@@ -123,6 +123,9 @@ class Item(object):
     else:
       self.state_ = value
 
+  def __str__(self):
+    return u'<{0} - {1} : {2}>'.format(self.type_, self.name, self.state_).encode('utf-8')
+
 
 class DateTimeItem(Item):
   def __init__(self, j):
