@@ -29,21 +29,13 @@ base_url = 'http://localhost:8080/rest'
 
 
 # fetch all items
-items = {}
-r = requests.get(base_url + '/items/', headers={'accept': 'application/json'}).json()
-for i in r['item']:
-  if i['type'] == 'GroupItem':
-    continue
-
-  if not i['name'] in items:
-    e = Item.initj(base_url, i)
-    items[i['name']] = e
+items = openhab.fetch_all_items(base_url)
 
 
 # fetch other items, show how to toggle a switch
-sunset = Item.init(base_url, 'Sunset')
-sunrise = Item.init(base_url, 'Sunrise')
-knx_day_night = Item.init(base_url, 'KNX_day_night')
+sunset = items.get('Sunset')
+sunrise = items.get('Sunrise')
+knx_day_night = items.get('KNX_day_night')
 
 now = datetime.datetime.now()
 

@@ -24,6 +24,23 @@ import requests
 import dateutil.parser
 
 
+# fetch all items
+def fetch_all_items(base_url):
+  items = {}
+  r = requests.get(base_url + '/items/', headers={'accept': 'application/json'}).json()
+
+  for i in r['item']:
+    # we ignore group-items for now
+    if i['type'] == 'GroupItem':
+      continue
+  
+    if not i['name'] in items:
+      e = Item.initj(base_url, i)
+      items[i['name']] = e
+
+  return items
+
+
 class Item(object):
   def __init__(self, name):
     self.name = name
