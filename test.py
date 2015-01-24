@@ -19,7 +19,6 @@
 #
 
 
-import requests
 import datetime
 import openhab
 from openhab import Item

@@ -46,6 +46,7 @@ class Item(object):
     self.name = name
     self.type_ = ''
     self.state_ = ''
+    self.lastupdate = None
 
   def init_from_json(self, j):
     self.name = j['name']
@@ -97,6 +98,18 @@ class Item(object):
   def state(self, value):
     v = value
 
+    self.set_state(value)
+
+    r = requests.post(self.base_url + '/items/' + self.name, data=str(v), headers={'accept': 'application/json'})
+
+    if r.status_code == requests.codes.ok:
+      return r.json()
+    else:
+      r.raise_for_status()
+
+  def set_state(self, value):
+    v = value
+
     if self.type_ == 'DateTimeItem':
       if not isinstance(v, datetime.datetime):
         raise ValueError()
@@ -113,12 +126,7 @@ class Item(object):
     else:
       raise ValueError()
 
-    r = requests.post(self.base_url + '/items/' + self.name, data=v, headers={'accept': 'application/json'})
-
-    if r.status_code == requests.codes.ok:
-      return r.json()
-    else:
-      r.raise_for_status()
+    self.lastupdate = datetime.datetime.now()
 
   @staticmethod
   def __get_item(base_url, name):
@@ -131,7 +139,10 @@ class Item(object):
 
   def __set_state(self, value):
     if self.type_ == 'DateTimeItem':
-      self.state_ = dateutil.parser.parse(value)
+      if value in ('Uninitialized', 'Undefined'):
+        self.state_ = None
+      else:
+        self.state_ = dateutil.parser.parse(value)
     elif self.type_ == 'NumberItem':
       if value in ('Uninitialized', 'Undefined'):
         self.state_ = None
@@ -139,6 +150,8 @@ class Item(object):
         self.state_ = float(value)
     else:
       self.state_ = value
+
+    self.lastupdate = datetime.datetime.now()
 
   def __str__(self):
     return u'<{0} - {1} : {2}>'.format(self.type_, self.name, self.state_).encode('utf-8')
