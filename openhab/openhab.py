@@ -25,7 +25,7 @@ import dateutil.parser
 
 
 # fetch all items
-def fetch_all_items(base_url):
+def fetch_all_items(base_url, autoupdate=False):
   items = {}
   r = requests.get(base_url + '/items/', headers={'accept': 'application/json'}).json()
 
@@ -35,177 +35,245 @@ def fetch_all_items(base_url):
       continue
   
     if not i['name'] in items:
-      e = Item.initj(base_url, i)
+      e = init_from_json(base_url, i, autoupdate=autoupdate)
       items[i['name']] = e
 
   return items
 
 
-class Item(object):
-  def __init__(self, name):
+def fetch_item_json(base_url, name):
+  r = requests.get(base_url + '/items/' + name, headers={'accept': 'application/json'})
+
+  if r.status_code == requests.codes.ok:
+    return r.json()
+  else:
+    r.raise_for_status()
+
+
+def init_from_json(base_url, j, **kwargs):
+  name = j['name']
+  type_ = j['type']
+  state = j['state']
+  class_ = get_class(type_)
+
+  i = class_(name, string_state=state, autoupdate=kwargs.get('autoupdate', False))
+  i.base_url = base_url
+
+  if i.__class__ == Item:
+    i._type = type_
+
+  return i
+
+
+def get_item(base_url, name, **kwargs):
+  j = fetch_item_json(base_url, name)
+
+  return init_from_json(base_url, j, **kwargs)
+
+
+def get_class(type_):
+  if type_ == 'SwitchItem':
+    return SwitchItem
+  elif type_ == 'DateTimeItem':
+    return DateTimeItem
+  elif type_ == 'NumberItem':
+    return NumberItem
+
+  return Item
+
+
+class BaseItem(object):
+  def __init__(self, name, type_=None, string_state=None, autoupdate=False):
     self.name = name
-    self.type_ = ''
-    self.state_ = ''
     self.lastupdate = None
+    self._type = None
+    self._autoupdate = autoupdate
 
-  def init_from_json(self, j):
-    self.name = j['name']
-    self.type_ = j['type']
-    self.__set_state(j['state'])
-
-  @staticmethod
-  def initj(base_url, j):
-    if j['type'] == 'SwitchItem':
-      i = SwitchItem(j)
-    elif j['type'] == 'DateTimeItem':
-      i = DateTimeItem(j)
-    elif j['type'] == 'NumberItem':
-      i = NumberItem(j)
+    if not string_state is None:
+      self.update_from_string(string_state)
     else:
-      i = Item(j['name'])
-      i.init_from_json(j)
+      self.state = None
 
-    i.base_url = base_url
+    if not type_ is None:
+      self._type = type_
 
-    return i
+  def update_from_string(self, value):
+    if not (isinstance(value, str) or isinstance(value, unicode)):
+      raise ValueError()
 
-  @staticmethod
-  def init(base_url, name):
-    j = Item.__get_item(base_url, name)
+    if value in ('Uninitialized', 'Undefined'):
+      self._set_state(None)
 
-    if j['type'] == 'SwitchItem':
-      i = SwitchItem(j)
-    elif j['type'] == 'DateTimeItem':
-      i = DateTimeItem(j)
-    else:
-      i = Item(name)
-      i.state
+      return True
 
-    i.base_url = base_url
+    self._set_state(value)
 
-    return i
+    return False
+
+  def _set_state(self, value):
+    self._state = value
+    self.lastupdate = datetime.datetime.now()
+
+  def to_openhab(self):
+    if self.state is None:
+      return 'Undefined'
+
+    return str(self.state)
 
   @property
   def state(self):
-    j = Item.__get_item(self.base_url, self.name)
-
-    self.type_ = j['type']
-    self.__set_state(j['state'])
-
-    return self.state_
+    return self._state
 
   @state.setter
   def state(self, value):
-    v = value
-
-    self.set_state(value)
-
-    r = requests.post(self.base_url + '/items/' + self.name, data=str(v), headers={'accept': 'application/json'})
-
-    if r.status_code == requests.codes.ok:
-      return r.json()
-    else:
-      r.raise_for_status()
-
-  def set_state(self, value):
-    v = value
-
-    if self.type_ == 'DateTimeItem':
-      if not isinstance(v, datetime.datetime):
-        raise ValueError()
-      else:
-        v = value.strftime('%Y-%m-%d %H:%M:%S')
-    elif self.type_ == 'NumberItem':
-      if not (isinstance(value, float) or isinstance(value, int)):
-        raise ValueError()
-      else:
-        v = str(v)
-    elif self.type_ == 'SwitchItem':
-      if not (isinstance(value, str) or isinstance(value, unicode)) or not value in ['ON', 'OFF']:
-        raise ValueError()
+    if value is None or isinstance(value, str) or isinstance(value, unicode):
+      self._state = value
     else:
       raise ValueError()
 
-    self.lastupdate = datetime.datetime.now()
+    if self._autoupdate:
+      self.post_state()
 
-  @staticmethod
-  def __get_item(base_url, name):
-    r = requests.get(base_url + '/items/' + name, headers={'accept': 'application/json'})
+  def fetch_state(self):
+    j = fetch_item_json(self.base_url, self.name)
+
+    self.update_from_string(j['state'])
+
+    return self.state
+
+  def post_state(self):
+    r = requests.post(self.base_url + '/items/' + self.name, data=self.to_openhab(), headers={'accept': 'application/json'})
 
     if r.status_code == requests.codes.ok:
       return r.json()
     else:
       r.raise_for_status()
 
-  def __set_state(self, value):
-    if self.type_ == 'DateTimeItem':
-      if value in ('Uninitialized', 'Undefined'):
-        self.state_ = None
-      else:
-        self.state_ = dateutil.parser.parse(value)
-    elif self.type_ == 'NumberItem':
-      if value in ('Uninitialized', 'Undefined'):
-        self.state_ = None
-      else:
-        self.state_ = float(value)
-    else:
-      self.state_ = value
-
-    self.lastupdate = datetime.datetime.now()
-
   def __str__(self):
-    return u'<{0} - {1} : {2}>'.format(self.type_, self.name, self.state_).encode('utf-8')
+    return u'<{0} - {1} : {2}>'.format(self._type, self.name, self._state).encode('utf-8')
 
 
-class DateTimeItem(Item):
-  def __init__(self, j):
-    super(DateTimeItem, self).init_from_json(j)
+class Item(BaseItem):
+  def __init__(self, name, **kwargs):
+    super(Item, self).__init__(name, type_='Item', **kwargs)
+
+  @BaseItem.state.setter
+  def state(self, value):
+    if value is None or isinstance(value, str) or isinstance(value, unicode):
+      self._state = value
+    else:
+      raise ValueError()
+
+    if self._autoupdate:
+      self.post_state()
+
+  def update_from_string(self, value):
+    if not super(Item, self).update_from_string(value):
+      self._set_state(value)
+
+  def to_openhab(self):
+    if self.state is None:
+      return 'Undefined'
+
+    return self.state
+
+
+class DateTimeItem(BaseItem):
+  def __init__(self, name, **kwargs):
+    super(DateTimeItem, self).__init__(name, type_='DateTimeItem', **kwargs)
 
   def __gt__(self, other):
-    return self.state_ > other
+    return self.state > other
 
   def __lt__(self, other):
     return not self.__gt__(other)
 
   def __eq__(self, other):
-    return self.state_ == other
+    return self.state == other
 
   def __ne__(self, other):
     return not self.__eq__(other)
 
-  @Item.state.setter
+  @BaseItem.state.setter
   def state(self, value):
-    if not isinstance(value, datetime.datetime):
+    if value is None or isinstance(value, datetime.datetime):
+      self._set_state(value)
+    else:
       raise ValueError()
 
-    Item.state.fset(self, value)
+    if self._autoupdate:
+      self.post_state()
+
+  def update_from_string(self, value):
+    if not super(DateTimeItem, self).update_from_string(value):
+      self._set_state(dateutil.parser.parse(value))
+
+  def to_openhab(self):
+    if self.state is None:
+      return 'Undefined'
+
+    return self.state.strftime('%Y-%m-%d %H:%M:%S')
 
 
-class SwitchItem(Item):
-  def __init__(self, j):
-    super(SwitchItem, self).init_from_json(j)
+class SwitchItem(BaseItem):
+  def __init__(self, name, **kwargs):
+    super(SwitchItem, self).__init__(name, type_='SwitchItem', **kwargs)
 
-  @Item.state.setter
+  @BaseItem.state.setter
   def state(self, value):
-    if not value in ['ON', 'OFF']:
+    if value is None:
+      self._set_state(None)
+    elif isinstance(value, bool):
+      self._set_state(bool(value))
+    else:
       raise ValueError()
 
-    Item.state.fset(self, value)
+    if self._autoupdate:
+      self.post_state()
 
   def on(self):
-    self.state = 'ON'
+    self.state = True
 
   def off(self):
-    self.state = 'OFF'
+    self.state = False
+
+  def update_from_string(self, value):
+    if not super(SwitchItem, self).update_from_string(value):
+      if value == 'ON':
+        self._set_state(True)
+      elif value == 'OFF':
+        self._set_state(False)
+      else:
+        raise ValueError()
+
+  def to_openhab(self):
+    if self.state is None:
+      return 'Undefined'
+    elif self.state == True:
+      return 'ON'
+ 
+    return 'OFF' 
 
 
-class NumberItem(Item):
-  def __init__(self, j):
-    super(NumberItem, self).init_from_json(j)
+class NumberItem(BaseItem):
+  def __init__(self, name, **kwargs):
+    super(NumberItem, self).__init__(name, type_='NumberItem', **kwargs)
 
-  @Item.state.setter
+  @BaseItem.state.setter
   def state(self, value):
-    if not (isinstance(value, float) or isinstance(value, int)):
+    if value is None:
+      self._set_state(None)
+    elif isinstance(value, float) or isinstance(value, int):
+      self._set_state(value)
+    else:
       raise ValueError()
 
-    Item.state.fset(self, value)
+    if self._autoupdate:
+      self.post_state()
+
+  def update_from_string(self, value):
+    if not super(NumberItem, self).update_from_string(value):
+      if '.' in value:
+        self._set_state(float(value))
+      else:
+        self._set_state(int(value))
