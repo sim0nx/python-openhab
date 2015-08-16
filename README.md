@@ -1,3 +1,6 @@
+[![Code Health](https://landscape.io/github/sim0nx/python-openhab/master/landscape.svg?style=flat)](https://landscape.io/github/sim0nx/python-openhab/master)
+
+
 python library for accessing the openHAB REST API
 ============
   This library allows for easily accessing the openHAB REST API.
