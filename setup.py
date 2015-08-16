@@ -14,7 +14,7 @@ f.close()
 
 install_requires = [
                     'requests>=2.4.3',
-                    'dateutil>=2.2',
+                    'python-dateutil>=2.2',
                     ]
 
 
