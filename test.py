@@ -19,7 +19,6 @@
 #
 
 
-import requests
 import datetime
 import openhab
 from openhab import Item
@@ -29,7 +28,7 @@ base_url = 'http://localhost:8080/rest'
 
 
 # fetch all items
-items = openhab.fetch_all_items(base_url)
+items = openhab.fetch_all_items(base_url, autoupdate=True)
 
 
 # fetch other items, show how to toggle a switch
