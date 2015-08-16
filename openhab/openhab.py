@@ -1,8 +1,9 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
+'''python library for accessing the openHAB REST API'''
 
 #
-# Georges Toth (c) 2014 <georges@trypill.org>
+# Georges Toth (c) 2015 <georges@trypill.org>
 #
 # python-openhab is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -18,83 +19,86 @@
 # along with python-openhab.  If not, see <http://www.gnu.org/licenses/>.
 #
 
+# pylint: disable=bad-indentation
+
 import datetime
-import json
 import requests
 import dateutil.parser
+
+__author__ = 'Georges Toth <georges@trypill.org>'
+__license__ = 'AGPLv3+'
 
 
 # fetch all items
 def fetch_all_items(base_url):
+  '''Returns all items defined in openHAB except for group-items'''
   items = {}
-  r = requests.get(base_url + '/items/', headers={'accept': 'application/json'}).json()
+  r = requests.get(base_url + '/items/',
+                   headers={'accept': 'application/json'}).json()
 
   for i in r['item']:
     # we ignore group-items for now
     if i['type'] == 'GroupItem':
       continue
-  
+
     if not i['name'] in items:
-      e = Item.initj(base_url, i)
+      e = get_item(base_url, i['name'])
       items[i['name']] = e
 
   return items
 
 
+def get_item(base_url, name):
+  '''Returns an item with its state and type as fetched from openHAB'''
+  json_data = _get_item_as_json(base_url, name)
+
+  if json_data['type'] == 'SwitchItem':
+    return SwitchItem(base_url, json_data)
+  elif json_data['type'] == 'DateTimeItem':
+    return DateTimeItem(base_url, json_data)
+  else:
+    return Item(base_url, json_data)
+
+
+def _get_item_as_json(base_url, name):
+  '''Private method for fetching a json configuration of an item'''
+  r = requests.get(base_url + '/items/' + name,
+                   headers={'accept': 'application/json'})
+
+  if r.status_code == requests.codes.ok:
+    return r.json()
+  else:
+    r.raise_for_status()
+
+
 class Item(object):
-  def __init__(self, name):
-    self.name = name
-    self.type_ = ''
-    self.state_ = ''
+  '''Base item class'''
+  def __init__(self, base_url, json_data):
+    self.base_url = base_url
+    self.type_ = None
+    self.name = ''
+    self._state = None
+    self.init_from_json(json_data)
 
-  def init_from_json(self, j):
-    self.name = j['name']
-    self.type_ = j['type']
-    self.__set_state(j['state'])
-
-  @staticmethod
-  def initj(base_url, j):
-    if j['type'] == 'SwitchItem':
-      i = SwitchItem(j)
-    elif j['type'] == 'DateTimeItem':
-      i = DateTimeItem(j)
-    elif j['type'] == 'NumberItem':
-      i = NumberItem(j)
-    else:
-      i = Item(j['name'])
-      i.init_from_json(j)
-
-    i.base_url = base_url
-
-    return i
-
-  @staticmethod
-  def init(base_url, name):
-    j = Item.__get_item(base_url, name)
-
-    if j['type'] == 'SwitchItem':
-      i = SwitchItem(j)
-    elif j['type'] == 'DateTimeItem':
-      i = DateTimeItem(j)
-    else:
-      i = Item(name)
-      i.state
-
-    i.base_url = base_url
-
-    return i
+  def init_from_json(self, json_data):
+    '''Initialize this object from a json configuration as fetched from
+    openHAB'''
+    self.name = json_data['name']
+    self.type_ = json_data['type']
+    self.__set_state(json_data['state'])
 
   @property
   def state(self):
-    j = Item.__get_item(self.base_url, self.name)
+    '''Update internal state and return it'''
+    json_data = _get_item_as_json(self.base_url, self.name)
+    self.init_from_json(json_data)
 
-    self.type_ = j['type']
-    self.__set_state(j['state'])
-
-    return self.state_
+    return self._state
 
   @state.setter
   def state(self, value):
+    '''Method for setting the internal state and updating
+    openHAB accordingly'''
     v = value
 
     if self.type_ == 'DateTimeItem':
@@ -108,21 +112,14 @@ class Item(object):
       else:
         v = str(v)
     elif self.type_ == 'SwitchItem':
-      if not (isinstance(value, str) or isinstance(value, unicode)) or not value in ['ON', 'OFF']:
+      if not (isinstance(value, str) or isinstance(value, unicode)) or\
+         value not in ['ON', 'OFF']:
         raise ValueError()
     else:
       raise ValueError()
 
-    r = requests.post(self.base_url + '/items/' + self.name, data=v, headers={'accept': 'application/json'})
-
-    if r.status_code == requests.codes.ok:
-      return r.json()
-    else:
-      r.raise_for_status()
-
-  @staticmethod
-  def __get_item(base_url, name):
-    r = requests.get(base_url + '/items/' + name, headers={'accept': 'application/json'})
+    r = requests.post(self.base_url + '/items/' + self.name, data=v,
+                      headers={'accept': 'application/json'})
 
     if r.status_code == requests.codes.ok:
       return r.json()
@@ -130,32 +127,31 @@ class Item(object):
       r.raise_for_status()
 
   def __set_state(self, value):
-    if self.type_ == 'DateTimeItem':
-      self.state_ = dateutil.parser.parse(value)
+    '''Private method for setting the internal state'''
+    if value in ('Uninitialized', 'Undefined'):
+      self._state = None
+    elif self.type_ == 'DateTimeItem':
+      self._state = dateutil.parser.parse(value)
     elif self.type_ == 'NumberItem':
-      if value in ('Uninitialized', 'Undefined'):
-        self.state_ = None
-      else:
-        self.state_ = float(value)
+      self._state = float(value)
     else:
-      self.state_ = value
+      self._state = value
 
   def __str__(self):
-    return u'<{0} - {1} : {2}>'.format(self.type_, self.name, self.state_).encode('utf-8')
+    return u'<{0} - {1} : {2}>'.format(self.type_, self.name,
+                                       self._state).encode('utf-8')
 
 
 class DateTimeItem(Item):
-  def __init__(self, j):
-    super(DateTimeItem, self).init_from_json(j)
-
+  '''DateTime item type'''
   def __gt__(self, other):
-    return self.state_ > other
+    return self._state > other
 
   def __lt__(self, other):
     return not self.__gt__(other)
 
   def __eq__(self, other):
-    return self.state_ == other
+    return self._state == other
 
   def __ne__(self, other):
     return not self.__eq__(other)
@@ -169,27 +165,25 @@ class DateTimeItem(Item):
 
 
 class SwitchItem(Item):
-  def __init__(self, j):
-    super(SwitchItem, self).init_from_json(j)
-
+  '''Switch item type'''
   @Item.state.setter
   def state(self, value):
-    if not value in ['ON', 'OFF']:
+    if value not in ['ON', 'OFF']:
       raise ValueError()
 
     Item.state.fset(self, value)
 
   def on(self):
+    '''Set the state of the switch to ON'''
     self.state = 'ON'
 
   def off(self):
+    '''Set the state of the switch to OFF'''
     self.state = 'OFF'
 
 
 class NumberItem(Item):
-  def __init__(self, j):
-    super(NumberItem, self).init_from_json(j)
-
+  '''Number item type'''
   @Item.state.setter
   def state(self, value):
     if not (isinstance(value, float) or isinstance(value, int)):
