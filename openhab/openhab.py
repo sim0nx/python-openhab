@@ -56,6 +56,8 @@ def get_item(base_url, name):
     return SwitchItem(base_url, json_data)
   elif json_data['type'] == 'DateTimeItem':
     return DateTimeItem(base_url, json_data)
+  elif json_data['type'] == 'ContactItem':
+    return ContactItem(base_url, json_data)
   else:
     return Item(base_url, json_data)
 
@@ -114,6 +116,10 @@ class Item(object):
     elif self.type_ == 'SwitchItem':
       if not (isinstance(value, str) or isinstance(value, unicode)) or\
          value not in ['ON', 'OFF']:
+        raise ValueError()
+    elif self.type_ == 'ContactItem':
+      if not (isinstance(value, str) or isinstance(value, unicode)) or\
+         value not in ['OPEN', 'CLOSED']:
         raise ValueError()
     else:
       raise ValueError()
@@ -190,3 +196,22 @@ class NumberItem(Item):
       raise ValueError()
 
     Item.state.fset(self, value)
+
+
+class ContactItem(Item):
+  '''Contact item type'''
+  @Item.state.setter
+  def state(self, value):
+    if value not in ['OPEN', 'CLOSED']:
+      raise ValueError()
+
+    Item.state.fset(self, value)
+
+  def open(self):
+    '''Set the state of the switch to OPEN'''
+    self.state = 'OPEN'
+
+  def closed(self):
+    '''Set the state of the switch to CLOSED'''
+    self.state = 'CLOSED'
+
