@@ -3,7 +3,7 @@
 '''python library for accessing the openHAB REST API'''
 
 #
-# Georges Toth (c) 2015 <georges@trypill.org>
+# Georges Toth (c) 2016 <georges@trypill.org>
 #
 # python-openhab is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -120,6 +120,9 @@ class Item(object):
     elif self.type_ == 'ContactItem':
       if not (isinstance(value, str) or isinstance(value, unicode)) or\
          value not in ['OPEN', 'CLOSED']:
+        raise ValueError()
+    elif self.type_ == 'StringItem':
+      if not (isinstance(value, str) or isinstance(value, unicode)):
         raise ValueError()
     else:
       raise ValueError()
