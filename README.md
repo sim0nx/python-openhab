@@ -12,6 +12,10 @@ Requirements
   - python-dateutil
   - python-requests
 
+Note on openHAB2:
+-----------
+  Make sure to use the 2.0 branch for openHAB2!
+
 Example
 ------------
   ```python
