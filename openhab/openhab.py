@@ -36,14 +36,13 @@ def fetch_all_items(base_url):
   r = requests.get(base_url + '/items/',
                    headers={'accept': 'application/json'}).json()
 
-  for i in r['item']:
+  for i in r:
     # we ignore group-items for now
-    if i['type'] == 'GroupItem':
+    if i['type'] == 'Group':
       continue
 
     if not i['name'] in items:
-      e = get_item(base_url, i['name'])
-      items[i['name']] = e
+      items[i['name']] = json_to_item(base_url, i)
 
   return items
 
@@ -52,11 +51,15 @@ def get_item(base_url, name):
   '''Returns an item with its state and type as fetched from openHAB'''
   json_data = _get_item_as_json(base_url, name)
 
-  if json_data['type'] == 'SwitchItem':
+  return json_to_item(base_url, json_data)
+
+
+def json_to_item(base_url, json_data):
+  if json_data['type'] == 'Switch':
     return SwitchItem(base_url, json_data)
-  elif json_data['type'] == 'DateTimeItem':
+  elif json_data['type'] == 'DateTime':
     return DateTimeItem(base_url, json_data)
-  elif json_data['type'] == 'ContactItem':
+  elif json_data['type'] == 'Contact':
     return ContactItem(base_url, json_data)
   else:
     return Item(base_url, json_data)
@@ -103,25 +106,25 @@ class Item(object):
     openHAB accordingly'''
     v = value
 
-    if self.type_ == 'DateTimeItem':
+    if self.type_ == 'DateTime':
       if not isinstance(v, datetime.datetime):
         raise ValueError()
       else:
         v = value.strftime('%Y-%m-%d %H:%M:%S')
-    elif self.type_ == 'NumberItem':
+    elif self.type_ == 'Number':
       if not (isinstance(value, float) or isinstance(value, int)):
         raise ValueError()
       else:
         v = str(v)
-    elif self.type_ == 'SwitchItem':
+    elif self.type_ == 'Switch':
       if not (isinstance(value, str) or isinstance(value, unicode)) or\
          value not in ['ON', 'OFF']:
         raise ValueError()
-    elif self.type_ == 'ContactItem':
+    elif self.type_ == 'Contact':
       if not (isinstance(value, str) or isinstance(value, unicode)) or\
          value not in ['OPEN', 'CLOSED']:
         raise ValueError()
-    elif self.type_ == 'StringItem':
+    elif self.type_ == 'String':
       if not (isinstance(value, str) or isinstance(value, unicode)):
         raise ValueError()
     else:
@@ -130,18 +133,16 @@ class Item(object):
     r = requests.post(self.base_url + '/items/' + self.name, data=v,
                       headers={'accept': 'application/json'})
 
-    if r.status_code == requests.codes.ok:
-      return r.json()
-    else:
+    if not (r.status_code >= 200 and r.status_code < 300):
       r.raise_for_status()
 
   def __set_state(self, value):
     '''Private method for setting the internal state'''
-    if value in ('Uninitialized', 'Undefined'):
+    if value in ('UNDEF', 'NULL'):
       self._state = None
-    elif self.type_ == 'DateTimeItem':
+    elif self.type_ == 'DateTime':
       self._state = dateutil.parser.parse(value)
-    elif self.type_ == 'NumberItem':
+    elif self.type_ == 'Number':
       self._state = float(value)
     else:
       self._state = value
