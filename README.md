@@ -1,4 +1,4 @@
-[![Code Health](https://landscape.io/github/sim0nx/python-openhab/master/landscape.svg?style=flat)](https://landscape.io/github/sim0nx/python-openhab/master)
+[![Code Health](https://landscape.io/github/sim0nx/python-openhab/2.0/landscape.svg?style=flat)](https://landscape.io/github/sim0nx/python-openhab/2.0)
 
 
 python library for accessing the openHAB REST API
