@@ -104,31 +104,9 @@ class Item(object):
   def state(self, value):
     '''Method for setting the internal state and updating
     openHAB accordingly'''
-    v = value
+    self._validate_value(value)
 
-    if self.type_ == 'DateTime':
-      if not isinstance(v, datetime.datetime):
-        raise ValueError()
-      else:
-        v = value.strftime('%Y-%m-%d %H:%M:%S')
-    elif self.type_ == 'Number':
-      if not (isinstance(value, float) or isinstance(value, int)):
-        raise ValueError()
-      else:
-        v = str(v)
-    elif self.type_ == 'Switch':
-      if not (isinstance(value, str) or isinstance(value, unicode)) or\
-         value not in ['ON', 'OFF']:
-        raise ValueError()
-    elif self.type_ == 'Contact':
-      if not (isinstance(value, str) or isinstance(value, unicode)) or\
-         value not in ['OPEN', 'CLOSED']:
-        raise ValueError()
-    elif self.type_ == 'String':
-      if not (isinstance(value, str) or isinstance(value, unicode)):
-        raise ValueError()
-    else:
-      raise ValueError()
+    v = self._rest_format(value)
 
     r = requests.post(self.base_url + '/items/' + self.name, data=v,
                       headers={'accept': 'application/json'})
@@ -136,20 +114,42 @@ class Item(object):
     if not (r.status_code >= 200 and r.status_code < 300):
       r.raise_for_status()
 
+  def _validate_value(self, value):
+    if self.type_ == 'String':
+      if not (isinstance(value, str) or isinstance(value, unicode)):
+        raise ValueError()
+    else:
+      raise ValueError()
+
+  def _parse_rest(self, value):
+    '''Parse a REST result into a native object'''
+    return value
+
+  def _rest_format(self, value):
+    '''Format a value before submitting to openHAB'''
+    return value
+
   def __set_state(self, value):
     '''Private method for setting the internal state'''
     if value in ('UNDEF', 'NULL'):
       self._state = None
-    elif self.type_ == 'DateTime':
-      self._state = dateutil.parser.parse(value)
-    elif self.type_ == 'Number':
-      self._state = float(value)
     else:
-      self._state = value
+      self._state = self._parse_rest(value)
 
   def __str__(self):
     return u'<{0} - {1} : {2}>'.format(self.type_, self.name,
                                        self._state).encode('utf-8')
+
+  def update(self, value):
+    self._validate_value(value)
+
+    v = self._rest_format(value)
+
+    r = requests.put(self.base_url + '/items/' + self.name + '/state', data=v,
+                     headers={'accept': 'application/json'})
+
+    if not (r.status_code >= 200 and r.status_code < 300):
+      r.raise_for_status()
 
 
 class DateTimeItem(Item):
@@ -173,6 +173,18 @@ class DateTimeItem(Item):
 
     Item.state.fset(self, value)
 
+  def _parse_rest(self, value):
+    '''Parse a REST result into a native object'''
+    return dateutil.parser.parse(value)
+
+  def _rest_format(self, value):
+    '''Format a value before submitting to openHAB'''
+    return value.strftime('%Y-%m-%d %H:%M:%S')
+
+  def _validate_value(self, value):
+    if not isinstance(value, datetime.datetime):
+      raise ValueError()
+
 
 class SwitchItem(Item):
   '''Switch item type'''
@@ -191,6 +203,11 @@ class SwitchItem(Item):
     '''Set the state of the switch to OFF'''
     self.state = 'OFF'
 
+  def _validate_value(self, value):
+    if not (isinstance(value, str) or isinstance(value, unicode)) or\
+       value not in ['ON', 'OFF']:
+      raise ValueError()
+
 
 class NumberItem(Item):
   '''Number item type'''
@@ -200,6 +217,18 @@ class NumberItem(Item):
       raise ValueError()
 
     Item.state.fset(self, value)
+
+  def _parse_rest(self, value):
+    '''Parse a REST result into a native object'''
+    return float(value)
+
+  def _rest_format(self, value):
+    '''Format a value before submitting to openHAB'''
+    v = str(v)
+
+  def _validate_value(self, value):
+    if not (isinstance(value, float) or isinstance(value, int)):
+      raise ValueError()
 
 
 class ContactItem(Item):
@@ -219,3 +248,7 @@ class ContactItem(Item):
     '''Set the state of the switch to CLOSED'''
     self.state = 'CLOSED'
 
+  def _validate_value(self, value):
+    if not (isinstance(value, str) or isinstance(value, unicode)) or\
+       value not in ['OPEN', 'CLOSED']:
+      raise ValueError()
