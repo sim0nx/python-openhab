@@ -82,6 +82,8 @@ class openHAB(object):
       return DateTimeItem(self, json_data)
     elif json_data['type'] == 'Contact':
       return ContactItem(self, json_data)
+    elif json_data['type'] == 'Number':
+      return NumberItem(self, json_data)
     else:
       return Item(self, json_data)
 
