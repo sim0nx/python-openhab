@@ -1,2 +1,2 @@
-from openhab import *
+from openhab import openHAB
 

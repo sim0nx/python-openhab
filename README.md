@@ -19,12 +19,13 @@ Note on openHAB2:
 Example
 ------------
   ```python
-  import openhab
+  from openhab import openHAB
   
   base_url = 'http://localhost:8080/rest'
-  
+  openhab = openHAB(base_url)
+ 
   # fetch all items
-  items = openhab.fetch_all_items(base_url)
+  items = openhab.fetch_all_items()
   
   sunset = items.get('Sunset')
   print sunset.state
