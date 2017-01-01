@@ -1,7 +1,7 @@
 [![Code Health](https://landscape.io/github/sim0nx/python-openhab/master/landscape.svg?style=flat)](https://landscape.io/github/sim0nx/python-openhab/master)
 
 
-python library for accessing the openHAB REST API
+python library for accessing the openHAB 1.x REST API
 ============
   This library allows for easily accessing the openHAB REST API.
   A number of features are implemented but not all, this is work in progress.
@@ -14,7 +14,7 @@ Requirements
 
 Note on openHAB2:
 -----------
-  Make sure to use the 2.0 branch for openHAB2!
+  Make sure to use the 2.x branch for openHAB2!
 
 Example
 ------------
