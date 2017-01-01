@@ -22,6 +22,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # pylint: disable=bad-indentation
 
+import six
 import datetime
 import dateutil.parser
 
@@ -60,7 +61,7 @@ class Item(object):
 
   def _validate_value(self, value):
     if self.type_ == 'String':
-      if not (isinstance(value, str) or isinstance(value, unicode)):
+      if not isinstance(value, six.string_types):
         raise ValueError()
     else:
       raise ValueError()
@@ -81,8 +82,7 @@ class Item(object):
       self._state = self._parse_rest(value)
 
   def __str__(self):
-    return u'<{0} - {1} : {2}>'.format(self.type_, self.name,
-                                       self._state).encode('utf-8')
+    return '<{0} - {1} : {2}>'.format(self.type_, self.name, self._state)
 
   def update(self, value):
     self._validate_value(value)
@@ -152,8 +152,7 @@ class SwitchItem(Item):
     self.state = 'OFF'
 
   def _validate_value(self, value):
-    if not (isinstance(value, str) or isinstance(value, unicode)) or\
-       value not in ['ON', 'OFF']:
+    if not isinstance(value, six.string_types) or value not in ['ON', 'OFF']:
       raise ValueError()
 
 
@@ -197,6 +196,5 @@ class ContactItem(Item):
     self.state = 'CLOSED'
 
   def _validate_value(self, value):
-    if not (isinstance(value, str) or isinstance(value, unicode)) or\
-       value not in ['OPEN', 'CLOSED']:
+    if not isinstance(value, six.string_types) or value not in ['OPEN', 'CLOSED']:
       raise ValueError()
