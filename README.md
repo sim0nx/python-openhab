@@ -14,7 +14,7 @@ Requirements
 
 Note on openHAB2:
 -----------
-  Make sure to use the 2.x branch for openHAB2!
+  Make sure to use the master branch for openHAB2!
 
 Example
 ------------
