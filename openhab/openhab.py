@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+from __future__ import absolute_import, division, print_function, unicode_literals
 # -*- coding: utf-8 -*-
 '''python library for accessing the openHAB REST API'''
 
@@ -22,7 +23,7 @@
 # pylint: disable=bad-indentation
 
 import requests
-from items import *
+from openhab.items import *
 
 __author__ = 'Georges Toth <georges@trypill.org>'
 __license__ = 'AGPLv3+'
@@ -89,4 +90,4 @@ class openHAB(object):
 
   def get_item_raw(self, name):
     '''Private method for fetching a json configuration of an item'''
-    return self.req_get('/items/' + name)
+    return self.req_get('/items/{}'.format(name))
