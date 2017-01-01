@@ -1,4 +1,4 @@
-[![Code Health](https://landscape.io/github/sim0nx/python-openhab/2.0/landscape.svg?style=flat)](https://landscape.io/github/sim0nx/python-openhab/2.0)
+[![Code Health](https://landscape.io/github/sim0nx/python-openhab/master/landscape.svg?style=flat)](https://landscape.io/github/sim0nx/python-openhab/master)
 
 
 python library for accessing the openHAB REST API
@@ -12,9 +12,9 @@ Requirements
   - python-dateutil
   - python-requests
 
-Note on openHAB2:
+Note on openHAB1:
 -----------
-  Make sure to use the 2.0 branch for openHAB2!
+  Make sure to use the 1.x branch for openHAB1.x!
 
 Example
 ------------
