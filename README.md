@@ -8,9 +8,9 @@ python library for accessing the openHAB REST API
 
 Requirements
 ------------
-  - python 2.7.x
-  - python-dateutil
-  - python-requests
+  - python 2.7.x / 3.5
+  - python :: dateutil
+  - python :: requests
 
 Note on openHAB1:
 -----------
@@ -28,5 +28,5 @@ Example
   items = openhab.fetch_all_items()
   
   sunset = items.get('Sunset')
-  print sunset.state
+  print(sunset.state)
   ```

@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+from __future__ import absolute_import, division, print_function, unicode_literals
 # -*- coding: utf-8 -*-
 
 #
@@ -44,4 +45,4 @@ if now > sunrise.state and now < sunset.state:
 else:
   knx_day_night.off()
 
-print knx_day_night.state
+print(knx_day_night.state)
