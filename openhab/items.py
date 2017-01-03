@@ -32,8 +32,14 @@ __license__ = 'AGPLv3+'
 
 
 class Item(object):
-  '''Base item class'''
+  """Base item class"""
   def __init__(self, openhab, json_data):
+    """
+    Args:
+      openhab (openHAB): openHAB object.
+      json_data (dic): A dict converted from the JSON data returned by the openHAB
+                       server.
+    """
     self.openhab = openhab
     self.type_ = None
     self.name = ''
@@ -41,15 +47,23 @@ class Item(object):
     self.init_from_json(json_data)
 
   def init_from_json(self, json_data):
-    '''Initialize this object from a json configuration as fetched from
-    openHAB'''
+    """Initialize this object from a json configuration as fetched from
+    openHAB
+
+    Args:
+      json_data (dict): A dict converted from the JSON data returned by the openHAB
+                        server.
+    """
     self.name = json_data['name']
     self.type_ = json_data['type']
     self.__set_state(json_data['state'])
 
   @property
   def state(self):
-    '''Update internal state and return it'''
+    """The state property represents the current state of the item. The state is
+    automatically refreshed from openHAB on reading it.
+    Updating the value via this property send an update to the event bus.
+    """
     json_data = self.openhab.get_item_raw(self.name)
     self.init_from_json(json_data)
 
@@ -57,10 +71,12 @@ class Item(object):
 
   @state.setter
   def state(self, value):
-    '''Updates the state of an item'''
     self.update(value)
 
   def _validate_value(self, value):
+    """Private method for verifying the new value before modifying the state of the
+    item.
+    """
     if self.type_ == 'String':
       if not isinstance(value, six.string_types):
         raise ValueError()
@@ -71,15 +87,15 @@ class Item(object):
       raise ValueError()
 
   def _parse_rest(self, value):
-    '''Parse a REST result into a native object'''
+    """Parse a REST result into a native object."""
     return value
 
   def _rest_format(self, value):
-    '''Format a value before submitting to openHAB'''
+    """Format a value before submitting to openHAB."""
     return value
 
   def __set_state(self, value):
-    '''Private method for setting the internal state'''
+    """Private method for setting the internal state."""
     if value in ('UNDEF', 'NULL'):
       self._state = None
     else:
@@ -89,6 +105,12 @@ class Item(object):
     return '<{0} - {1} : {2}>'.format(self.type_, self.name, self._state)
 
   def update(self, value):
+    """Updates the state of an item.
+
+    Args:
+      value (object): The value to update the item with. The type of the value depends
+                      on the item type and is checked accordingly.
+    """
     self._validate_value(value)
 
     v = self._rest_format(value)
@@ -96,7 +118,12 @@ class Item(object):
     self.openhab.req_put('/items/' + self.name + '/state', data=v)
 
   def command(self, value):
-    '''Sends a command to an item'''
+    """Sends the given value as command to the event bus.
+
+    Args:
+      value (object): The value to send as command to the event bus. The type of the
+                      value depends on the item type and is checked accordingly.
+    """
     self._validate_value(value)
 
     v = self._rest_format(value)
@@ -105,7 +132,9 @@ class Item(object):
 
 
 class DateTimeItem(Item):
-  '''DateTime item type'''
+  """DateTime item type"""
+  types = [DateTimeType]
+
   def __gt__(self, other):
     return self._state > other
 
@@ -118,53 +147,31 @@ class DateTimeItem(Item):
   def __ne__(self, other):
     return not self.__eq__(other)
 
-  @Item.state.setter
-  def state(self, value):
-    self._validate_value(value)
-
-    Item.state.fset(self, value)
-
   def _parse_rest(self, value):
-    '''Parse a REST result into a native object'''
+    """Parse a REST result into a native object"""
     return dateutil.parser.parse(value)
 
   def _rest_format(self, value):
-    '''Format a value before submitting to openHAB'''
+    """Format a value before submitting to openHAB"""
     return value.isoformat()
-
-  def _validate_value(self, value):
-    if not isinstance(value, datetime.datetime):
-      raise ValueError()
 
 
 class SwitchItem(Item):
+  """SwitchItem item type"""
   types = [OnOffType]
 
-  '''Switch item type'''
-  @Item.state.setter
-  def state(self, value):
-    self._validate_value(value)
-
-    Item.state.fset(self, value)
-
   def on(self):
-    '''Set the state of the switch to ON'''
+    """Set the state of the switch to ON"""
     self.state = 'ON'
 
   def off(self):
-    '''Set the state of the switch to OFF'''
+    """Set the state of the switch to OFF"""
     self.state = 'OFF'
 
 
 class NumberItem(Item):
+  """NumberItem item type"""
   types = [DecimalType]
-
-  '''Number item type'''
-  @Item.state.setter
-  def state(self, value):
-    self._validate_value(value)
-
-    Item.state.fset(self, value)
 
   def _parse_rest(self, value):
     '''Parse a REST result into a native object'''
@@ -176,19 +183,13 @@ class NumberItem(Item):
 
 
 class ContactItem(Item):
+  """Contact item type"""
   types = [OpenCloseType]
 
-  '''Contact item type'''
-  @Item.state.setter
-  def state(self, value):
-    self._validate_value(value)
-
-    Item.state.fset(self, value)
-
   def open(self):
-    '''Set the state of the switch to OPEN'''
+    """Set the state of the switch to OPEN"""
     self.state = 'OPEN'
 
   def closed(self):
-    '''Set the state of the switch to CLOSED'''
+    """Set the state of the switch to CLOSED"""
     self.state = 'CLOSED'
