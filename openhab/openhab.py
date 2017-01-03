@@ -39,12 +39,12 @@ class openHAB(object):
     """
     Args:
       base_url (str): The openHAB REST URL, e.g. http://example.com/rest
-      username (str): A optional username, used in conjunction with a optional
+      username (str, optional): A optional username, used in conjunction with a optional
                       provided password, in case openHAB requires authentication.
-      password (str): A optional password, used in conjunction with a optional
+      password (str, optional): A optional password, used in conjunction with a optional
                       provided username, in case openHAB requires authentication.
-      http_auth (AuthBase): An alternative to username/password pait, is to
-                            specify a custom http authentication object.
+      http_auth (AuthBase, optional): An alternative to username/password pair, is to
+                            specify a custom http authentication object of type :class:`requests.auth.AuthBase`.
 
     Returns:
       openHAB: openHAB class instance.
@@ -99,7 +99,7 @@ class openHAB(object):
 
     Args:
       uri_path (str): The path to be used in the POST request.
-      data (dict): A optional dict with data to be submitted as part of the POST request.
+      data (dict, optional): A optional dict with data to be submitted as part of the POST request.
 
     Returns:
       None: No data is returned.
@@ -116,7 +116,7 @@ class openHAB(object):
 
     Args:
       uri_path (str): The path to be used in the PUT request.
-      data (dict): A optional dict with data to be submitted as part of the PUT request.
+      data (dict, optional): A optional dict with data to be submitted as part of the PUT request.
 
     Returns:
       None: No data is returned.
