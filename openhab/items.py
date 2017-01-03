@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 from __future__ import absolute_import, division, print_function, unicode_literals
 # -*- coding: utf-8 -*-
-'''python library for accessing the openHAB REST API'''
+"""python library for accessing the openHAB REST API"""
 
 #
 # Georges Toth (c) 2016 <georges@trypill.org>
