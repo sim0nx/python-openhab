@@ -53,7 +53,7 @@ class StringType(CommandType):
   @classmethod
   def validate(cls, value):
     """Value validation method.
-    Valid valued are andy of type string.
+    Valid values are andy of type string.
 
     Args:
       value (str): The value to validate.
@@ -70,7 +70,7 @@ class OnOffType(StringType):
   @classmethod
   def validate(cls, value):
     """Value validation method.
-    Valid valued are ``ON`` and ``OFF``.
+    Valid values are ``ON`` and ``OFF``.
 
     Args:
       value (str): The value to validate.
@@ -89,7 +89,7 @@ class OpenCloseType(StringType):
   @classmethod
   def validate(cls, value):
     """Value validation method.
-    Valid valued are ``OPEN`` and ``CLOSED``.
+    Valid values are ``OPEN`` and ``CLOSED``.
 
     Args:
       value (str): The value to validate.
@@ -108,7 +108,7 @@ class DecimalType(CommandType):
   @classmethod
   def validate(cls, value):
     """Value validation method.
-    Valid valued are any of type ``float`` or ``int``.
+    Valid values are any of type ``float`` or ``int``.
 
     Args:
       value (float): The value to validate.
@@ -125,7 +125,7 @@ class PercentType(DecimalType):
   @classmethod
   def validate(cls, value):
     """Value validation method.
-    Valid valued are any of type ``float`` or ``int`` and must be greater of equal to 0
+    Valid values are any of type ``float`` or ``int`` and must be greater of equal to 0
     and smaller or equal to 100.
 
     Args:
@@ -145,7 +145,7 @@ class IncreaseDecreaseType(StringType):
   @classmethod
   def validate(cls, value):
     """Value validation method.
-    Valid valued are ``INCREASE`` and ``DECREASE``.
+    Valid values are ``INCREASE`` and ``DECREASE``.
 
     Args:
       value (str): The value to validate.
@@ -164,7 +164,7 @@ class DateTimeType(CommandType):
   @classmethod
   def validate(cls, value):
     """Value validation method.
-    Valid valued are any of type ``datetime.datetime``.
+    Valid values are any of type ``datetime.datetime``.
 
     Args:
       value (datetime.datetime): The value to validate.
