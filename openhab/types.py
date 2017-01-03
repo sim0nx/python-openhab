@@ -34,7 +34,7 @@ class CommandType(object):
 
   @classmethod
   def validate(cls, value):
-    raise NotImplemented()
+    raise NotImplementedError()
 
 
 class StringType(CommandType):
