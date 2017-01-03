@@ -72,7 +72,7 @@ class DecimalType(CommandType):
 class PercentType(DecimalType):
   @classmethod
   def validate(cls, value):
-    super(OnOffType, cls).validate(value)
+    super(PercentType, cls).validate(value)
 
     if not (value >= 0 and value <= 100):
       raise ValueError()
