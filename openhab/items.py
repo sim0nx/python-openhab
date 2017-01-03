@@ -148,11 +148,26 @@ class DateTimeItem(Item):
     return not self.__eq__(other)
 
   def _parse_rest(self, value):
-    """Parse a REST result into a native object"""
+    """Parse a REST result into a native object
+
+    Args:
+      value (str): A string argument to be converted into a datetime.datetime object.
+
+    Returns:
+      datetime.datetime: The datetime.datetime object as converted from the string
+                         parameter.
+    """
     return dateutil.parser.parse(value)
 
   def _rest_format(self, value):
-    """Format a value before submitting to openHAB"""
+    """Format a value before submitting to openHAB
+    Args:
+      value (datetime.datetime): A datetime.datetime argument to be converted
+                                 into a string.
+
+    Returns:
+      str: The string as converted from the datetime.datetime parameter.
+    """
     return value.isoformat()
 
 
@@ -174,11 +189,25 @@ class NumberItem(Item):
   types = [DecimalType]
 
   def _parse_rest(self, value):
-    '''Parse a REST result into a native object'''
+    """Parse a REST result into a native object
+
+    Args:
+      value (str): A string argument to be converted into a float object.
+
+    Returns:
+      float: The float object as converted from the string parameter.
+    """
     return float(value)
 
   def _rest_format(self, value):
-    '''Format a value before submitting to openHAB'''
+    """Format a value before submitting to openHAB
+
+    Args:
+      value (float): A float argument to be converted into a string.
+
+    Returns:
+      str: The string as converted from the float parameter.
+    """
     return str(value)
 
 
@@ -187,9 +216,9 @@ class ContactItem(Item):
   types = [OpenCloseType]
 
   def open(self):
-    """Set the state of the switch to OPEN"""
+    """Set the state of the contact item to OPEN"""
     self.state = 'OPEN'
 
   def closed(self):
-    """Set the state of the switch to CLOSED"""
+    """Set the state of the contact item to CLOSED"""
     self.state = 'CLOSED'
