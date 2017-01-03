@@ -1,4 +1,5 @@
 [![Code Health](https://landscape.io/github/sim0nx/python-openhab/master/landscape.svg?style=flat)](https://landscape.io/github/sim0nx/python-openhab/master)
+[![Documentation](https://readthedocs.org/projects/pip/badge/?version=latest)](http://python-openhab.readthedocs.io/en/latest/)
 
 
 python library for accessing the openHAB REST API
