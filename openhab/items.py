@@ -25,6 +25,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 import six
 import datetime
 import dateutil.parser
+from openhab.types import *
 
 __author__ = 'Georges Toth <georges@trypill.org>'
 __license__ = 'AGPLv3+'
@@ -63,6 +64,9 @@ class Item(object):
     if self.type_ == 'String':
       if not isinstance(value, six.string_types):
         raise ValueError()
+    elif 'types' in dir(self):
+      for type_ in self.types:
+        type_.validate(value)
     else:
       raise ValueError()
 
@@ -116,8 +120,7 @@ class DateTimeItem(Item):
 
   @Item.state.setter
   def state(self, value):
-    if not isinstance(value, datetime.datetime):
-      raise ValueError()
+    self._validate_value(value)
 
     Item.state.fset(self, value)
 
@@ -127,7 +130,7 @@ class DateTimeItem(Item):
 
   def _rest_format(self, value):
     '''Format a value before submitting to openHAB'''
-    return value.strftime('%Y-%m-%d %H:%M:%S')
+    return value.isoformat()
 
   def _validate_value(self, value):
     if not isinstance(value, datetime.datetime):
@@ -135,11 +138,12 @@ class DateTimeItem(Item):
 
 
 class SwitchItem(Item):
+  types = [OnOffType]
+
   '''Switch item type'''
   @Item.state.setter
   def state(self, value):
-    if value not in ['ON', 'OFF']:
-      raise ValueError()
+    self._validate_value(value)
 
     Item.state.fset(self, value)
 
@@ -151,17 +155,14 @@ class SwitchItem(Item):
     '''Set the state of the switch to OFF'''
     self.state = 'OFF'
 
-  def _validate_value(self, value):
-    if not isinstance(value, six.string_types) or value not in ['ON', 'OFF']:
-      raise ValueError()
-
 
 class NumberItem(Item):
+  types = [DecimalType]
+
   '''Number item type'''
   @Item.state.setter
   def state(self, value):
-    if not (isinstance(value, float) or isinstance(value, int)):
-      raise ValueError()
+    self._validate_value(value)
 
     Item.state.fset(self, value)
 
@@ -173,17 +174,14 @@ class NumberItem(Item):
     '''Format a value before submitting to openHAB'''
     return str(value)
 
-  def _validate_value(self, value):
-    if not (isinstance(value, float) or isinstance(value, int)):
-      raise ValueError()
-
 
 class ContactItem(Item):
+  types = [OpenCloseType]
+
   '''Contact item type'''
   @Item.state.setter
   def state(self, value):
-    if value not in ['OPEN', 'CLOSED']:
-      raise ValueError()
+    self._validate_value(value)
 
     Item.state.fset(self, value)
 
@@ -194,7 +192,3 @@ class ContactItem(Item):
   def closed(self):
     '''Set the state of the switch to CLOSED'''
     self.state = 'CLOSED'
-
-  def _validate_value(self, value):
-    if not isinstance(value, six.string_types) or value not in ['OPEN', 'CLOSED']:
-      raise ValueError()
