@@ -23,6 +23,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 # pylint: disable=bad-indentation
 
 import requests
+from requests.auth import HTTPBasicAuth
 from openhab.items import *
 
 __author__ = 'Georges Toth <georges@trypill.org>'
@@ -31,32 +32,107 @@ __license__ = 'AGPLv3+'
 
 
 class openHAB(object):
-  def __init__(self, base_url):
+  """openHAB REST API client
+  """
+
+  def __init__(self, base_url, username=None, password=None, http_auth=None):
+    """
+    Args:
+      base_url (str): The openHAB REST URL, e.g. http://example.com/rest
+      username (str): A optional username, used in conjunction with a optional
+                      provided password, in case openHAB requires authentication.
+      password (str): A optional password, used in conjunction with a optional
+                      provided username, in case openHAB requires authentication.
+      http_auth (AuthBase): An alternative to username/password pait, is to
+                            specify a custom http authentication object.
+
+    Returns:
+      openHAB: openHAB class instance.
+    """
     self.base_url = base_url
 
     self.session = requests.Session()
     self.session.headers['accept'] = 'application/json'
 
+    if http_auth is not None:
+      self.session.auth = http_auth
+    elif username is not None and password is not None:
+      self.session.auth = HTTPBasicAuth(username, password)
+
   def _check_req_return(self, req):
+    """Internal method for checking the return value of a REST HTTP request.
+
+    Args:
+      req (requests.Response): A requests Response object.
+
+    Returns:
+      None: Returns None if no error occured; else raises an exception.
+
+    Raises:
+      ValueError: Raises a ValueError exception in case of a non-successful
+                  REST request.
+    """
     if not (req.status_code >= 200 and req.status_code < 300):
       req.raise_for_status()
 
+    return None
+
   def req_get(self, uri_path):
+    """Helper method for initiating a HTTP GET request. Besides doing the actual
+    request, it also checks the return value and returns the resulting decoded
+    JSON data.
+
+    Args:
+      uri_path (str): The path to be used in the GET request.
+
+    Returns:
+      dict: Returns a dict containing the data returned by the openHAB REST server.
+    """
     r = self.session.get(self.base_url + uri_path)
     self._check_req_return(r)
     return r.json()
 
   def req_post(self, uri_path, data=None):
+    """Helper method for initiating a HTTP POST request. Besides doing the actual
+    request, it also checks the return value and returns the resulting decoded
+    JSON data.
+
+    Args:
+      uri_path (str): The path to be used in the POST request.
+      data (dict): A optional dict with data to be submitted as part of the POST request.
+
+    Returns:
+      None: No data is returned.
+    """
     r = self.session.post(self.base_url + uri_path, data=data)
     self._check_req_return(r)
 
+    return None
+
   def req_put(self, uri_path, data=None):
+    """Helper method for initiating a HTTP PUT request. Besides doing the actual
+    request, it also checks the return value and returns the resulting decoded
+    JSON data.
+
+    Args:
+      uri_path (str): The path to be used in the PUT request.
+      data (dict): A optional dict with data to be submitted as part of the PUT request.
+
+    Returns:
+      None: No data is returned.
+    """
     r = self.session.put(self.base_url + uri_path, data=data)
     self._check_req_return(r)
 
+    return None
+
   # fetch all items
   def fetch_all_items(self):
-    '''Returns all items defined in openHAB except for group-items'''
+    """Returns all items defined in openHAB except for group-items
+
+    Returns:
+      dict: Returns a dict with item names as key and item class instances as value.
+    """
     items = {}
     res = self.req_get('/items/')
 
@@ -71,12 +147,29 @@ class openHAB(object):
     return items
 
   def get_item(self, name):
-    '''Returns an item with its state and type as fetched from openHAB'''
+    """Returns an item with its state and type as fetched from openHAB
+
+    Args:
+      name (str): The name of the item to fetch from openHAB.
+
+    Returns:
+      Item: A corresponding Item class instance with the state of the requested item.
+    """
     json_data = self.get_item_raw(name)
 
     return self.json_to_item(json_data)
 
   def json_to_item(self, json_data):
+    """This method takes as argument the RAW (JSON decoded) response for an openHAB
+    item. It checks of what type the item is and returns a class instance of the
+    specific item filled with the item's state.
+
+    Args:
+      json_data (dict): The JSON decoded data as returned by the openHAB server.
+
+    Returns:
+      Item: A corresponding Item class instance with the state of the item.
+    """
     if json_data['type'] == 'Switch':
       return SwitchItem(self, json_data)
     elif json_data['type'] == 'DateTime':
@@ -89,5 +182,12 @@ class openHAB(object):
       return Item(self, json_data)
 
   def get_item_raw(self, name):
-    '''Private method for fetching a json configuration of an item'''
+    """Private method for fetching a json configuration of an item.
+
+    Args:
+      name (str): The item name to be fetched.
+
+    Returns:
+      dict: A JSON decoded dict.
+    """
     return self.req_get('/items/{}'.format(name))
