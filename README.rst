@@ -6,6 +6,10 @@
    :target: http://python-openhab.readthedocs.io/en/latest/
    :alt: Documentation
 
+.. image:: https://www.quantifiedcode.com/api/v1/project/0cd779d9548547c09f69009316e548e1/badge.svg
+  :target: https://www.quantifiedcode.com/app/project/0cd779d9548547c09f69009316e548e1
+  :alt: Code issues
+
 
 python library for accessing the openHAB REST API
 =================================================
