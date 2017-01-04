@@ -29,8 +29,6 @@ from openhab.types import DateTimeType, OnOffType, DecimalType, OpenCloseType
 __author__ = 'Georges Toth <georges@trypill.org>'
 __license__ = 'AGPLv3+'
 
-__all__ = ['Item', 'DateTimeItem', 'SwitchItem', 'NumberItem', 'ContactItem']
-
 
 class Item(object):
   """Base item class"""
