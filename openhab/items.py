@@ -23,12 +23,13 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 # pylint: disable=bad-indentation
 
 import six
-import datetime
 import dateutil.parser
-from openhab.types import *
+from openhab.types import DateTimeType, OnOffType, DecimalType, OpenCloseType
 
 __author__ = 'Georges Toth <georges@trypill.org>'
 __license__ = 'AGPLv3+'
+
+__all__ = ['Item', 'DateTimeItem', 'SwitchItem', 'NumberItem', 'ContactItem']
 
 
 class Item(object):

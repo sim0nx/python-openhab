@@ -5,3 +5,4 @@ python-targets:
 pep8:
   disable:
     - E114
+    - W105
