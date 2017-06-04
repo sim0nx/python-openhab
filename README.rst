@@ -13,22 +13,38 @@
 
 python library for accessing the openHAB REST API
 =================================================
-  This library allows for easily accessing the openHAB REST API.
-  A number of features are implemented but not all, this is work in progress.
+
+This library allows for easily accessing the openHAB REST API.
+A number of features are implemented but not all, this is work in progress.
 
 Requirements
 ------------
+
   - python 2.7.x / 3.5
   - python :: dateutil
   - python :: requests
 
 Note on openHAB1:
 -----------------
-  Make sure to use the 1.x branch for openHAB1.x!
+
+Make sure to use the 1.x branch for openHAB1.x!
+
+Installation
+------------
+
+Install the latest version using pip:
+
+.. code-block:: bash
+
+  pip install python-openhab
+
 
 Example
 -------
-  Example usage of the library::
+
+Example usage of the library:
+
+.. code-block:: python
 
     from openhab import openHAB
     
@@ -40,4 +56,3 @@ Example
     
     sunset = items.get('Sunset')
     print(sunset.state)
-
