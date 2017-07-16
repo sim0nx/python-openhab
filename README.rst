@@ -56,3 +56,15 @@ Example usage of the library:
     
     sunset = items.get('Sunset')
     print(sunset.state)
+
+    # fetch a single item
+    item = openhab.get_item('light_switch')
+
+    # turn a swith on
+    item.on()
+
+    # send a state update (this only update the state)
+    item.state = 'OFF'
+
+    # send a command
+    item.command('ON')
