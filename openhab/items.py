@@ -175,11 +175,11 @@ class SwitchItem(Item):
 
   def on(self):
     """Set the state of the switch to ON"""
-    self.state = 'ON'
+    self.command('ON')
 
   def off(self):
     """Set the state of the switch to OFF"""
-    self.state = 'OFF'
+    self.command('OFF')
 
 
 class NumberItem(Item):
