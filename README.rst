@@ -24,7 +24,7 @@ A number of features are implemented but not all, this is work in progress.
 Requirements
 ------------
 
-  - python 2.7.x / 3.5
+  - python >= 3.5
   - python :: dateutil
   - python :: requests
   - python :: typing
