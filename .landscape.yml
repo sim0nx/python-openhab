@@ -1,8 +1,0 @@
-python-targets:
-  - 2
-  - 3
-
-pep8:
-  disable:
-    - E114
-    - W105

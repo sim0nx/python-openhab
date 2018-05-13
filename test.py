@@ -1,9 +1,8 @@
 #!/usr/bin/env python3
-from __future__ import absolute_import, division, print_function, unicode_literals
 # -*- coding: utf-8 -*-
 
 #
-# Georges Toth (c) 2016 <georges@trypill.org>
+# Georges Toth (c) 2016-present <georges@trypill.org>
 #
 # python-openhab is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -21,24 +20,20 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 
 import datetime
-import pytz
-from openhab import openHAB
-
+import openhab
 
 base_url = 'http://localhost:8080/rest'
-openhab = openHAB(base_url)
-
+openhab = openhab.OpenHAB(base_url)
 
 # fetch all items
 items = openhab.fetch_all_items()
-
 
 # fetch other items, show how to toggle a switch
 sunset = items.get('Sunset')
 sunrise = items.get('Sunrise')
 knx_day_night = items.get('KNX_day_night')
 
-now = datetime.datetime.now(pytz.utc)
+now = datetime.datetime.now(datetime.timezone.utc)
 
 if now > sunrise.state and now < sunset.state:
   knx_day_night.on()

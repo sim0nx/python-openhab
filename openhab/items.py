@@ -1,9 +1,8 @@
-from __future__ import absolute_import, division, print_function, unicode_literals
 # -*- coding: utf-8 -*-
 """python library for accessing the openHAB REST API"""
 
 #
-# Georges Toth (c) 2016 <georges@trypill.org>
+# Georges Toth (c) 2016-present <georges@trypill.org>
 #
 # python-openhab is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -21,30 +20,34 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # pylint: disable=bad-indentation
 
-import six
 import dateutil.parser
-from openhab.types import DateTimeType, OnOffType, DecimalType, OpenCloseType
+import typing
+
+import openhab
+import openhab.types
 
 __author__ = 'Georges Toth <georges@trypill.org>'
 __license__ = 'AGPLv3+'
 
 
-class Item(object):
+class Item:
   """Base item class"""
-  def __init__(self, openhab, json_data):
+  types = []  # type: typing.List[typing.Type[openhab.types.CommandType]]
+
+  def __init__(self, openhab: openhab.OpenHAB, json_data: dict) -> None:
     """
     Args:
-      openhab (openHAB): openHAB object.
+      openhab (openhab.OpenHAB): openHAB object.
       json_data (dic): A dict converted from the JSON data returned by the openHAB
                        server.
     """
     self.openhab = openhab
     self.type_ = None
     self.name = ''
-    self._state = None
+    self._state = None  # type: typing.Optional[typing.Any]
     self.init_from_json(json_data)
 
-  def init_from_json(self, json_data):
+  def init_from_json(self, json_data: dict):
     """Initialize this object from a json configuration as fetched from
     openHAB
 
@@ -57,7 +60,7 @@ class Item(object):
     self.__set_state(json_data['state'])
 
   @property
-  def state(self):
+  def state(self) -> typing.Any:
     """The state property represents the current state of the item. The state is
     automatically refreshed from openHAB on reading it.
     Updating the value via this property send an update to the event bus.
@@ -68,41 +71,41 @@ class Item(object):
     return self._state
 
   @state.setter
-  def state(self, value):
+  def state(self, value: typing.Any):
     self.update(value)
 
-  def _validate_value(self, value):
+  def _validate_value(self, value: typing.Union[str, typing.Type[openhab.types.CommandType]]):
     """Private method for verifying the new value before modifying the state of the
     item.
     """
     if self.type_ == 'String':
-      if not isinstance(value, six.string_types):
+      if not isinstance(value, str):
         raise ValueError()
-    elif 'types' in dir(self):
+    elif len(self.types):
       for type_ in self.types:
         type_.validate(value)
     else:
       raise ValueError()
 
-  def _parse_rest(self, value):
+  def _parse_rest(self, value: str) -> str:
     """Parse a REST result into a native object."""
     return value
 
-  def _rest_format(self, value):
+  def _rest_format(self, value: str) -> str:
     """Format a value before submitting to openHAB."""
     return value
 
-  def __set_state(self, value):
+  def __set_state(self, value: str):
     """Private method for setting the internal state."""
     if value in ('UNDEF', 'NULL'):
       self._state = None
     else:
       self._state = self._parse_rest(value)
 
-  def __str__(self):
+  def __str__(self) -> str:
     return '<{0} - {1} : {2}>'.format(self.type_, self.name, self._state)
 
-  def update(self, value):
+  def update(self, value: typing.Any):
     """Updates the state of an item.
 
     Args:
@@ -115,7 +118,7 @@ class Item(object):
 
     self.openhab.req_put('/items/' + self.name + '/state', data=v)
 
-  def command(self, value):
+  def command(self, value: typing.Any):
     """Sends the given value as command to the event bus.
 
     Args:
@@ -131,7 +134,7 @@ class Item(object):
 
 class DateTimeItem(Item):
   """DateTime item type"""
-  types = [DateTimeType]
+  types = [openhab.types.DateTimeType]
 
   def __gt__(self, other):
     return self._state > other
@@ -171,7 +174,7 @@ class DateTimeItem(Item):
 
 class SwitchItem(Item):
   """SwitchItem item type"""
-  types = [OnOffType]
+  types = [openhab.types.OnOffType]
 
   def on(self):
     """Set the state of the switch to ON"""
@@ -184,7 +187,7 @@ class SwitchItem(Item):
 
 class NumberItem(Item):
   """NumberItem item type"""
-  types = [DecimalType]
+  types = [openhab.types.DecimalType]
 
   def _parse_rest(self, value):
     """Parse a REST result into a native object
@@ -211,7 +214,7 @@ class NumberItem(Item):
 
 class ContactItem(Item):
   """Contact item type"""
-  types = [OpenCloseType]
+  types = [openhab.types.OpenCloseType]
 
   def open(self):
     """Set the state of the contact item to OPEN"""

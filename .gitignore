@@ -63,3 +63,5 @@ target/
 .pydevproject
 .project
 .settings
+.idea
+.mypy_cache

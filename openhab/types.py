@@ -1,9 +1,8 @@
-from __future__ import absolute_import, division, print_function, unicode_literals
 # -*- coding: utf-8 -*-
 """python library for accessing the openHAB REST API"""
 
 #
-# Georges Toth (c) 2016 <georges@trypill.org>
+# Georges Toth (c) 2016-present <georges@trypill.org>
 #
 # python-openhab is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -21,18 +20,20 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # pylint: disable=bad-indentation
 
-import six
 import datetime
+import abc
+import typing
 
 __author__ = 'Georges Toth <georges@trypill.org>'
 __license__ = 'AGPLv3+'
 
 
-class CommandType(object):
+class CommandType(metaclass=abc.ABCMeta):
   """Base command type class"""
 
   @classmethod
-  def validate(cls, value):
+  @abc.abstractmethod
+  def validate(cls, value: typing.Any):
     """Value validation method. As this is the base class which should not be used
     directly, we throw a NotImplementedError exception.
 
@@ -50,7 +51,7 @@ class CommandType(object):
 class StringType(CommandType):
   """StringType type class"""
   @classmethod
-  def validate(cls, value):
+  def validate(cls, value: str):
     """Value validation method.
     Valid values are andy of type string.
 
@@ -60,14 +61,14 @@ class StringType(CommandType):
     Raises:
       ValueError: Raises ValueError if an invalid value has been specified.
     """
-    if not isinstance(value, six.string_types):
+    if not isinstance(value, str):
       raise ValueError()
 
 
 class OnOffType(StringType):
   """OnOffType type class"""
   @classmethod
-  def validate(cls, value):
+  def validate(cls, value: str):
     """Value validation method.
     Valid values are ``ON`` and ``OFF``.
 
@@ -77,7 +78,7 @@ class OnOffType(StringType):
     Raises:
       ValueError: Raises ValueError if an invalid value has been specified.
     """
-    super(OnOffType, cls).validate(value)
+    super().validate(value)
 
     if value not in ['ON', 'OFF']:
       raise ValueError()
@@ -86,7 +87,7 @@ class OnOffType(StringType):
 class OpenCloseType(StringType):
   """OpenCloseType type class"""
   @classmethod
-  def validate(cls, value):
+  def validate(cls, value: str):
     """Value validation method.
     Valid values are ``OPEN`` and ``CLOSED``.
 
@@ -96,7 +97,7 @@ class OpenCloseType(StringType):
     Raises:
       ValueError: Raises ValueError if an invalid value has been specified.
     """
-    super(OpenCloseType, cls).validate(value)
+    super().validate(value)
 
     if value not in ['OPEN', 'CLOSED']:
       raise ValueError()
@@ -105,7 +106,7 @@ class OpenCloseType(StringType):
 class DecimalType(CommandType):
   """DecimalType type class"""
   @classmethod
-  def validate(cls, value):
+  def validate(cls, value: typing.Union[float, int]):
     """Value validation method.
     Valid values are any of type ``float`` or ``int``.
 
@@ -122,7 +123,7 @@ class DecimalType(CommandType):
 class PercentType(DecimalType):
   """PercentType type class"""
   @classmethod
-  def validate(cls, value):
+  def validate(cls, value: typing.Union[float, int]):
     """Value validation method.
     Valid values are any of type ``float`` or ``int`` and must be greater of equal to 0
     and smaller or equal to 100.
@@ -133,7 +134,7 @@ class PercentType(DecimalType):
     Raises:
       ValueError: Raises ValueError if an invalid value has been specified.
     """
-    super(PercentType, cls).validate(value)
+    super().validate(value)
 
     if not (0 <= value <= 100):
       raise ValueError()
@@ -142,7 +143,7 @@ class PercentType(DecimalType):
 class IncreaseDecreaseType(StringType):
   """IncreaseDecreaseType type class"""
   @classmethod
-  def validate(cls, value):
+  def validate(cls, value: str):
     """Value validation method.
     Valid values are ``INCREASE`` and ``DECREASE``.
 
@@ -152,7 +153,7 @@ class IncreaseDecreaseType(StringType):
     Raises:
       ValueError: Raises ValueError if an invalid value has been specified.
     """
-    super(IncreaseDecreaseType, cls).validate(value)
+    super().validate(value)
 
     if value not in ['INCREASE', 'DECREASE']:
       raise ValueError()
@@ -161,7 +162,7 @@ class IncreaseDecreaseType(StringType):
 class DateTimeType(CommandType):
   """DateTimeType type class"""
   @classmethod
-  def validate(cls, value):
+  def validate(cls, value: datetime.datetime):
     """Value validation method.
     Valid values are any of type ``datetime.datetime``.
 
