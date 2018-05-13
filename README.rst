@@ -6,9 +6,9 @@
    :target: https://www.codacy.com/app/sim0nx/python-openhab?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=sim0nx/python-openhab&amp;utm_campaign=Badge_Grade
    :alt: Codacy badge
 
-.. image:: https://readthedocs.org/projects/pip/badge/?version=latest
-   :target: http://python-openhab.readthedocs.io/en/latest/
-   :alt: Documentation
+.. image:: https://readthedocs.org/projects/python-openhab/badge/?version=latest
+   :target: http://python-openhab.readthedocs.io/en/latest/?badge=latest
+   :alt: Documentation Status
 
 .. image:: https://badge.fury.io/py/python-openhab.svg
    :target: https://badge.fury.io/py/python-openhab
