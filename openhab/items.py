@@ -34,14 +34,14 @@ class Item:
   """Base item class"""
   types = []  # type: typing.List[typing.Type[openhab.types.CommandType]]
 
-  def __init__(self, openhab: openhab.OpenHAB, json_data: dict) -> None:
+  def __init__(self, openhab_conn: openhab.OpenHAB, json_data: dict) -> None:
     """
     Args:
-      openhab (openhab.OpenHAB): openHAB object.
+      openhab_conn (openhab.OpenHAB): openHAB object.
       json_data (dic): A dict converted from the JSON data returned by the openHAB
                        server.
     """
-    self.openhab = openhab
+    self.openhab = openhab_conn
     self.type_ = None
     self.name = ''
     self._state = None  # type: typing.Optional[typing.Any]
