@@ -22,7 +22,7 @@
 
 import requests
 from requests.auth import HTTPBasicAuth
-from openhab.items import Item, DateTimeItem, SwitchItem, NumberItem, ContactItem
+from .items import Item, DateTimeItem, SwitchItem, NumberItem, ContactItem
 import warnings
 import typing
 
