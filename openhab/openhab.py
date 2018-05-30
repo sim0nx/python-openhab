@@ -149,7 +149,7 @@ class OpenHAB:
 
     return items
 
-  def get_item(self, name: str) -> object:
+  def get_item(self, name: str) -> Item:
     """Returns an item with its state and type as fetched from openHAB
 
     Args:
@@ -162,7 +162,7 @@ class OpenHAB:
 
     return self.json_to_item(json_data)
 
-  def json_to_item(self, json_data: dict) -> object:
+  def json_to_item(self, json_data: dict) -> Item:
     """This method takes as argument the RAW (JSON decoded) response for an openHAB
     item. It checks of what type the item is and returns a class instance of the
     specific item filled with the item's state.
