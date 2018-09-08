@@ -48,7 +48,7 @@ class OpenHAB:
                       provided username, in case openHAB requires authentication.
       http_auth (AuthBase, optional): An alternative to username/password pair, is to
                             specify a custom http authentication object of type :class:`requests.auth.AuthBase`.
-      timeout (str, optional): An optional timeout for REST transactions
+      timeout (float, optional): An optional timeout for REST transactions
 
     Returns:
       OpenHAB: openHAB class instance.
