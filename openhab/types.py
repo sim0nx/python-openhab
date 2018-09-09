@@ -20,8 +20,8 @@
 
 # pylint: disable=bad-indentation
 
-import datetime
 import abc
+import datetime
 import typing
 
 __author__ = 'Georges Toth <georges@trypill.org>'
@@ -116,7 +116,7 @@ class DecimalType(CommandType):
     Raises:
       ValueError: Raises ValueError if an invalid value has been specified.
     """
-    if not (isinstance(value, float) or isinstance(value, int)):
+    if not isinstance(value, (int, float)):
       raise ValueError()
 
 

@@ -20,11 +20,13 @@
 
 # pylint: disable=bad-indentation
 
+import typing
+import warnings
+
 import requests
 from requests.auth import HTTPBasicAuth
-from .items import Item, DateTimeItem, SwitchItem, NumberItem, ContactItem
-import warnings
-import typing
+
+import openhab.items
 
 __author__ = 'Georges Toth <georges@trypill.org>'
 __license__ = 'AGPLv3+'
@@ -60,7 +62,7 @@ class OpenHAB:
 
     if http_auth is not None:
       self.session.auth = http_auth
-    elif not(username is None or password is None):
+    elif not (username is None or password is None):
       self.session.auth = HTTPBasicAuth(username, password)
 
     self.timeout = timeout
@@ -95,11 +97,11 @@ class OpenHAB:
     Returns:
       dict: Returns a dict containing the data returned by the openHAB REST server.
     """
-    r = self.session.get(self.base_url + uri_path, timeout = self.timeout)
+    r = self.session.get(self.base_url + uri_path, timeout=self.timeout)
     self._check_req_return(r)
     return r.json()
 
-  def req_post(self, uri_path: str, data: typing.Optional[dict]=None) -> None:
+  def req_post(self, uri_path: str, data: typing.Optional[dict] = None) -> None:
     """Helper method for initiating a HTTP POST request. Besides doing the actual
     request, it also checks the return value and returns the resulting decoded
     JSON data.
@@ -111,12 +113,12 @@ class OpenHAB:
     Returns:
       None: No data is returned.
     """
-    r = self.session.post(self.base_url + uri_path, data=data, timeout = self.timeout)
+    r = self.session.post(self.base_url + uri_path, data=data, timeout=self.timeout)
     self._check_req_return(r)
 
     return None
 
-  def req_put(self, uri_path: str, data: typing.Optional[dict]=None) -> None:
+  def req_put(self, uri_path: str, data: typing.Optional[dict] = None) -> None:
     """Helper method for initiating a HTTP PUT request. Besides doing the actual
     request, it also checks the return value and returns the resulting decoded
     JSON data.
@@ -128,7 +130,7 @@ class OpenHAB:
     Returns:
       None: No data is returned.
     """
-    r = self.session.put(self.base_url + uri_path, data=data, timeout = self.timeout)
+    r = self.session.put(self.base_url + uri_path, data=data, timeout=self.timeout)
     self._check_req_return(r)
 
     return None
@@ -153,7 +155,7 @@ class OpenHAB:
 
     return items
 
-  def get_item(self, name: str) -> Item:
+  def get_item(self, name: str) -> openhab.items.Item:
     """Returns an item with its state and type as fetched from openHAB
 
     Args:
@@ -166,7 +168,7 @@ class OpenHAB:
 
     return self.json_to_item(json_data)
 
-  def json_to_item(self, json_data: dict) -> Item:
+  def json_to_item(self, json_data: dict) -> openhab.items.Item:
     """This method takes as argument the RAW (JSON decoded) response for an openHAB
     item. It checks of what type the item is and returns a class instance of the
     specific item filled with the item's state.
@@ -178,15 +180,17 @@ class OpenHAB:
       Item: A corresponding Item class instance with the state of the item.
     """
     if json_data['type'] == 'Switch':
-      return SwitchItem(self, json_data)
+      return openhab.items.SwitchItem(self, json_data)
     elif json_data['type'] == 'DateTime':
-      return DateTimeItem(self, json_data)
+      return openhab.items.DateTimeItem(self, json_data)
     elif json_data['type'] == 'Contact':
-      return ContactItem(self, json_data)
+      return openhab.items.ContactItem(self, json_data)
     elif json_data['type'] == 'Number':
-      return NumberItem(self, json_data)
+      return openhab.items.NumberItem(self, json_data)
+    elif json_data['type'] == 'Dimmer':
+      return openhab.items.DimmerItem(self, json_data)
     else:
-      return Item(self, json_data)
+      return openhab.items.Item(self, json_data)
 
   def get_item_raw(self, name: str) -> typing.Any:
     """Private method for fetching a json configuration of an item.
@@ -200,6 +204,7 @@ class OpenHAB:
     return self.req_get('/items/{}'.format(name))
 
 
+# noinspection PyPep8Naming
 class openHAB(OpenHAB):
   def __init__(self, *args, **kwargs):
     super().__init__(*args, **kwargs)

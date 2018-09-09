@@ -20,8 +20,9 @@
 
 # pylint: disable=bad-indentation
 
-import dateutil.parser
 import typing
+
+import dateutil.parser
 
 import openhab
 import openhab.types
@@ -81,9 +82,19 @@ class Item:
     if self.type_ == 'String':
       if not isinstance(value, str):
         raise ValueError()
-    elif len(self.types):
+    elif self.types:
+      validation = False
+
       for type_ in self.types:
-        type_.validate(value)
+        try:
+          type_.validate(value)
+        except ValueError:
+          pass
+        else:
+          validation = True
+
+      if not validation:
+        raise ValueError('Invalid value "{}"'.format(value))
     else:
       raise ValueError()
 
@@ -116,8 +127,10 @@ class Item:
 
     v = self._rest_format(value)
 
+    # noinspection PyTypeChecker
     self.openhab.req_put('/items/' + self.name + '/state', data=v)
 
+  # noinspection PyTypeChecker
   def command(self, value: typing.Any):
     """Sends the given value as command to the event bus.
 
@@ -223,3 +236,49 @@ class ContactItem(Item):
   def closed(self):
     """Set the state of the contact item to CLOSED"""
     self.state = 'CLOSED'
+
+
+class DimmerItem(Item):
+  """DimmerItem item type"""
+  types = [openhab.types.OnOffType, openhab.types.PercentType, openhab.types.IncreaseDecreaseType]
+
+  def _parse_rest(self, value):
+    """Parse a REST result into a native object
+
+    Args:
+      value (str): A string argument to be converted into a int object.
+
+    Returns:
+      int: The int object as converted from the string parameter.
+    """
+    return int(value)
+
+  def _rest_format(self, value: typing.Any):
+    """Format a value before submitting to openHAB
+
+    Args:
+      value: Either a string or an integer; in the latter case we have to cast it to a string.
+
+    Returns:
+      str: The string as possibly converted from the parameter.
+    """
+    if not isinstance(value, str):
+      return str(value)
+
+    return value
+
+  def on(self):
+    """Set the state of the dimmer to ON"""
+    self.command('ON')
+
+  def off(self):
+    """Set the state of the dimmer to OFF"""
+    self.command('OFF')
+
+  def increase(self):
+    """Increase the state of the dimmer"""
+    self.command('INCREASE')
+
+  def decrease(self):
+    """Decrease the state of the dimmer"""
+    self.command('DECREASE')
