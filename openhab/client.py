@@ -37,7 +37,8 @@ class OpenHAB:
   def __init__(self, base_url: str,
                username: typing.Optional[str] = None,
                password: typing.Optional[str] = None,
-               http_auth: typing.Optional[requests.auth.AuthBase] = None) -> None:
+               http_auth: typing.Optional[requests.auth.AuthBase] = None,
+               timeout: typing.Optional[float] = None) -> None:
     """
     Args:
       base_url (str): The openHAB REST URL, e.g. http://example.com/rest
@@ -47,6 +48,7 @@ class OpenHAB:
                       provided username, in case openHAB requires authentication.
       http_auth (AuthBase, optional): An alternative to username/password pair, is to
                             specify a custom http authentication object of type :class:`requests.auth.AuthBase`.
+      timeout (float, optional): An optional timeout for REST transactions
 
     Returns:
       OpenHAB: openHAB class instance.
@@ -60,6 +62,8 @@ class OpenHAB:
       self.session.auth = http_auth
     elif not(username is None or password is None):
       self.session.auth = HTTPBasicAuth(username, password)
+
+    self.timeout = timeout
 
   @staticmethod
   def _check_req_return(req: requests.Response) -> None:
@@ -91,7 +95,7 @@ class OpenHAB:
     Returns:
       dict: Returns a dict containing the data returned by the openHAB REST server.
     """
-    r = self.session.get(self.base_url + uri_path)
+    r = self.session.get(self.base_url + uri_path, timeout = self.timeout)
     self._check_req_return(r)
     return r.json()
 
@@ -107,7 +111,7 @@ class OpenHAB:
     Returns:
       None: No data is returned.
     """
-    r = self.session.post(self.base_url + uri_path, data=data)
+    r = self.session.post(self.base_url + uri_path, data=data, timeout = self.timeout)
     self._check_req_return(r)
 
     return None
@@ -124,7 +128,7 @@ class OpenHAB:
     Returns:
       None: No data is returned.
     """
-    r = self.session.put(self.base_url + uri_path, data=data)
+    r = self.session.put(self.base_url + uri_path, data=data, timeout = self.timeout)
     self._check_req_return(r)
 
     return None
