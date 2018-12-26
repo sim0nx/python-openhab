@@ -22,6 +22,7 @@
 
 import typing
 import warnings
+import re
 
 import requests
 from requests.auth import HTTPBasicAuth
@@ -185,7 +186,13 @@ class OpenHAB:
       return openhab.items.DateTimeItem(self, json_data)
     elif json_data['type'] == 'Contact':
       return openhab.items.ContactItem(self, json_data)
-    elif json_data['type'] == 'Number':
+    elif json_data['type'].startswith('Number'):
+      if json_data['type'].startswith('Number:'):
+        m = re.match(r'''^([^\s]+)''', json_data['state'])
+
+        if m:
+          json_data['state'] = m.group(1)
+
       return openhab.items.NumberItem(self, json_data)
     elif json_data['type'] == 'Dimmer':
       return openhab.items.DimmerItem(self, json_data)
