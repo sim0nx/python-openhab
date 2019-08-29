@@ -251,7 +251,7 @@ class DimmerItem(Item):
     Returns:
       int: The int object as converted from the string parameter.
     """
-    return int(value)
+    return int(float(value))
 
   def _rest_format(self, value: typing.Any):
     """Format a value before submitting to openHAB
