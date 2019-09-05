@@ -3,9 +3,6 @@ from os.path import join, dirname
 
 from setuptools import setup, find_packages
 
-__version__ = (2, 9)
-__versionstr__ = '.'.join(map(str, __version__))
-
 f = open(join(dirname(__file__), 'README.rst'))
 long_description = f.read().strip()
 f.close()
@@ -23,7 +20,7 @@ setup(
   url="https://github.com/sim0nx/python-openhab",
   download_url="https://github.com/sim0nx/python-openhab",
   long_description=long_description,
-  version=__versionstr__,
+  version='2.10.0',
   author="Georges Toth",
   author_email="georges@trypill.org",
   packages=find_packages(
