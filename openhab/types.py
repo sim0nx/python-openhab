@@ -23,6 +23,7 @@
 import abc
 import datetime
 import typing
+import re
 
 __author__ = 'Georges Toth <georges@trypill.org>'
 __license__ = 'AGPLv3+'
@@ -101,6 +102,30 @@ class OpenCloseType(StringType):
 
     if value not in ['OPEN', 'CLOSED']:
       raise ValueError()
+
+
+class ColorType(StringType):
+  """ColorType type class"""
+  @classmethod
+  def validate(cls, value: str):
+    """Value validation method.
+    Valid values are in format H,S,B.
+    Value ranges:
+      H(ue): 0-360
+      S(aturation): 0-100
+      B(rightness): 0-100
+
+    Args:
+      value (str): The value to validate.
+
+    Raises:
+      ValueError: Raises ValueError if an invalid value has been specified.
+    """
+    super().validate(value)
+    h,s,b = re.split(',', value)
+    if not ((0 <= int(h) <= 360) and (0 <= int(s) <= 100) and (0 <= int(b) <= 100)):
+        raise ValueError()
+
 
 
 class DecimalType(CommandType):

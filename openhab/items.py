@@ -282,3 +282,49 @@ class DimmerItem(Item):
   def decrease(self):
     """Decrease the state of the dimmer"""
     self.command('DECREASE')
+
+
+class ColorItem(Item):
+  """ColorItem item type"""
+  types = [openhab.types.OnOffType, openhab.types.PercentType, openhab.types.IncreaseDecreaseType, openhab.types.ColorType]
+
+  def _parse_rest(self, value):
+    """Parse a REST result into a native object
+
+    Args:
+      value (str): A string argument to be converted into a str object.
+
+    Returns:
+      str: The str object as converted from the string parameter.
+    """
+    return str(value)
+
+  def _rest_format(self, value: typing.Any):
+    """Format a value before submitting to openHAB
+
+    Args:
+      value: Either a string or an integer; in the latter case we have to cast it to a string.
+
+    Returns:
+      str: The string as possibly converted from the parameter.
+    """
+    if not isinstance(value, str):
+      return str(value)
+
+    return value
+
+  def on(self):
+    """Set the state of the color to ON"""
+    self.command('ON')
+
+  def off(self):
+    """Set the state of the color to OFF"""
+    self.command('OFF')
+
+  def increase(self):
+    """Increase the state of the color"""
+    self.command('INCREASE')
+
+  def decrease(self):
+    """Decrease the state of the color"""
+    self.command('DECREASE')
