@@ -206,3 +206,43 @@ class DateTimeType(CommandType):
     """
     if not isinstance(value, datetime.datetime):
       raise ValueError()
+
+
+class UpDownType(StringType):
+  """UpDownType type class"""
+
+  @classmethod
+  def validate(cls, value: str):
+    """Value validation method.
+    Valid values are ``UP`` and ``DOWN``.
+
+    Args:
+      value (str): The value to validate.
+
+    Raises:
+      ValueError: Raises ValueError if an invalid value has been specified.
+    """
+    super().validate(value)
+
+    if value not in ['UP', 'DOWN']:
+      raise ValueError()
+
+
+class StopType(StringType):
+  """UpDownType type class"""
+
+  @classmethod
+  def validate(cls, value: str):
+    """Value validation method.
+    Valid values are ``UP`` and ``DOWN``.
+
+    Args:
+      value (str): The value to validate.
+
+    Raises:
+      ValueError: Raises ValueError if an invalid value has been specified.
+    """
+    super().validate(value)
+
+    if value not in ['STOP']:
+      raise ValueError()

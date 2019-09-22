@@ -328,3 +328,45 @@ class ColorItem(Item):
   def decrease(self):
     """Decrease the state of the color"""
     self.command('DECREASE')
+
+
+class RollershutterItem(Item):
+  """RollershutterItem item type"""
+  types = [openhab.types.UpDownType, openhab.types.PercentType, openhab.types.StopType]
+
+  def _parse_rest(self, value):
+    """Parse a REST result into a native object
+
+    Args:
+      value (str): A string argument to be converted into a int object.
+
+    Returns:
+      int: The int object as converted from the string parameter.
+    """
+    return int(float(value))
+
+  def _rest_format(self, value: typing.Any):
+    """Format a value before submitting to openHAB
+
+    Args:
+      value: Either a string or an integer; in the latter case we have to cast it to a string.
+
+    Returns:
+      str: The string as possibly converted from the parameter.
+    """
+    if not isinstance(value, str):
+      return str(value)
+
+    return value
+
+  def up(self):
+    """Set the state of the dimmer to ON"""
+    self.command('UP')
+
+  def down(self):
+    """Set the state of the dimmer to OFF"""
+    self.command('DOWN')
+
+  def stop(self):
+    """Set the state of the dimmer to OFF"""
+    self.command('STOP')
