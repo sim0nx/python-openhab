@@ -204,6 +204,9 @@ class OpenHAB:
     if json_data['type'] == 'Color':
       return openhab.items.ColorItem(self, json_data)
 
+    if json_data['type'] == 'Rollershutter':
+      return openhab.items.RollershutterItem(self, json_data)
+
     return openhab.items.Item(self, json_data)
 
   def get_item_raw(self, name: str) -> typing.Any:
