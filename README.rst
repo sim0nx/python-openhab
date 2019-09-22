@@ -1,7 +1,3 @@
-.. image:: https://landscape.io/github/sim0nx/python-openhab/master/landscape.svg?style=flat
-   :target: https://landscape.io/github/sim0nx/python-openhab/master
-   :alt: Code Health
-
 .. image:: https://api.codacy.com/project/badge/Grade/c9f4e32e536f4150a8e7e18039f8f102
    :target: https://www.codacy.com/app/sim0nx/python-openhab?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=sim0nx/python-openhab&amp;utm_campaign=Badge_Grade
    :alt: Codacy badge
