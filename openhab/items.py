@@ -24,7 +24,6 @@ import typing
 
 import dateutil.parser
 
-import openhab
 import openhab.types
 
 __author__ = 'Georges Toth <georges@trypill.org>'
@@ -286,7 +285,8 @@ class DimmerItem(Item):
 
 class ColorItem(Item):
   """ColorItem item type"""
-  types = [openhab.types.OnOffType, openhab.types.PercentType, openhab.types.IncreaseDecreaseType, openhab.types.ColorType]
+  types = [openhab.types.OnOffType, openhab.types.PercentType, openhab.types.IncreaseDecreaseType,
+           openhab.types.ColorType]
 
   def _parse_rest(self, value):
     """Parse a REST result into a native object

@@ -22,8 +22,8 @@
 
 import abc
 import datetime
-import typing
 import re
+import typing
 
 __author__ = 'Georges Toth <georges@trypill.org>'
 __license__ = 'AGPLv3+'
@@ -51,6 +51,7 @@ class CommandType(metaclass=abc.ABCMeta):
 
 class StringType(CommandType):
   """StringType type class"""
+
   @classmethod
   def validate(cls, value: str):
     """Value validation method.
@@ -68,6 +69,7 @@ class StringType(CommandType):
 
 class OnOffType(StringType):
   """OnOffType type class"""
+
   @classmethod
   def validate(cls, value: str):
     """Value validation method.
@@ -87,6 +89,7 @@ class OnOffType(StringType):
 
 class OpenCloseType(StringType):
   """OpenCloseType type class"""
+
   @classmethod
   def validate(cls, value: str):
     """Value validation method.
@@ -106,6 +109,7 @@ class OpenCloseType(StringType):
 
 class ColorType(StringType):
   """ColorType type class"""
+
   @classmethod
   def validate(cls, value: str):
     """Value validation method.
@@ -122,14 +126,14 @@ class ColorType(StringType):
       ValueError: Raises ValueError if an invalid value has been specified.
     """
     super().validate(value)
-    h,s,b = re.split(',', value)
+    h, s, b = re.split(',', value)
     if not ((0 <= int(h) <= 360) and (0 <= int(s) <= 100) and (0 <= int(b) <= 100)):
-        raise ValueError()
-
+      raise ValueError()
 
 
 class DecimalType(CommandType):
   """DecimalType type class"""
+
   @classmethod
   def validate(cls, value: typing.Union[float, int]):
     """Value validation method.
@@ -147,6 +151,7 @@ class DecimalType(CommandType):
 
 class PercentType(DecimalType):
   """PercentType type class"""
+
   @classmethod
   def validate(cls, value: typing.Union[float, int]):
     """Value validation method.
@@ -167,6 +172,7 @@ class PercentType(DecimalType):
 
 class IncreaseDecreaseType(StringType):
   """IncreaseDecreaseType type class"""
+
   @classmethod
   def validate(cls, value: str):
     """Value validation method.
@@ -186,6 +192,7 @@ class IncreaseDecreaseType(StringType):
 
 class DateTimeType(CommandType):
   """DateTimeType type class"""
+
   @classmethod
   def validate(cls, value: datetime.datetime):
     """Value validation method.

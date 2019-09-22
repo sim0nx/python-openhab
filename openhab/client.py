@@ -20,9 +20,9 @@
 
 # pylint: disable=bad-indentation
 
+import re
 import typing
 import warnings
-import re
 
 import requests
 from requests.auth import HTTPBasicAuth
@@ -182,11 +182,14 @@ class OpenHAB:
     """
     if json_data['type'] == 'Switch':
       return openhab.items.SwitchItem(self, json_data)
-    elif json_data['type'] == 'DateTime':
+
+    if json_data['type'] == 'DateTime':
       return openhab.items.DateTimeItem(self, json_data)
-    elif json_data['type'] == 'Contact':
+
+    if json_data['type'] == 'Contact':
       return openhab.items.ContactItem(self, json_data)
-    elif json_data['type'].startswith('Number'):
+
+    if json_data['type'].startswith('Number'):
       if json_data['type'].startswith('Number:'):
         m = re.match(r'''^([^\s]+)''', json_data['state'])
 
@@ -194,12 +197,14 @@ class OpenHAB:
           json_data['state'] = m.group(1)
 
       return openhab.items.NumberItem(self, json_data)
-    elif json_data['type'] == 'Dimmer':
+
+    if json_data['type'] == 'Dimmer':
       return openhab.items.DimmerItem(self, json_data)
-    elif json_data['type'] == 'Color':
-        return openhab.items.ColorItem(self, json_data)
-    else:
-      return openhab.items.Item(self, json_data)
+
+    if json_data['type'] == 'Color':
+      return openhab.items.ColorItem(self, json_data)
+
+    return openhab.items.Item(self, json_data)
 
   def get_item_raw(self, name: str) -> typing.Any:
     """Private method for fetching a json configuration of an item.
