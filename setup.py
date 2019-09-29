@@ -14,7 +14,7 @@ setuptools.setup(
   url="https://github.com/sim0nx/python-openhab",
   download_url="https://github.com/sim0nx/python-openhab",
   long_description=long_description,
-  version='2.10.1',
+  version='2.10.2',
   author="Georges Toth",
   author_email="georges@trypill.org",
   packages=setuptools.find_packages(),
