@@ -1,22 +1,20 @@
-.. _api:
-
 API Documentation
 =================
 
-openHAB
--------
+client
+----------
 
-.. autoclass:: openhab.openhab.openHAB
+.. automodule:: openhab.client
     :members:
 
-Items
-------
+items
+----------
 
 .. automodule:: openhab.items
     :members:
 
-Types
-------
+types
+----------
 
 .. automodule:: openhab.types
     :members:
