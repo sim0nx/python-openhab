@@ -116,7 +116,7 @@ class Item:
   def __str__(self) -> str:
     return '<{0} - {1} : {2}>'.format(self.type_, self.name, self._state)
 
-  def update(self, value: typing.Any):
+  def update(self, value: typing.Any) -> None:
     """Updates the state of an item.
 
     Args:
@@ -128,10 +128,10 @@ class Item:
     v = self._rest_format(value)
 
     # noinspection PyTypeChecker
-    self.openhab.req_put('/items/' + self.name + '/state', data=v)
+    self.openhab.req_put('/items/{}/state'.format(self.name), data=v)
 
   # noinspection PyTypeChecker
-  def command(self, value: typing.Any):
+  def command(self, value: typing.Any) -> None:
     """Sends the given value as command to the event bus.
 
     Args:
@@ -142,7 +142,7 @@ class Item:
 
     v = self._rest_format(value)
 
-    self.openhab.req_post('/items/' + self.name, data=v)
+    self.openhab.req_post('/items/{}'.format(self.name), data=v)
 
 
 class DateTimeItem(Item):
