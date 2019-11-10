@@ -233,8 +233,12 @@ class NumberItem(Item):
 
 
 class ContactItem(Item):
-  """Contact item type"""
+  """Contact item type."""
   types = [openhab.types.OpenCloseType]
+
+  def command(self, *args, **kwargs):
+    """This overrides the `Item` command method. Commands are not accepted for items of type contact!"""
+    raise ValueError('This item ({}) only supports updates, not commands!'.format(self.__class__))
 
   def open(self):
     """Set the state of the contact item to OPEN"""
