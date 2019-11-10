@@ -65,3 +65,6 @@ target/
 .settings
 .idea
 .mypy_cache
+.vscode
+venv
+venv

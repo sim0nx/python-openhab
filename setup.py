@@ -14,10 +14,11 @@ setuptools.setup(
   url="https://github.com/sim0nx/python-openhab",
   download_url="https://github.com/sim0nx/python-openhab",
   long_description=long_description,
-  version='2.10.2',
+  version='2.11.0',
   author="Georges Toth",
   author_email="georges@trypill.org",
   packages=setuptools.find_packages(),
+  package_data={'openhab': ['py.typed']},
   keywords=['openHAB'],
   classifiers=[
     "Development Status :: 4 - Beta",
@@ -30,6 +31,6 @@ setuptools.setup(
   install_requires=[
     'requests>=2.4.3',
     'python-dateutil>=2.2',
-    'typing'
   ],
+  python_requires='>=3.5',
 )

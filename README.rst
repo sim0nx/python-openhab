@@ -51,7 +51,7 @@ Example usage of the library:
     from openhab import openHAB
     
     base_url = 'http://localhost:8080/rest'
-    openhab = openHAB(base_url)
+    openhab = OpenHAB(base_url)
    
     # fetch all items
     items = openhab.fetch_all_items()
@@ -62,7 +62,7 @@ Example usage of the library:
     # fetch a single item
     item = openhab.get_item('light_switch')
 
-    # turn a swith on
+    # turn a switch on
     item.on()
 
     # send a state update (this only update the state)
