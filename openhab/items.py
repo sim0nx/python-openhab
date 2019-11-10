@@ -182,7 +182,8 @@ class DateTimeItem(Item):
     Returns:
       str: The string as converted from the datetime.datetime parameter.
     """
-    return value.isoformat()
+    # openHAB supports only up to milliseconds as of this writing
+    return value.isoformat(timespec='milliseconds')
 
 
 class SwitchItem(Item):
