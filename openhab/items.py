@@ -20,6 +20,7 @@
 
 # pylint: disable=bad-indentation
 
+import re
 import typing
 
 import dateutil.parser
@@ -202,7 +203,7 @@ class NumberItem(Item):
   types = [openhab.types.DecimalType]
 
   def _parse_rest(self, value):
-    """Parse a REST result into a native object
+    """Parse a REST result into a native object.
 
     Args:
       value (str): A string argument to be converted into a float object.
@@ -210,7 +211,14 @@ class NumberItem(Item):
     Returns:
       float: The float object as converted from the string parameter.
     """
-    return float(value)
+    # Items of type NumberItem may contain units of measurement. Here we make sure to strip them off.
+    # @TODO possibly implement supporting UoM data for NumberItems not sure this would be useful.
+    m = re.match(r'''^([0-9.]+)''', value)
+
+    if m:
+      return float(m.group(1))
+
+    raise ValueError('{}: unable to parse value "{}"'.format(self.__class__, value))
 
   def _rest_format(self, value):
     """Format a value before submitting to openHAB
