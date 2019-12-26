@@ -214,7 +214,7 @@ class NumberItem(Item):
     """
     # Items of type NumberItem may contain units of measurement. Here we make sure to strip them off.
     # @TODO possibly implement supporting UoM data for NumberItems not sure this would be useful.
-    m = re.match(r'''^([0-9.]+)''', value)
+    m = re.match(r'''^(-?[0-9.]+)''', value)
 
     if m:
       return float(m.group(1))
