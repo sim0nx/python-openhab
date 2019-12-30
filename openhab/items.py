@@ -140,7 +140,7 @@ class Item:
 
     v = self._rest_format(value)
 
-    self._update(value)
+    self._update(v)
 
   # noinspection PyTypeChecker
   def command(self, value: typing.Any) -> None:
