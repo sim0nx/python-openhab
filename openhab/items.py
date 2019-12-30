@@ -116,6 +116,16 @@ class Item:
   def __str__(self) -> str:
     return '<{0} - {1} : {2}>'.format(self.type_, self.name, self._state)
 
+  def _update(self, value: typing.Any) -> None:
+    """Updates the state of an item, input validation is expected to be already done.
+
+    Args:
+      value (object): The value to update the item with. The type of the value depends
+                      on the item type and is checked accordingly.
+    """
+    # noinspection PyTypeChecker
+    self.openhab.req_put('/items/{}/state'.format(self.name), data=value)
+
   def update(self, value: typing.Any) -> None:
     """Updates the state of an item.
 
@@ -127,8 +137,7 @@ class Item:
 
     v = self._rest_format(value)
 
-    # noinspection PyTypeChecker
-    self.openhab.req_put('/items/{}/state'.format(self.name), data=v)
+    self._update(value)
 
   # noinspection PyTypeChecker
   def command(self, value: typing.Any) -> None:
@@ -143,6 +152,14 @@ class Item:
     v = self._rest_format(value)
 
     self.openhab.req_post('/items/{}'.format(self.name), data=v)
+
+  def update_state_null(self):
+    """Update the state of the item to *NULL*."""
+    self._update('NULL')
+
+  def update_state_undef(self):
+    """Update the state of the item to *UNDEF*."""
+    self._update('UNDEF')
 
 
 class DateTimeItem(Item):
