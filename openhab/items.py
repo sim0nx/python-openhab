@@ -46,6 +46,7 @@ class Item:
     self.type_ = None
     self.name = ''
     self._state = None  # type: typing.Optional[typing.Any]
+    self._raw_state = None  # type: typing.Optional[typing.Any]  # raw state as returned by the server
     self.init_from_json(json_data)
 
   def init_from_json(self, json_data: dict):
@@ -108,6 +109,8 @@ class Item:
 
   def __set_state(self, value: str):
     """Private method for setting the internal state."""
+    self._raw_state = value
+
     if value in ('UNDEF', 'NULL'):
       self._state = None
     else:
@@ -153,13 +156,39 @@ class Item:
 
     self.openhab.req_post('/items/{}'.format(self.name), data=v)
 
-  def update_state_null(self):
+  def update_state_null(self) -> None:
     """Update the state of the item to *NULL*."""
     self._update('NULL')
 
-  def update_state_undef(self):
+  def update_state_undef(self) -> None:
     """Update the state of the item to *UNDEF*."""
     self._update('UNDEF')
+
+  def is_state_null(self) -> bool:
+    """If the item state is None, use this method for checking if the remote value is NULL."""
+    if self.state is None:
+      # we need to query the current remote state as else this method will not work correctly if called after
+      # either update_state method
+      if self._raw_state is None:
+        # This should never happen
+        raise ValueError('Invalid internal (raw) state.')
+
+      return self._raw_state == 'NULL'
+
+    return False
+
+  def is_state_undef(self) -> bool:
+    """If the item state is None, use this method for checking if the remote value is UNDEF."""
+    if self.state is None:
+      # we need to query the current remote state as else this method will not work correctly if called after
+      # either update_state method
+      if self._raw_state is None:
+        # This should never happen
+        raise ValueError('Invalid internal (raw) state.')
+
+      return self._raw_state == 'UNDEF'
+
+    return False
 
 
 class DateTimeItem(Item):
