@@ -107,7 +107,7 @@ class Item:
     """Format a value before submitting to openHAB."""
     return value
 
-  def __set_state(self, value: str):
+  def __set_state(self, value: str) -> None:
     """Private method for setting the internal state."""
     self._raw_state = value
 
@@ -236,11 +236,11 @@ class SwitchItem(Item):
   """SwitchItem item type"""
   types = [openhab.types.OnOffType]
 
-  def on(self):
+  def on(self) -> None:
     """Set the state of the switch to ON"""
     self.command('ON')
 
-  def off(self):
+  def off(self) -> None:
     """Set the state of the switch to OFF"""
     self.command('OFF')
 
@@ -249,7 +249,7 @@ class NumberItem(Item):
   """NumberItem item type"""
   types = [openhab.types.DecimalType]
 
-  def _parse_rest(self, value):
+  def _parse_rest(self, value: str) -> float:
     """Parse a REST result into a native object.
 
     Args:
@@ -267,7 +267,7 @@ class NumberItem(Item):
 
     raise ValueError('{}: unable to parse value "{}"'.format(self.__class__, value))
 
-  def _rest_format(self, value):
+  def _rest_format(self, value: float) -> str:
     """Format a value before submitting to openHAB
 
     Args:
@@ -283,15 +283,15 @@ class ContactItem(Item):
   """Contact item type."""
   types = [openhab.types.OpenCloseType]
 
-  def command(self, *args, **kwargs):
+  def command(self, *args, **kwargs) -> None:
     """This overrides the `Item` command method. Commands are not accepted for items of type contact!"""
     raise ValueError('This item ({}) only supports updates, not commands!'.format(self.__class__))
 
-  def open(self):
+  def open(self) -> None:
     """Set the state of the contact item to OPEN"""
     self.state = 'OPEN'
 
-  def closed(self):
+  def closed(self) -> None:
     """Set the state of the contact item to CLOSED"""
     self.state = 'CLOSED'
 
@@ -300,7 +300,7 @@ class DimmerItem(Item):
   """DimmerItem item type"""
   types = [openhab.types.OnOffType, openhab.types.PercentType, openhab.types.IncreaseDecreaseType]
 
-  def _parse_rest(self, value):
+  def _parse_rest(self, value: str) -> int:
     """Parse a REST result into a native object
 
     Args:
@@ -311,8 +311,8 @@ class DimmerItem(Item):
     """
     return int(float(value))
 
-  def _rest_format(self, value: typing.Any):
-    """Format a value before submitting to openHAB
+  def _rest_format(self, value: typing.Union[str, int]) -> str:
+    """Format a value before submitting to OpenHAB
 
     Args:
       value: Either a string or an integer; in the latter case we have to cast it to a string.
@@ -325,19 +325,19 @@ class DimmerItem(Item):
 
     return value
 
-  def on(self):
+  def on(self) -> None:
     """Set the state of the dimmer to ON"""
     self.command('ON')
 
-  def off(self):
+  def off(self) -> None:
     """Set the state of the dimmer to OFF"""
     self.command('OFF')
 
-  def increase(self):
+  def increase(self) -> None:
     """Increase the state of the dimmer"""
     self.command('INCREASE')
 
-  def decrease(self):
+  def decrease(self) -> None:
     """Decrease the state of the dimmer"""
     self.command('DECREASE')
 
@@ -347,7 +347,7 @@ class ColorItem(Item):
   types = [openhab.types.OnOffType, openhab.types.PercentType, openhab.types.IncreaseDecreaseType,
            openhab.types.ColorType]
 
-  def _parse_rest(self, value):
+  def _parse_rest(self, value: str) -> str:
     """Parse a REST result into a native object
 
     Args:
@@ -358,7 +358,7 @@ class ColorItem(Item):
     """
     return str(value)
 
-  def _rest_format(self, value: typing.Any):
+  def _rest_format(self, value: typing.Union[str, int]) -> str:
     """Format a value before submitting to openHAB
 
     Args:
@@ -372,19 +372,19 @@ class ColorItem(Item):
 
     return value
 
-  def on(self):
+  def on(self) -> None:
     """Set the state of the color to ON"""
     self.command('ON')
 
-  def off(self):
+  def off(self) -> None:
     """Set the state of the color to OFF"""
     self.command('OFF')
 
-  def increase(self):
+  def increase(self) -> None:
     """Increase the state of the color"""
     self.command('INCREASE')
 
-  def decrease(self):
+  def decrease(self) -> None:
     """Decrease the state of the color"""
     self.command('DECREASE')
 
@@ -393,7 +393,7 @@ class RollershutterItem(Item):
   """RollershutterItem item type"""
   types = [openhab.types.UpDownType, openhab.types.PercentType, openhab.types.StopType]
 
-  def _parse_rest(self, value):
+  def _parse_rest(self, value: str) -> int:
     """Parse a REST result into a native object
 
     Args:
@@ -404,7 +404,7 @@ class RollershutterItem(Item):
     """
     return int(float(value))
 
-  def _rest_format(self, value: typing.Any):
+  def _rest_format(self, value: typing.Union[str, int]) -> str:
     """Format a value before submitting to openHAB
 
     Args:
@@ -418,14 +418,14 @@ class RollershutterItem(Item):
 
     return value
 
-  def up(self):
+  def up(self) -> None:
     """Set the state of the dimmer to ON"""
     self.command('UP')
 
-  def down(self):
+  def down(self) -> None:
     """Set the state of the dimmer to OFF"""
     self.command('DOWN')
 
-  def stop(self):
+  def stop(self) -> None:
     """Set the state of the dimmer to OFF"""
     self.command('STOP')

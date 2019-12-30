@@ -96,7 +96,7 @@ class OpenHAB:
       uri_path (str): The path to be used in the GET request.
 
     Returns:
-      dict: Returns a dict containing the data returned by the openHAB REST server.
+      dict: Returns a dict containing the data returned by the OpenHAB REST server.
     """
     r = self.session.get(self.base_url + uri_path, timeout=self.timeout)
     self._check_req_return(r)
@@ -137,7 +137,7 @@ class OpenHAB:
     return None
 
   # fetch all items
-  def fetch_all_items(self) -> dict:
+  def fetch_all_items(self) -> typing.Dict[str, openhab.items.Item]:
     """Returns all items defined in openHAB except for group-items
 
     Returns:

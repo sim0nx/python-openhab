@@ -53,7 +53,7 @@ class StringType(CommandType):
   """StringType type class"""
 
   @classmethod
-  def validate(cls, value: str):
+  def validate(cls, value: str) -> None:
     """Value validation method.
     Valid values are andy of type string.
 
@@ -71,7 +71,7 @@ class OnOffType(StringType):
   """OnOffType type class"""
 
   @classmethod
-  def validate(cls, value: str):
+  def validate(cls, value: str) -> None:
     """Value validation method.
     Valid values are ``ON`` and ``OFF``.
 
@@ -91,7 +91,7 @@ class OpenCloseType(StringType):
   """OpenCloseType type class"""
 
   @classmethod
-  def validate(cls, value: str):
+  def validate(cls, value: str) -> None:
     """Value validation method.
     Valid values are ``OPEN`` and ``CLOSED``.
 
@@ -111,7 +111,7 @@ class ColorType(StringType):
   """ColorType type class"""
 
   @classmethod
-  def validate(cls, value: str):
+  def validate(cls, value: str) -> None:
     """Value validation method.
     Valid values are in format H,S,B.
     Value ranges:
@@ -135,7 +135,7 @@ class DecimalType(CommandType):
   """DecimalType type class"""
 
   @classmethod
-  def validate(cls, value: typing.Union[float, int]):
+  def validate(cls, value: typing.Union[float, int]) -> None:
     """Value validation method.
     Valid values are any of type ``float`` or ``int``.
 
@@ -153,7 +153,7 @@ class PercentType(DecimalType):
   """PercentType type class"""
 
   @classmethod
-  def validate(cls, value: typing.Union[float, int]):
+  def validate(cls, value: typing.Union[float, int]) -> None:
     """Value validation method.
     Valid values are any of type ``float`` or ``int`` and must be greater of equal to 0
     and smaller or equal to 100.
@@ -174,7 +174,7 @@ class IncreaseDecreaseType(StringType):
   """IncreaseDecreaseType type class"""
 
   @classmethod
-  def validate(cls, value: str):
+  def validate(cls, value: str) -> None:
     """Value validation method.
     Valid values are ``INCREASE`` and ``DECREASE``.
 
@@ -194,7 +194,7 @@ class DateTimeType(CommandType):
   """DateTimeType type class"""
 
   @classmethod
-  def validate(cls, value: datetime.datetime):
+  def validate(cls, value: datetime.datetime) -> None:
     """Value validation method.
     Valid values are any of type ``datetime.datetime``.
 
@@ -212,7 +212,7 @@ class UpDownType(StringType):
   """UpDownType type class"""
 
   @classmethod
-  def validate(cls, value: str):
+  def validate(cls, value: str) -> None:
     """Value validation method.
     Valid values are ``UP`` and ``DOWN``.
 
@@ -232,7 +232,7 @@ class StopType(StringType):
   """UpDownType type class"""
 
   @classmethod
-  def validate(cls, value: str):
+  def validate(cls, value: str) -> None:
     """Value validation method.
     Valid values are ``UP`` and ``DOWN``.
 
