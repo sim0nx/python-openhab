@@ -71,6 +71,30 @@ Example usage of the library:
     # send a command
     item.command('ON')
 
+    # check if item state is NULL
+    if item.state is None and item.is_state_null():
+      pass
+
+    # check if item state is UNDEF
+    if item.state is None and item.is_state_undef():
+      pass
+
+
+Note on NULL and UNDEF
+----------------------
+
+In OpenHAB items may have two states named NULL and UNDEF, which have distinct meanings but basically indicate that an
+item has no usable value.
+This library sets the state of an item, regardless of their OpenHAB value being NULL or UNDEF, to None.
+This in order to ease working with the library as we do cast certain types to native types.
+
+In order to check if an item's state is either NULL or UNDEF, you can use the helper functions:
+
+.. code-block:: python
+
+    item.is_state_null()
+    item.is_state_undef()
+
 
 
 .. toctree::
