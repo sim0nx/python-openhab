@@ -91,6 +91,13 @@ class Item:
 
   @property
   def members(self):
+    """If item is a type of Group, it will return all member items for this group. For none group
+    item empty dictionary will be returned.
+
+    Returns:
+      dict: Returns a dict with item names as key and `Item` class instances as value.
+
+    """
     return self._members
 
   def _validate_value(self, value: typing.Union[str, typing.Type[openhab.types.CommandType]]):
