@@ -79,6 +79,16 @@ Example usage of the library:
     if item.state is None and item.is_state_undef():
       pass
 
+    # fetch some group
+    lights_group = openhab.get_item('lights_group')
+
+    # send command to group
+    lights_group.on()
+
+    # send update to each member
+    for v in lights_group.members.values():
+      v.update('OFF')
+
 
 Note on NULL and UNDEF
 ----------------------

@@ -138,7 +138,7 @@ class OpenHAB:
 
   # fetch all items
   def fetch_all_items(self) -> typing.Dict[str, openhab.items.Item]:
-    """Returns all items defined in openHAB except for group-items
+    """Returns all items defined in openHAB
 
     Returns:
       dict: Returns a dict with item names as key and item class instances as value.
@@ -147,10 +147,6 @@ class OpenHAB:
     res = self.req_get('/items/')
 
     for i in res:
-      # we ignore group-items for now
-      if i['type'] == 'Group':
-        continue
-
       if not i['name'] in items:
         items[i['name']] = self.json_to_item(i)
 
@@ -180,17 +176,21 @@ class OpenHAB:
     Returns:
       Item: A corresponding Item class instance with the state of the item.
     """
-    if json_data['type'] == 'Switch':
+    type = json_data['type']
+    if type == 'Group' and 'groupType' in json_data:
+      type = json_data["groupType"]
+
+    if type == 'Switch':
       return openhab.items.SwitchItem(self, json_data)
 
-    if json_data['type'] == 'DateTime':
+    if type == 'DateTime':
       return openhab.items.DateTimeItem(self, json_data)
 
-    if json_data['type'] == 'Contact':
+    if type == 'Contact':
       return openhab.items.ContactItem(self, json_data)
 
-    if json_data['type'].startswith('Number'):
-      if json_data['type'].startswith('Number:'):
+    if type.startswith('Number'):
+      if type.startswith('Number:'):
         m = re.match(r'''^([^\s]+)''', json_data['state'])
 
         if m:
@@ -198,13 +198,13 @@ class OpenHAB:
 
       return openhab.items.NumberItem(self, json_data)
 
-    if json_data['type'] == 'Dimmer':
+    if type == 'Dimmer':
       return openhab.items.DimmerItem(self, json_data)
 
-    if json_data['type'] == 'Color':
+    if type == 'Color':
       return openhab.items.ColorItem(self, json_data)
 
-    if json_data['type'] == 'Rollershutter':
+    if type == 'Rollershutter':
       return openhab.items.RollershutterItem(self, json_data)
 
     return openhab.items.Item(self, json_data)

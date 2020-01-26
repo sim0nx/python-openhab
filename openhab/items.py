@@ -44,9 +44,12 @@ class Item:
     """
     self.openhab = openhab_conn
     self.type_ = None
+    self.group = False
     self.name = ''
     self._state = None  # type: typing.Optional[typing.Any]
     self._raw_state = None  # type: typing.Optional[typing.Any]  # raw state as returned by the server
+    self._members = {}   # group members (key = item name), for none-group items it's empty
+
     self.init_from_json(json_data)
 
   def init_from_json(self, json_data: dict):
@@ -58,7 +61,17 @@ class Item:
                         server.
     """
     self.name = json_data['name']
-    self.type_ = json_data['type']
+    if json_data['type'] == 'Group':
+      self.group = True
+      if 'groupType' in json_data:
+        self.type_ = json_data['groupType']
+
+      # init members
+      for i in json_data['members']:
+        self.members[i['name']] = self.openhab.json_to_item(i)
+
+    else:
+      self.type_ = json_data['type']
     self.__set_state(json_data['state'])
 
   @property
@@ -75,6 +88,17 @@ class Item:
   @state.setter
   def state(self, value: typing.Any):
     self.update(value)
+
+  @property
+  def members(self):
+    """If item is a type of Group, it will return all member items for this group. For none group
+    item empty dictionary will be returned.
+
+    Returns:
+      dict: Returns a dict with item names as key and `Item` class instances as value.
+
+    """
+    return self._members
 
   def _validate_value(self, value: typing.Union[str, typing.Type[openhab.types.CommandType]]):
     """Private method for verifying the new value before modifying the state of the
