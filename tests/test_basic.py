@@ -12,16 +12,20 @@ def test_fetch_all_items():
   assert len(items)
 
 
-def test_datetime():
+def test_datetime_update():
   dt_obj = openhab.get_item('TheDateTime')
   dt_utc_now = datetime.datetime.utcnow().replace(tzinfo=datetime.timezone.utc)
-
   dt_obj.state = dt_utc_now
-  assert dt_obj.state.isoformat(timespec='milliseconds') == dt_utc_now.isoformat(timespec='milliseconds')
 
+  assert dt_obj.state.isoformat(timespec='seconds') == dt_utc_now.isoformat(timespec='seconds')
+
+
+def test_datetime_command():
+  dt_obj = openhab.get_item('TheDateTime')
   dt_utc_now = datetime.datetime.utcnow().replace(tzinfo=datetime.timezone.utc)
   dt_obj.command(dt_utc_now)
-  assert dt_obj.state.isoformat(timespec='milliseconds') == dt_utc_now.isoformat(timespec='milliseconds')
+
+  assert dt_obj.state.isoformat(timespec='seconds') == dt_utc_now.isoformat(timespec='seconds')
 
 
 def test_null_undef():
