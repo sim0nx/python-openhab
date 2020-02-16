@@ -10,6 +10,10 @@
    :target: https://badge.fury.io/py/python-openhab
    :alt: pypi version
 
+.. image:: https://travis-ci.com/sim0nx/python-openhab.svg?branch=master
+   :target: https://travis-ci.com/sim0nx/python-openhab
+   :alt: travis-ci status
+
 
 python library for accessing the openHAB REST API
 =================================================
@@ -23,13 +27,7 @@ Requirements
   - python >= 3.5
   - python :: dateutil
   - python :: requests
-  - python :: typing
-
-Note on openHAB1:
------------------
-
-The current version is focused on OpenHAB 2.x; OpenHAB 1.x might still work, though this is not tested. If you require
-older OpenHAB support, please use an older version of this library.
+  - openHAB version 2
 
 Installation
 ------------
