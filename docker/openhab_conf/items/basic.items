@@ -1,0 +1,15 @@
+Group    Home                 "Our Home"       <house>                                  ["Building"]
+
+Group    GF                   "Ground Floor"   <groundfloor>   (Home)                   ["GroundFloor"]
+
+Group    Dining               "Dining"                         (Home)                   ["Room"]
+
+Number:Temperature   Dining_Temperature   "Temperature [%.1f °C]"    <temperature>   (Dining, gTemperature)   ["Temperature"] 
+
+Group:Number:AVG   gTemperature   "Temperature"   <temperature>   (Home)   ["Temperature"]
+
+Contact TheContact  "contact test"  (Home)
+
+DateTime  TheDateTime "datetime test [%s]" (Home)
+
+Number  floattest

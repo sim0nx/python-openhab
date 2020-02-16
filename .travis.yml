@@ -1,0 +1,21 @@
+language: python
+services: docker
+cache: pip
+
+matrix:
+  include:
+  - python: "3.7"
+  - python: "3.8"
+
+before_install:
+  - image="openhab/openhab:2.5.1-amd64-alpine"
+
+install:
+  - pip install -U pip
+  - pip install -U pytest
+  - python setup.py install
+  - docker run -d --name openhab -p 8080:8080 -e OPENHAB_HTTP_PORT=8080 -v $TRAVIS_BUILD_DIR/docker/openhab_conf:/openhab/conf $image
+  - python docker/test_connectivity.py
+
+script:
+  - pytest -v tests
