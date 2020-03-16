@@ -48,7 +48,7 @@ Example usage of the library:
 
 .. code-block:: python
 
-    from openhab import openHAB
+    from openhab import OpenHAB
 
     base_url = 'http://localhost:8080/rest'
     openhab = OpenHAB(base_url)
