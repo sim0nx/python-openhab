@@ -12,4 +12,6 @@ Contact TheContact  "contact test"  (Home)
 
 DateTime  TheDateTime "datetime test [%s]" (Home)
 
+String stringtest
+
 Number  floattest

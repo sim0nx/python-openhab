@@ -20,6 +20,7 @@
 
 # pylint: disable=bad-indentation
 
+import logging
 import re
 import typing
 
@@ -49,6 +50,8 @@ class Item:
     self._state = None  # type: typing.Optional[typing.Any]
     self._raw_state = None  # type: typing.Optional[typing.Any]  # raw state as returned by the server
     self._members = {}   # group members (key = item name), for none-group items it's empty
+
+    self.logger = logging.getLogger(__name__)
 
     self.init_from_json(json_data)
 
@@ -105,7 +108,7 @@ class Item:
     item.
     """
     if self.type_ == 'String':
-      if not isinstance(value, str):
+      if not isinstance(value, (str, bytes)):
         raise ValueError()
     elif self.types:
       validation = False
@@ -129,7 +132,15 @@ class Item:
 
   def _rest_format(self, value: str) -> str:
     """Format a value before submitting to openHAB."""
-    return value
+    # Only latin-1 encoding is supported by default. If non-latin-1 characters were provided, convert them to bytes.
+    try:
+      _ = value.encode('latin-1')
+    except UnicodeError:
+      _value = value.encode('utf-8')
+    else:
+      _value = value
+
+    return _value
 
   def __set_state(self, value: str) -> None:
     """Private method for setting the internal state."""

@@ -20,6 +20,7 @@
 
 # pylint: disable=bad-indentation
 
+import logging
 import re
 import typing
 import warnings
@@ -67,6 +68,8 @@ class OpenHAB:
       self.session.auth = HTTPBasicAuth(username, password)
 
     self.timeout = timeout
+
+    self.logger = logging.getLogger(__name__)
 
   @staticmethod
   def _check_req_return(req: requests.Response) -> None:

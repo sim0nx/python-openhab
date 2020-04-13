@@ -43,3 +43,10 @@ def test_float():
 
   float_obj.state = 1.0
   assert float_obj.state == 1.0
+
+
+def test_non_latin1_string():
+  string_obj = openhab.get_item('stringtest')
+
+  string_obj.state = 'שלום'
+  assert string_obj.state == 'שלום'
