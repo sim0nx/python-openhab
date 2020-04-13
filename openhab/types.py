@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""python library for accessing the openHAB REST API"""
+"""python library for accessing the openHAB REST API."""
 
 #
 # Georges Toth (c) 2016-present <georges@trypill.org>
@@ -30,7 +30,7 @@ __license__ = 'AGPLv3+'
 
 
 class CommandType(metaclass=abc.ABCMeta):
-  """Base command type class"""
+  """Base command type class."""
 
   @classmethod
   @abc.abstractmethod
@@ -50,11 +50,12 @@ class CommandType(metaclass=abc.ABCMeta):
 
 
 class StringType(CommandType):
-  """StringType type class"""
+  """StringType type class."""
 
   @classmethod
   def validate(cls, value: str) -> None:
     """Value validation method.
+
     Valid values are andy of type string.
 
     Args:
@@ -68,11 +69,12 @@ class StringType(CommandType):
 
 
 class OnOffType(StringType):
-  """OnOffType type class"""
+  """OnOffType type class."""
 
   @classmethod
   def validate(cls, value: str) -> None:
     """Value validation method.
+
     Valid values are ``ON`` and ``OFF``.
 
     Args:
@@ -88,11 +90,12 @@ class OnOffType(StringType):
 
 
 class OpenCloseType(StringType):
-  """OpenCloseType type class"""
+  """OpenCloseType type class."""
 
   @classmethod
   def validate(cls, value: str) -> None:
     """Value validation method.
+
     Valid values are ``OPEN`` and ``CLOSED``.
 
     Args:
@@ -108,11 +111,12 @@ class OpenCloseType(StringType):
 
 
 class ColorType(StringType):
-  """ColorType type class"""
+  """ColorType type class."""
 
   @classmethod
   def validate(cls, value: str) -> None:
     """Value validation method.
+
     Valid values are in format H,S,B.
     Value ranges:
       H(ue): 0-360
@@ -132,11 +136,12 @@ class ColorType(StringType):
 
 
 class DecimalType(CommandType):
-  """DecimalType type class"""
+  """DecimalType type class."""
 
   @classmethod
   def validate(cls, value: typing.Union[float, int]) -> None:
     """Value validation method.
+
     Valid values are any of type ``float`` or ``int``.
 
     Args:
@@ -150,11 +155,12 @@ class DecimalType(CommandType):
 
 
 class PercentType(DecimalType):
-  """PercentType type class"""
+  """PercentType type class."""
 
   @classmethod
   def validate(cls, value: typing.Union[float, int]) -> None:
     """Value validation method.
+
     Valid values are any of type ``float`` or ``int`` and must be greater of equal to 0
     and smaller or equal to 100.
 
@@ -171,11 +177,12 @@ class PercentType(DecimalType):
 
 
 class IncreaseDecreaseType(StringType):
-  """IncreaseDecreaseType type class"""
+  """IncreaseDecreaseType type class."""
 
   @classmethod
   def validate(cls, value: str) -> None:
     """Value validation method.
+
     Valid values are ``INCREASE`` and ``DECREASE``.
 
     Args:
@@ -191,11 +198,12 @@ class IncreaseDecreaseType(StringType):
 
 
 class DateTimeType(CommandType):
-  """DateTimeType type class"""
+  """DateTimeType type class."""
 
   @classmethod
   def validate(cls, value: datetime.datetime) -> None:
     """Value validation method.
+
     Valid values are any of type ``datetime.datetime``.
 
     Args:
@@ -209,11 +217,12 @@ class DateTimeType(CommandType):
 
 
 class UpDownType(StringType):
-  """UpDownType type class"""
+  """UpDownType type class."""
 
   @classmethod
   def validate(cls, value: str) -> None:
     """Value validation method.
+
     Valid values are ``UP`` and ``DOWN``.
 
     Args:
@@ -229,11 +238,12 @@ class UpDownType(StringType):
 
 
 class StopType(StringType):
-  """UpDownType type class"""
+  """UpDownType type class."""
 
   @classmethod
   def validate(cls, value: str) -> None:
     """Value validation method.
+
     Valid values are ``UP`` and ``DOWN``.
 
     Args:

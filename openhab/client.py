@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""python library for accessing the openHAB REST API"""
+"""python library for accessing the openHAB REST API."""
 
 #
 # Georges Toth (c) 2016-present <georges@trypill.org>
@@ -35,15 +35,15 @@ __license__ = 'AGPLv3+'
 
 
 class OpenHAB:
-  """openHAB REST API client
-  """
+  """openHAB REST API client."""
 
   def __init__(self, base_url: str,
                username: typing.Optional[str] = None,
                password: typing.Optional[str] = None,
                http_auth: typing.Optional[requests.auth.AuthBase] = None,
                timeout: typing.Optional[float] = None) -> None:
-    """
+    """Constructor.
+
     Args:
       base_url (str): The openHAB REST URL, e.g. http://example.com/rest
       username (str, optional): A optional username, used in conjunction with a optional
@@ -88,11 +88,10 @@ class OpenHAB:
     if not (200 <= req.status_code < 300):
       req.raise_for_status()
 
-    return None
-
   def req_get(self, uri_path: str) -> typing.Any:
-    """Helper method for initiating a HTTP GET request. Besides doing the actual
-    request, it also checks the return value and returns the resulting decoded
+    """Helper method for initiating a HTTP GET request.
+
+    Besides doing the actual request, it also checks the return value and returns the resulting decoded
     JSON data.
 
     Args:
@@ -106,8 +105,9 @@ class OpenHAB:
     return r.json()
 
   def req_post(self, uri_path: str, data: typing.Optional[dict] = None) -> None:
-    """Helper method for initiating a HTTP POST request. Besides doing the actual
-    request, it also checks the return value and returns the resulting decoded
+    """Helper method for initiating a HTTP POST request.
+
+    Besides doing the actual request, it also checks the return value and returns the resulting decoded
     JSON data.
 
     Args:
@@ -123,8 +123,9 @@ class OpenHAB:
     return None
 
   def req_put(self, uri_path: str, data: typing.Optional[dict] = None) -> None:
-    """Helper method for initiating a HTTP PUT request. Besides doing the actual
-    request, it also checks the return value and returns the resulting decoded
+    """Helper method for initiating a HTTP PUT request.
+
+    Besides doing the actual request, it also checks the return value and returns the resulting decoded
     JSON data.
 
     Args:
@@ -141,7 +142,7 @@ class OpenHAB:
 
   # fetch all items
   def fetch_all_items(self) -> typing.Dict[str, openhab.items.Item]:
-    """Returns all items defined in openHAB
+    """Returns all items defined in openHAB.
 
     Returns:
       dict: Returns a dict with item names as key and item class instances as value.
@@ -156,7 +157,7 @@ class OpenHAB:
     return items
 
   def get_item(self, name: str) -> openhab.items.Item:
-    """Returns an item with its state and type as fetched from openHAB
+    """Returns an item with its state and type as fetched from openHAB.
 
     Args:
       name (str): The name of the item to fetch from openHAB.
@@ -169,8 +170,9 @@ class OpenHAB:
     return self.json_to_item(json_data)
 
   def json_to_item(self, json_data: dict) -> openhab.items.Item:
-    """This method takes as argument the RAW (JSON decoded) response for an openHAB
-    item. It checks of what type the item is and returns a class instance of the
+    """This method takes as argument the RAW (JSON decoded) response for an openHAB item.
+
+    It checks of what type the item is and returns a class instance of the
     specific item filled with the item's state.
 
     Args:
@@ -226,7 +228,10 @@ class OpenHAB:
 
 # noinspection PyPep8Naming
 class openHAB(OpenHAB):
+  """Legacy class wrapper."""
+
   def __init__(self, *args, **kwargs):
+    """Constructor."""
     super().__init__(*args, **kwargs)
 
     warnings.warn('The use of the "openHAB" class is deprecated, please use "OpenHAB" instead.', DeprecationWarning)

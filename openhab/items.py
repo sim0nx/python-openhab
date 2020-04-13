@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""python library for accessing the openHAB REST API"""
+"""python library for accessing the openHAB REST API."""
 
 #
 # Georges Toth (c) 2016-present <georges@trypill.org>
@@ -33,11 +33,13 @@ __license__ = 'AGPLv3+'
 
 
 class Item:
-  """Base item class"""
+  """Base item class."""
+
   types = []  # type: typing.List[typing.Type[openhab.types.CommandType]]
 
   def __init__(self, openhab_conn: 'openhab.client.OpenHAB', json_data: dict) -> None:
-    """
+    """Constructor.
+
     Args:
       openhab_conn (openhab.OpenHAB): openHAB object.
       json_data (dic): A dict converted from the JSON data returned by the openHAB
@@ -49,15 +51,14 @@ class Item:
     self.name = ''
     self._state = None  # type: typing.Optional[typing.Any]
     self._raw_state = None  # type: typing.Optional[typing.Any]  # raw state as returned by the server
-    self._members = {}   # group members (key = item name), for none-group items it's empty
+    self._members = {}  # type: typing.Dict[str, typing.Any] #  group members (key = item name), for none-group items it's empty
 
     self.logger = logging.getLogger(__name__)
 
     self.init_from_json(json_data)
 
   def init_from_json(self, json_data: dict):
-    """Initialize this object from a json configuration as fetched from
-    openHAB
+    """Initialize this object from a json configuration as fetched from openHAB.
 
     Args:
       json_data (dict): A dict converted from the JSON data returned by the openHAB
@@ -79,8 +80,9 @@ class Item:
 
   @property
   def state(self) -> typing.Any:
-    """The state property represents the current state of the item. The state is
-    automatically refreshed from openHAB on reading it.
+    """The state property represents the current state of the item.
+
+    The state is automatically refreshed from openHAB on reading it.
     Updating the value via this property send an update to the event bus.
     """
     json_data = self.openhab.get_item_raw(self.name)
@@ -94,8 +96,9 @@ class Item:
 
   @property
   def members(self):
-    """If item is a type of Group, it will return all member items for this group. For none group
-    item empty dictionary will be returned.
+    """If item is a type of Group, it will return all member items for this group.
+
+    For none group item empty dictionary will be returned.
 
     Returns:
       dict: Returns a dict with item names as key and `Item` class instances as value.
@@ -104,9 +107,7 @@ class Item:
     return self._members
 
   def _validate_value(self, value: typing.Union[str, typing.Type[openhab.types.CommandType]]):
-    """Private method for verifying the new value before modifying the state of the
-    item.
-    """
+    """Private method for verifying the new value before modifying the state of the item."""
     if self.type_ == 'String':
       if not isinstance(value, (str, bytes)):
         raise ValueError()
@@ -130,15 +131,15 @@ class Item:
     """Parse a REST result into a native object."""
     return value
 
-  def _rest_format(self, value: str) -> str:
+  def _rest_format(self, value: str) -> typing.Union[str, bytes]:
     """Format a value before submitting to openHAB."""
+    _value = value  # type: typing.Union[str, bytes]
+
     # Only latin-1 encoding is supported by default. If non-latin-1 characters were provided, convert them to bytes.
     try:
       _ = value.encode('latin-1')
     except UnicodeError:
       _value = value.encode('utf-8')
-    else:
-      _value = value
 
     return _value
 
@@ -227,7 +228,8 @@ class Item:
 
 
 class DateTimeItem(Item):
-  """DateTime item type"""
+  """DateTime item type."""
+
   types = [openhab.types.DateTimeType]
 
   def __gt__(self, other):
@@ -243,7 +245,7 @@ class DateTimeItem(Item):
     return not self.__eq__(other)
 
   def _parse_rest(self, value):
-    """Parse a REST result into a native object
+    """Parse a REST result into a native object.
 
     Args:
       value (str): A string argument to be converted into a datetime.datetime object.
@@ -255,7 +257,8 @@ class DateTimeItem(Item):
     return dateutil.parser.parse(value)
 
   def _rest_format(self, value):
-    """Format a value before submitting to openHAB
+    """Format a value before submitting to openHAB.
+
     Args:
       value (datetime.datetime): A datetime.datetime argument to be converted
                                  into a string.
@@ -268,20 +271,22 @@ class DateTimeItem(Item):
 
 
 class SwitchItem(Item):
-  """SwitchItem item type"""
+  """SwitchItem item type."""
+
   types = [openhab.types.OnOffType]
 
   def on(self) -> None:
-    """Set the state of the switch to ON"""
+    """Set the state of the switch to ON."""
     self.command('ON')
 
   def off(self) -> None:
-    """Set the state of the switch to OFF"""
+    """Set the state of the switch to OFF."""
     self.command('OFF')
 
 
 class NumberItem(Item):
-  """NumberItem item type"""
+  """NumberItem item type."""
+
   types = [openhab.types.DecimalType]
 
   def _parse_rest(self, value: str) -> float:
@@ -303,7 +308,7 @@ class NumberItem(Item):
     raise ValueError('{}: unable to parse value "{}"'.format(self.__class__, value))
 
   def _rest_format(self, value: float) -> str:
-    """Format a value before submitting to openHAB
+    """Format a value before submitting to openHAB.
 
     Args:
       value (float): A float argument to be converted into a string.
@@ -316,27 +321,32 @@ class NumberItem(Item):
 
 class ContactItem(Item):
   """Contact item type."""
+
   types = [openhab.types.OpenCloseType]
 
   def command(self, *args, **kwargs) -> None:
-    """This overrides the `Item` command method. Commands are not accepted for items of type contact!"""
+    """This overrides the `Item` command method.
+
+    Note: Commands are not accepted for items of type contact.
+    """
     raise ValueError('This item ({}) only supports updates, not commands!'.format(self.__class__))
 
   def open(self) -> None:
-    """Set the state of the contact item to OPEN"""
+    """Set the state of the contact item to OPEN."""
     self.state = 'OPEN'
 
   def closed(self) -> None:
-    """Set the state of the contact item to CLOSED"""
+    """Set the state of the contact item to CLOSED."""
     self.state = 'CLOSED'
 
 
 class DimmerItem(Item):
-  """DimmerItem item type"""
+  """DimmerItem item type."""
+
   types = [openhab.types.OnOffType, openhab.types.PercentType, openhab.types.IncreaseDecreaseType]
 
   def _parse_rest(self, value: str) -> int:
-    """Parse a REST result into a native object
+    """Parse a REST result into a native object.
 
     Args:
       value (str): A string argument to be converted into a int object.
@@ -347,7 +357,7 @@ class DimmerItem(Item):
     return int(float(value))
 
   def _rest_format(self, value: typing.Union[str, int]) -> str:
-    """Format a value before submitting to OpenHAB
+    """Format a value before submitting to OpenHAB.
 
     Args:
       value: Either a string or an integer; in the latter case we have to cast it to a string.
@@ -361,29 +371,30 @@ class DimmerItem(Item):
     return value
 
   def on(self) -> None:
-    """Set the state of the dimmer to ON"""
+    """Set the state of the dimmer to ON."""
     self.command('ON')
 
   def off(self) -> None:
-    """Set the state of the dimmer to OFF"""
+    """Set the state of the dimmer to OFF."""
     self.command('OFF')
 
   def increase(self) -> None:
-    """Increase the state of the dimmer"""
+    """Increase the state of the dimmer."""
     self.command('INCREASE')
 
   def decrease(self) -> None:
-    """Decrease the state of the dimmer"""
+    """Decrease the state of the dimmer."""
     self.command('DECREASE')
 
 
 class ColorItem(Item):
-  """ColorItem item type"""
+  """ColorItem item type."""
+
   types = [openhab.types.OnOffType, openhab.types.PercentType, openhab.types.IncreaseDecreaseType,
            openhab.types.ColorType]
 
   def _parse_rest(self, value: str) -> str:
-    """Parse a REST result into a native object
+    """Parse a REST result into a native object.
 
     Args:
       value (str): A string argument to be converted into a str object.
@@ -394,7 +405,7 @@ class ColorItem(Item):
     return str(value)
 
   def _rest_format(self, value: typing.Union[str, int]) -> str:
-    """Format a value before submitting to openHAB
+    """Format a value before submitting to openHAB.
 
     Args:
       value: Either a string or an integer; in the latter case we have to cast it to a string.
@@ -408,28 +419,29 @@ class ColorItem(Item):
     return value
 
   def on(self) -> None:
-    """Set the state of the color to ON"""
+    """Set the state of the color to ON."""
     self.command('ON')
 
   def off(self) -> None:
-    """Set the state of the color to OFF"""
+    """Set the state of the color to OFF."""
     self.command('OFF')
 
   def increase(self) -> None:
-    """Increase the state of the color"""
+    """Increase the state of the color."""
     self.command('INCREASE')
 
   def decrease(self) -> None:
-    """Decrease the state of the color"""
+    """Decrease the state of the color."""
     self.command('DECREASE')
 
 
 class RollershutterItem(Item):
-  """RollershutterItem item type"""
+  """RollershutterItem item type."""
+
   types = [openhab.types.UpDownType, openhab.types.PercentType, openhab.types.StopType]
 
   def _parse_rest(self, value: str) -> int:
-    """Parse a REST result into a native object
+    """Parse a REST result into a native object.
 
     Args:
       value (str): A string argument to be converted into a int object.
@@ -440,7 +452,7 @@ class RollershutterItem(Item):
     return int(float(value))
 
   def _rest_format(self, value: typing.Union[str, int]) -> str:
-    """Format a value before submitting to openHAB
+    """Format a value before submitting to openHAB.
 
     Args:
       value: Either a string or an integer; in the latter case we have to cast it to a string.
@@ -454,13 +466,13 @@ class RollershutterItem(Item):
     return value
 
   def up(self) -> None:
-    """Set the state of the dimmer to ON"""
+    """Set the state of the dimmer to ON."""
     self.command('UP')
 
   def down(self) -> None:
-    """Set the state of the dimmer to OFF"""
+    """Set the state of the dimmer to OFF."""
     self.command('DOWN')
 
   def stop(self) -> None:
-    """Set the state of the dimmer to OFF"""
+    """Set the state of the dimmer to OFF."""
     self.command('STOP')
