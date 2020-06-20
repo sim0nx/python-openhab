@@ -283,6 +283,13 @@ class SwitchItem(Item):
     """Set the state of the switch to OFF."""
     self.command('OFF')
 
+  def toggle(self) -> None:
+    """Toggle the state of the switch to OFF to ON and vice versa."""
+    if self.state == 'ON':
+      self.off()
+    else:
+      self.on()
+
 
 class NumberItem(Item):
   """NumberItem item type."""
