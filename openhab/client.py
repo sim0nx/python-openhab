@@ -212,6 +212,9 @@ class OpenHAB:
     if type == 'Rollershutter':
       return openhab.items.RollershutterItem(self, json_data)
 
+    if type == 'Player':
+      return openhab.items.PlayerItem(self, json_data)
+
     return openhab.items.Item(self, json_data)
 
   def get_item_raw(self, name: str) -> typing.Any:
