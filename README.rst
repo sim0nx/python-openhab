@@ -18,7 +18,7 @@
 python library for accessing the openHAB REST API
 =================================================
 
-This library allows for easily accessing the OpenHAB REST API.
+This library allows for easily accessing the openHAB REST API.
 A number of features are implemented but not all, this is work in progress.
 
 Requirements
@@ -91,9 +91,9 @@ Example usage of the library:
 Note on NULL and UNDEF
 ----------------------
 
-In OpenHAB items may have two states named NULL and UNDEF, which have distinct meanings but basically indicate that an
+In openHAB items may have two states named NULL and UNDEF, which have distinct meanings but basically indicate that an
 item has no usable value.
-This library sets the state of an item, regardless of their OpenHAB value being NULL or UNDEF, to None.
+This library sets the state of an item, regardless of their openHAB value being NULL or UNDEF, to None.
 This in order to ease working with the library as we do cast certain types to native types.
 
 In order to check if an item's state is either NULL or UNDEF, you can use the helper functions:
