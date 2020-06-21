@@ -256,3 +256,24 @@ class StopType(StringType):
 
     if value not in ['STOP']:
       raise ValueError()
+
+
+class PlayerType(StringType):
+  """PlayerType type class."""
+
+  @classmethod
+  def validate(cls, value: str) -> None:
+    """Value validation method.
+
+    Valid values are ``PLAY``, ``PAUSE``, ``NEXT``, ``PREVIOUS``, ``REWIND``, and ``FASTFORWARD``.
+
+    Args:
+      value (str): The value to validate.
+
+    Raises:
+      ValueError: Raises ValueError if an invalid value has been specified.
+    """
+    super().validate(value)
+
+    if value not in ['PLAY', 'PAUSE', 'NEXT', 'PREVIOUS', 'REWIND', 'FASTFORWARD']:
+      raise ValueError()

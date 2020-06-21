@@ -270,6 +270,28 @@ class DateTimeItem(Item):
     return value.isoformat(timespec='milliseconds')
 
 
+class PlayerItem(Item):
+  """PlayerItem item type."""
+
+  types = [openhab.types.PlayerType]
+
+  def play(self) -> None:
+    """Set the state of the player to PLAY."""
+    self.command('PLAY')
+
+  def pause(self) -> None:
+    """Set the state of the player to PAUSE."""
+    self.command('PAUSE')
+
+  def next(self) -> None:
+    """Set the state of the player to NEXT."""
+    self.command('NEXT')
+
+  def previous(self) -> None:
+    """Set the state of the player to PREVIOUS."""
+    self.command('PREVIOUS')
+
+
 class SwitchItem(Item):
   """SwitchItem item type."""
 
