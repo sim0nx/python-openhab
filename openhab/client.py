@@ -117,7 +117,7 @@ class OpenHAB:
     Returns:
       None: No data is returned.
     """
-    r = self.session.post(self.base_url + uri_path, data=data, timeout=self.timeout)
+    r = self.session.post(self.base_url + uri_path, data=data, headers={'Content-Type': 'text/plain'}, timeout=self.timeout)
     self._check_req_return(r)
 
     return None
@@ -135,7 +135,7 @@ class OpenHAB:
     Returns:
       None: No data is returned.
     """
-    r = self.session.put(self.base_url + uri_path, data=data, timeout=self.timeout)
+    r = self.session.put(self.base_url + uri_path, data=data, headers={'Content-Type': 'text/plain'}, timeout=self.timeout)
     self._check_req_return(r)
 
     return None
