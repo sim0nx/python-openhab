@@ -25,10 +25,17 @@ import re
 import typing
 import warnings
 
+import sseclient
+import threading
 import requests
+import weakref
+import json
+import time
 from requests.auth import HTTPBasicAuth
+from dataclasses import dataclass
 
 import openhab.items
+import openhab.events
 
 __author__ = 'Georges Toth <georges@trypill.org>'
 __license__ = 'AGPLv3+'
@@ -41,7 +48,8 @@ class OpenHAB:
                username: typing.Optional[str] = None,
                password: typing.Optional[str] = None,
                http_auth: typing.Optional[requests.auth.AuthBase] = None,
-               timeout: typing.Optional[float] = None) -> None:
+               timeout: typing.Optional[float] = None,
+               autoUpdate: typing.Optional[bool] = False) -> None:
     """Constructor.
 
     Args:
@@ -53,14 +61,19 @@ class OpenHAB:
       http_auth (AuthBase, optional): An alternative to username/password pair, is to
                             specify a custom http authentication object of type :class:`requests.auth.AuthBase`.
       timeout (float, optional): An optional timeout for REST transactions
+      autoUpdate (bool, optional): Register for Openhab Item Events to actively get informed about changes.
 
     Returns:
       OpenHAB: openHAB class instance.
     """
     self.base_url = base_url
-
+    self.events_url = "{}/events?topics=smarthome/items".format(base_url.strip('/'))
+    self.autoUpdate=autoUpdate
     self.session = requests.Session()
     self.session.headers['accept'] = 'application/json'
+    #self.registered_items:typing.Dict[str,openhab.items.Item]= {}
+    self.registered_items = weakref.WeakValueDictionary()
+
 
     if http_auth is not None:
       self.session.auth = http_auth
@@ -70,6 +83,10 @@ class OpenHAB:
     self.timeout = timeout
 
     self.logger = logging.getLogger(__name__)
+    self.__keep_event_deamon_running__ = False
+    self.eventListeners:typing.List[typing.Callable] = []
+    if self.autoUpdate:
+      self.__installSSEClient__()
 
   @staticmethod
   def _check_req_return(req: requests.Response) -> None:
@@ -87,6 +104,125 @@ class OpenHAB:
     """
     if not (200 <= req.status_code < 300):
       req.raise_for_status()
+
+
+
+  def parseItem(self, event:openhab.events.ItemEvent):
+    if event.itemname in self.registered_items:
+      item=self.registered_items[event.itemname]
+      if item is None:
+        self.logger.warning("item '{}' was removed in all scopes. Ignoring the events coming in for it.".format(event.itemname))
+      else:
+        item._processEvent(event)
+    else:
+      self.logger.debug("item '{}' not registered. ignoring the arrived event.".format(event.itemname))
+
+
+
+
+
+
+
+
+
+  def parseEvent(self,eventData:typing.Dict):
+    log=logging.getLogger()
+    eventreason=eventData["type"]
+
+
+
+    if eventreason  in ["ItemCommandEvent","ItemStateEvent","ItemStateChangedEvent"]:
+      itemname = eventData["topic"].split("/")[-2]
+      event=None
+      payloadData = json.loads(eventData["payload"])
+      remoteDatatype = payloadData["type"]
+      newValue = payloadData["value"]
+      log.debug("####### new Event arrived:")
+      log.debug("item name:{}".format(itemname))
+      log.debug("type:{}".format(eventreason))
+      log.debug("payloadData:{}".format(eventData["payload"]))
+
+      if eventreason =="ItemStateEvent":
+        event = openhab.events.ItemStateEvent(itemname=itemname, source=openhab.events.EventSourceOpenhab, remoteDatatype=remoteDatatype,newValue=newValue,asUpdate=False)
+      elif eventreason =="ItemCommandEvent":
+        event = openhab.events.ItemCommandEvent(itemname=itemname, source=openhab.events.EventSourceOpenhab, remoteDatatype=remoteDatatype, newValue=newValue)
+      elif eventreason in ["ItemStateChangedEvent"]:
+        oldremoteDatatype = payloadData["oldType"]
+        oldValue = payloadData["oldValue"]
+        event=openhab.events.ItemStateChangedEvent(itemname=itemname,source=openhab.events.EventSourceOpenhab, remoteDatatype=remoteDatatype,newValue=newValue,oldRemoteDatatype=oldremoteDatatype,oldValue=oldValue,asUpdate=False)
+        log.debug("received ItemStateChanged for '{itemname}'[{olddatatype}->{datatype}]:{oldState}->{newValue}".format(itemname=itemname, olddatatype=oldremoteDatatype, datatype=remoteDatatype, oldState=oldValue, newValue=newValue))
+
+      else:
+        log.debug("received command for '{itemname}'[{datatype}]:{newValue}".format(itemname=itemname, datatype=remoteDatatype, newValue=newValue))
+      self.informEventListeners(event)
+      self.parseItem(event)
+    else:
+      log.info("received unknown Event-type in Openhab Event stream: {}".format(eventData))
+
+  def informEventListeners(self,event:openhab.events.ItemEvent):
+    for aListener in self.eventListeners:
+      try:
+        aListener(event)
+      except Exception as e:
+        self.logger.error("error executing Eventlistener for event:{}.".format(event.itemname),e)
+
+  def addEventListener(self, listener:typing.Callable[[openhab.events.ItemEvent],None]):
+    self.eventListeners.append(listener)
+
+  def removeEventListener(self, listener:typing.Optional[typing.Callable[[openhab.events.ItemEvent],None]]=None):
+    if listener is None:
+      self.eventListeners.clear()
+    elif listener in self.eventListeners:
+      self.eventListeners.remove(listener)
+
+
+
+
+  def sseDaemonThread(self):
+    self.logger.info("starting Openhab - Event Deamon")
+    next_waittime=initial_waittime=0.1
+    while self.__keep_event_deamon_running__:
+      try:
+        self.logger.info("about to connect to Openhab Events-Stream.")
+        # response = requests.get(self.events_url, stream=True)
+        # self.logger.info("connected to Openhab Events-Stream.")
+
+
+        import urllib3
+        http = urllib3.PoolManager()
+        response = http.request('GET', self.events_url, preload_content=False)
+        self.logger.info("connected to Openhab Events-Stream.")
+        self.sseClient = sseclient.SSEClient(response)
+        self.logger.info("pr")
+
+
+        next_waittime = initial_waittime
+        for event in self.sseClient.events():
+          eventData = json.loads(event.data)
+          self.parseEvent(eventData)
+          if not self.__keep_event_deamon_running__:
+            return
+      except Exception as e:
+        self.logger.warning("Lost connection to Openhab Events-Stream.",e)
+        time.sleep(next_waittime) # aleep a bit and then retry
+        next_waittime=min(10,next_waittime+0.5) # increase waittime over time up to 10 seconds
+
+
+
+
+  def register_item(self, item: openhab.items.Item):
+    if not item is None and not item.name is None:
+      if not item.name in self.registered_items:
+        #self.registered_items[item.name]=weakref.ref(item)
+        self.registered_items[item.name] = item
+
+  def __installSSEClient__(self):
+    """ installs an event Stream to receive all Item events"""
+
+    #now start readerThread
+    self.__keep_event_deamon_running__=True
+    self.sseDaemon = threading.Thread(target=self.sseDaemonThread, args=(), daemon=True)
+    self.sseDaemon.start()
 
   def req_get(self, uri_path: str) -> typing.Any:
     """Helper method for initiating a HTTP GET request.
