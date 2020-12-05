@@ -22,7 +22,8 @@
 import datetime
 import openhab
 
-base_url = 'http://localhost:8080/rest'
+#base_url = 'http://localhost:8080/rest'
+base_url = 'http://10.10.20.81:8080/rest'
 openhab = openhab.OpenHAB(base_url)
 
 # fetch all items
