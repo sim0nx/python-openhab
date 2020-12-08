@@ -28,6 +28,7 @@ import dateutil.parser
 
 import openhab.types
 import openhab.events
+from datetime import datetime, timedelta
 
 __author__ = 'Georges Toth <georges@trypill.org>'
 __license__ = 'AGPLv3+'
@@ -59,6 +60,9 @@ class Item:
     self.logger = logging.getLogger(__name__)
 
     self.init_from_json(json_data)
+    self.lastCommandSent = datetime.fromtimestamp(0)
+    self.lastUpdateSent = datetime.fromtimestamp(0)
+
     self.openhab.register_item(self)
     self.eventListeners: typing.Dict[typing.Callable[[openhab.events.ItemEvent],None],Item.EventListener]={}
     #typing.List[typing.Callable] = []
@@ -101,11 +105,11 @@ class Item:
   def state(self, value: typing.Any):
     oldstate= self._state
     self.update(value)
-    if oldstate==self._state:
-      event=openhab.events.ItemStateEvent( itemname=self.name,source=openhab.events.EventSourceInternal, remoteDatatype=self.type_,newValue=self._state, asUpdate=False)
-    else:
-      event = openhab.events.ItemStateChangedEvent(itemname=self.name,source=openhab.events.EventSourceInternal, remoteDatatype=self.type_, newValue=self._state, oldRemoteDatatype=self.type_,oldValue=oldstate, asUpdate=False)
-    self._processEvent(event)
+    # if oldstate==self._state:
+    #   event=openhab.events.ItemStateEvent( itemname=self.name,source=openhab.events.EventSourceInternal, remoteDatatype=self.type_,newValueRaw=self._state, asUpdate=False)
+    # else:
+    #   event = openhab.events.ItemStateChangedEvent(itemname=self.name,source=openhab.events.EventSourceInternal, remoteDatatype=self.type_, newValueRaw=self._state, oldRemoteDatatype=self.type_,oldValueRaw=oldstate, asUpdate=False)
+    # self._processEvent(event)
 
   @property
   def members(self):
@@ -156,23 +160,58 @@ class Item:
 
     return _value
 
-  def _processEvent(self,event:openhab.events.ItemEvent):
-    if  event.source==openhab.events.EventSourceOpenhab:
-      self.__set_state(value=event.newValue)
+  def _isMyOwnChange(self, event):
+    now = datetime.now()
+    self.logger.debug("_isMyOwnChange:event.source:{}, event.type{}, self._state:{}, event.newValue:{},self.lastCommandSent:{}, self.lastUpdateSent:{} , now:{}".format(event.source,event.type,self._state,event.newValue ,self.lastCommandSent,self.lastUpdateSent,now))
+    if event.source == openhab.events.EventSourceOpenhab:
+      if event.type in [openhab.events.ItemCommandEventType, openhab.events.ItemStateChangedEventType, openhab.events.ItemStateEventType]:
+        if self._state == event.newValue:
+          if max(self.lastCommandSent, self.lastUpdateSent) + timedelta(milliseconds=self.openhab.maxEchoToOpenhabMS) > now:
+            # this is the echo of the command we just sent to openHAB.
+            return True
+      return False
+    else:
+      return True
+
+
+
+  def _processExternalEvent(self, event:openhab.events.ItemEvent):
+    self.logger.info("processing external event")
+    newValue,uom=self._parse_rest(event.newValueRaw)
+    event.newValue=newValue
+    event.unitOfMeasure=uom
+    if event.type==openhab.events.ItemStateChangedEventType:
+      oldValue,ouom=self._parse_rest(event.oldValueRaw)
+      event.oldValue=oldValue
+      event.oldUnitOfMeasure=ouom
+    isMyOwnChange=self._isMyOwnChange(event)
+    self.logger.info("external event:{}".format(event))
+    if not isMyOwnChange:
+      self.__set_state(value=event.newValueRaw)
       event.newValue=self._state
     for aListener in self.eventListeners.values():
       if event.type in aListener.listeningTypes:
-        if aListener.onlyIfEventsourceIsOpenhab and event.source!=openhab.events.EventSourceOpenhab:
-          break
-        else:
+        if not isMyOwnChange or (isMyOwnChange and aListener.alsoGetMyEchosFromOpenHAB):
           try:
             aListener.callbackfunction(self,event)
           except Exception as e:
             self.logger.error("error executing Eventlistener for item:{}.".format(event.itemname),e)
 
+  def _processInternalEvent(self,event:openhab.events.ItemEvent):
+    self.logger.info("processing internal event")
+    for aListener in self.eventListeners.values():
+      if event.type in aListener.listeningTypes:
+        if aListener.onlyIfEventsourceIsOpenhab:
+          continue
+        else:
+          try:
+            aListener.callbackfunction(self,event)
+          except Exception as e:
+              self.logger.error("error executing Eventlistener for item:{}.".format(event.itemname),e)
+
 
   class EventListener(object):
-    def __init__(self,listeningTypes:typing.Set[openhab.events.EventType],listener:typing.Callable[[openhab.events.ItemEvent],None],onlyIfEventsourceIsOpenhab):
+    def __init__(self,listeningTypes:typing.Set[openhab.events.EventType],listener:typing.Callable[[openhab.events.ItemEvent],None],onlyIfEventsourceIsOpenhab,alsoGetMyEchosFromOpenHAB):
       allTypes = {openhab.events.ItemStateEvent.type, openhab.events.ItemCommandEvent.type, openhab.events.ItemStateChangedEvent.type}
       if listeningTypes is None:
         self.listeningTypes = allTypes
@@ -185,6 +224,7 @@ class Item:
 
       self.callbackfunction:typing.Callable[[openhab.events.ItemEvent],None]=listener
       self.onlyIfEventsourceIsOpenhab = onlyIfEventsourceIsOpenhab
+      self.alsoGetMyEchosFromOpenHAB=alsoGetMyEchosFromOpenHAB
 
     def addTypes(self,listeningTypes:typing.Set[openhab.events.EventType]):
       if listeningTypes is None: return
@@ -210,17 +250,15 @@ class Item:
 
 
 
-  def addEventListener(self,types:typing.List[openhab.events.EventType],listener:typing.Callable[[openhab.events.ItemEvent],None],onlyIfEventsourceIsOpenhab=None):
+  def addEventListener(self,types:typing.List[openhab.events.EventType],listener:typing.Callable[[openhab.events.ItemEvent],None],onlyIfEventsourceIsOpenhab=True,alsoGetMyEchosFromOpenHAB=False):
+
+
     if listener in self.eventListeners:
       eventListener= self.eventListeners[listener]
       eventListener.addTypes(types)
-
-      if not onlyIfEventsourceIsOpenhab is None:
-        eventListener.onlyIfEventsourceIsOpenhab=onlyIfEventsourceIsOpenhab
+      eventListener.onlyIfEventsourceIsOpenhab=onlyIfEventsourceIsOpenhab
     else:
-      if not onlyIfEventsourceIsOpenhab is None:
-        onlyIfEventsourceIsOpenhab=True
-      eventListener=Item.EventListener(listeningTypes=types,listener=listener,onlyIfEventsourceIsOpenhab=onlyIfEventsourceIsOpenhab)
+      eventListener=Item.EventListener(listeningTypes=types,listener=listener,onlyIfEventsourceIsOpenhab=onlyIfEventsourceIsOpenhab,alsoGetMyEchosFromOpenHAB=alsoGetMyEchosFromOpenHAB)
       self.eventListeners[listener]=eventListener
 
   def removeEventListener(self,types:typing.List[openhab.events.EventType],listener:typing.Callable[[openhab.events.ItemEvent],None]):
@@ -254,7 +292,9 @@ class Item:
                       on the item type and is checked accordingly.
     """
     # noinspection PyTypeChecker
+    self.lastCommandSent = datetime.now()
     self.openhab.req_put('/items/{}/state'.format(self.name), data=value)
+
 
   def update(self, value: typing.Any) -> None:
     """Updates the state of an item.
@@ -267,14 +307,25 @@ class Item:
     self._validate_value(value)
 
     v = self._rest_format(value)
-
+    self._state=value
     self._update(v)
 
     if oldstate == self._state:
-      event = openhab.events.ItemStateEvent(itemname=self.name,source=openhab.events.EventSourceInternal, remoteDatatype=self.type_, newValue=self._state, asUpdate=True)
+      event = openhab.events.ItemStateEvent(itemname=self.name,source=openhab.events.EventSourceInternal, remoteDatatype=self.type_, newValue=self._state, newValueRaw=None, unitOfMeasure=self._unitOfMeasure, asUpdate=True)
     else:
-      event = openhab.events.ItemStateChangedEvent(itemname=self.name, source=openhab.events.EventSourceInternal,remoteDatatype=self.type_, newValue=self._state, oldRemoteDatatype=self.type_, oldValue=oldstate, asUpdate=True)
-    self._processEvent(event)
+      event = openhab.events.ItemStateChangedEvent(itemname=self.name,
+                                                   source=openhab.events.EventSourceInternal,
+                                                   remoteDatatype=self.type_,
+                                                   newValue=self._state,
+                                                   newValueRaw=None,
+                                                   unitOfMeasure=self._unitOfMeasure,
+                                                   oldRemoteDatatype=self.type_,
+                                                   oldValue=oldstate,
+                                                   oldValueRaw="",
+                                                   oldUnitOfMeasure="",
+                                                   asUpdate=True,
+                                                   )
+    self._processInternalEvent(event)
 
   # noinspection PyTypeChecker
   def command(self, value: typing.Any) -> None:
@@ -288,12 +339,15 @@ class Item:
     self._validate_value(value)
 
     v = self._rest_format(value)
-
+    self._state = value
+    self.lastCommandSent = datetime.now()
     self.openhab.req_post('/items/{}'.format(self.name), data=v)
 
-
-    event = openhab.events.ItemCommandEvent(itemname=self.name, source=openhab.events.EventSourceInternal,remoteDatatype=self.type_, newValue=self._state)
-    self._processEvent(event)
+    uoM=""
+    if hasattr(self,"_unitOfMeasure"):
+      uoM=self._unitOfMeasure
+    event = openhab.events.ItemCommandEvent(itemname=self.name, source=openhab.events.EventSourceInternal,remoteDatatype=self.type_, newValue=value, newValueRaw=None, unitOfMeasure=uoM)
+    self._processInternalEvent(event)
 
 
   def update_state_null(self) -> None:
@@ -441,7 +495,7 @@ class NumberItem(Item):
         value=m.group(1)
         unitOfMeasure = m.group(2)
 
-        logging.getLogger().debug("original value:{}, myvalue:{}, my UoM:{}".format(m,value,unitOfMeasure))
+        #logging.getLogger().debug("original value:{}, myvalue:{}, my UoM:{}".format(m,value,unitOfMeasure))
         return (float(value),unitOfMeasure)
     except Exception as e:
       self.logger.error("error in parsing new value '{}' for '{}'".format(value,self.name),e)

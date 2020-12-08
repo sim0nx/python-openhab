@@ -1,3 +1,25 @@
+# -*- coding: utf-8 -*-
+"""python classes for receiving events from openHAB SSE (server side events) REST API."""
+
+#
+# Alexey Grubauer (c) 2020 <alexey@ingenious-minds.at>
+#
+# python-openhab is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# python-openhab is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with python-openhab.  If not, see <http://www.gnu.org/licenses/>.
+#
+
+# pylint: disable=bad-indentation
+
 import typing
 from dataclasses import dataclass
 
@@ -24,7 +46,9 @@ class ItemStateEvent(ItemEvent):
     type = ItemStateEventType
     remoteDatatype: str
     newValue: typing.Any
+    newValueRaw: str
     asUpdate:bool
+    unitOfMeasure: str
 
 
 @dataclass
@@ -32,10 +56,14 @@ class ItemCommandEvent(ItemEvent):
     type = ItemCommandEventType
     remoteDatatype: str
     newValue: typing.Any
+    newValueRaw: typing.Any
+    unitOfMeasure: str
 
 
 @dataclass
 class ItemStateChangedEvent(ItemStateEvent):
     type = ItemStateChangedEventType
     oldRemoteDatatype: str
+    oldValueRaw: str
     oldValue: typing.Any
+    oldUnitOfMeasure: str
