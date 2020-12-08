@@ -17,7 +17,6 @@
 # You should have received a copy of the GNU General Public License
 # along with python-openhab.  If not, see <http://www.gnu.org/licenses/>.
 #
-
 # pylint: disable=bad-indentation
 
 import logging
@@ -25,7 +24,7 @@ import re
 import typing
 import warnings
 
-import sseclient
+from sseclient import SSEClient
 import threading
 import requests
 import weakref
@@ -49,7 +48,8 @@ class OpenHAB:
                password: typing.Optional[str] = None,
                http_auth: typing.Optional[requests.auth.AuthBase] = None,
                timeout: typing.Optional[float] = None,
-               autoUpdate: typing.Optional[bool] = False) -> None:
+               autoUpdate: typing.Optional[bool] = False,
+               maxEchoToOpenHAB_ms: typing.Optional[int]=800) -> None:
     """Constructor.
 
     Args:
@@ -62,7 +62,7 @@ class OpenHAB:
                             specify a custom http authentication object of type :class:`requests.auth.AuthBase`.
       timeout (float, optional): An optional timeout for REST transactions
       autoUpdate (bool, optional): Register for Openhab Item Events to actively get informed about changes.
-
+      maxEchoToOpenHAB_ms (int, optional): interpret Events from openHAB with same statevalue as we have coming within maxEchoToOpenhabMS millisends since our update/command as echos of our update//command
     Returns:
       OpenHAB: openHAB class instance.
     """
@@ -81,6 +81,7 @@ class OpenHAB:
       self.session.auth = HTTPBasicAuth(username, password)
 
     self.timeout = timeout
+    self.maxEchoToOpenhabMS=maxEchoToOpenHAB_ms
 
     self.logger = logging.getLogger(__name__)
     self.__keep_event_deamon_running__ = False
@@ -113,7 +114,7 @@ class OpenHAB:
       if item is None:
         self.logger.warning("item '{}' was removed in all scopes. Ignoring the events coming in for it.".format(event.itemname))
       else:
-        item._processEvent(event)
+        item._processExternalEvent(event)
     else:
       self.logger.debug("item '{}' not registered. ignoring the arrived event.".format(event.itemname))
 
@@ -143,19 +144,20 @@ class OpenHAB:
       log.debug("payloadData:{}".format(eventData["payload"]))
 
       if eventreason =="ItemStateEvent":
-        event = openhab.events.ItemStateEvent(itemname=itemname, source=openhab.events.EventSourceOpenhab, remoteDatatype=remoteDatatype,newValue=newValue,asUpdate=False)
+        event = openhab.events.ItemStateEvent(itemname=itemname, source=openhab.events.EventSourceOpenhab, remoteDatatype=remoteDatatype,newValueRaw=newValue,unitOfMeasure="",newValue="",asUpdate=False)
       elif eventreason =="ItemCommandEvent":
-        event = openhab.events.ItemCommandEvent(itemname=itemname, source=openhab.events.EventSourceOpenhab, remoteDatatype=remoteDatatype, newValue=newValue)
+        event = openhab.events.ItemCommandEvent(itemname=itemname, source=openhab.events.EventSourceOpenhab, remoteDatatype=remoteDatatype, newValueRaw=newValue,unitOfMeasure="", newValue="")
       elif eventreason in ["ItemStateChangedEvent"]:
         oldremoteDatatype = payloadData["oldType"]
         oldValue = payloadData["oldValue"]
-        event=openhab.events.ItemStateChangedEvent(itemname=itemname,source=openhab.events.EventSourceOpenhab, remoteDatatype=remoteDatatype,newValue=newValue,oldRemoteDatatype=oldremoteDatatype,oldValue=oldValue,asUpdate=False)
+        event=openhab.events.ItemStateChangedEvent(itemname=itemname,source=openhab.events.EventSourceOpenhab, remoteDatatype=remoteDatatype,newValueRaw=newValue,newValue="",unitOfMeasure="",oldRemoteDatatype=oldremoteDatatype,oldValueRaw=oldValue, oldValue="", oldUnitOfMeasure="",asUpdate=False)
         log.debug("received ItemStateChanged for '{itemname}'[{olddatatype}->{datatype}]:{oldState}->{newValue}".format(itemname=itemname, olddatatype=oldremoteDatatype, datatype=remoteDatatype, oldState=oldValue, newValue=newValue))
 
       else:
-        log.debug("received command for '{itemname}'[{datatype}]:{newValue}".format(itemname=itemname, datatype=remoteDatatype, newValue=newValue))
-      self.informEventListeners(event)
+        log.debug("received command for '{itemname}'[{datatype}]:{newValue}".format(itemname=itemname, datatype=remoteDatatype, newValueRaw=newValue))
+
       self.parseItem(event)
+      self.informEventListeners(event)
     else:
       log.info("received unknown Event-type in Openhab Event stream: {}".format(eventData))
 
@@ -178,30 +180,24 @@ class OpenHAB:
 
 
 
+
+
   def sseDaemonThread(self):
     self.logger.info("starting Openhab - Event Deamon")
     next_waittime=initial_waittime=0.1
     while self.__keep_event_deamon_running__:
       try:
         self.logger.info("about to connect to Openhab Events-Stream.")
-        # response = requests.get(self.events_url, stream=True)
-        # self.logger.info("connected to Openhab Events-Stream.")
 
-
-        import urllib3
-        http = urllib3.PoolManager()
-        response = http.request('GET', self.events_url, preload_content=False)
-        self.logger.info("connected to Openhab Events-Stream.")
-        self.sseClient = sseclient.SSEClient(response)
-        self.logger.info("pr")
-
+        messages = SSEClient(self.events_url)
 
         next_waittime = initial_waittime
-        for event in self.sseClient.events():
+        for event in messages:
           eventData = json.loads(event.data)
           self.parseEvent(eventData)
           if not self.__keep_event_deamon_running__:
             return
+
       except Exception as e:
         self.logger.warning("Lost connection to Openhab Events-Stream.",e)
         time.sleep(next_waittime) # aleep a bit and then retry
