@@ -21,12 +21,19 @@ python library for accessing the openHAB REST API
 This library allows for easily accessing the openHAB REST API.
 A number of features are implemented but not all, this is work in progress.
 
+currently you can
+ - retrieve current state of items
+ - send updates and commands to items
+ - receive commands, updates and changes from openhab
+
+
 Requirements
 ------------
 
   - python >= 3.5
   - python :: dateutil
   - python :: requests
+  - python :: sseclient
   - openHAB version 2
 
 Installation
@@ -49,7 +56,7 @@ Example usage of the library:
     from openhab import OpenHAB
     
     base_url = 'http://localhost:8080/rest'
-    openhab = OpenHAB(base_url)
+    openhab = OpenHAB(base_url,autoUpdate=True)
    
     # fetch all items
     items = openhab.fetch_all_items()
@@ -87,6 +94,23 @@ Example usage of the library:
     for v in lights_group.members.values():
       v.update('OFF')
 
+    # receive updates from openhab:
+
+    # fetch a item and keep it
+    testroom1_LampOnOff = openhab.get_item('light_switch')
+
+    #define a callback function to receive events
+    def onLight_switchCommand(item: openhab.items.Item, event: openhab.events.ItemCommandEvent):
+        log.info("########################### COMMAND of {} to {} (itemsvalue:{}) from OPENHAB".format(event.itemname, event.newValueRaw, item.state))
+        if event.source == openhab.events.EventSourceOpenhab:
+            log.info("this change came from openhab")
+    # install listener for evetns
+    testroom1_LampOnOff.addEventListener(types=openhab.events.ItemCommandEventType, listener=onLight_switchCommand, onlyIfEventsourceIsOpenhab=False)
+    # switch you will receive update also for your changes in the code. (see
+    testroom1_LampOnOff.off()
+
+    #Events stop to be delivered
+    testroom1_LampOnOff=None
 
 Note on NULL and UNDEF
 ----------------------

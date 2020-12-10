@@ -5,8 +5,11 @@ import openhab.events
 import time
 import openhab.items as items
 import logging
+import json
+import random
+import tests.testutil as testutil
 log=logging.getLogger()
-logging.basicConfig(level=20,format="%(levelno)s:%(asctime)s - %(message)s - %(name)s - PID:%(process)d - THREADID:%(thread)d - %(levelname)s - MODULE:%(module)s, -FN:%(filename)s -FUNC:%(funcName)s:%(lineno)d")
+logging.basicConfig(level=10,format="%(levelno)s:%(asctime)s - %(message)s - %(name)s - PID:%(process)d - THREADID:%(thread)d - %(levelname)s - MODULE:%(module)s, -FN:%(filename)s -FUNC:%(funcName)s:%(lineno)d")
 
 log.error("xx")
 log.warning("www")
@@ -51,7 +54,105 @@ def executeParseCheck():
         stringToParse=testdata[testkey]
 
 
-if True:
+
+def testCreateItem(myopenhab:openhab.OpenHAB):
+    myitemFactory = openhab.items.ItemFactory(myopenhab)
+    random.seed()
+    testprefix = "x2_{}".format(random.randint(1,1000))
+    itemname = "{}CreateItemTest".format(testprefix)
+    itemQuantityType = "Angle"  # "Length",Temperature,,Pressure,Speed,Intensity,Dimensionless,Angle
+    itemtype = "Number"
+    itemtype = openhab.items.NumberItem
+
+    labeltext = "das ist eine testzahl:"
+    itemlabel = "[{labeltext}%.1f °]".format(labeltext=labeltext)
+    itemcategory = "{}TestCategory".format(testprefix)
+    itemtags: List[str] = ["{}testtag1".format(testprefix), "{}testtag2".format(testprefix)]
+    itemgroupNames: List[str] = ["{}testgroup1".format(testprefix), "{}testgroup2".format(testprefix)]
+    grouptype = "{}testgrouptype".format(testprefix)
+    functionname = "{}testfunctionname".format(testprefix)
+    functionparams: List[str] = ["{}testfunctionnameParam1".format(testprefix), "{}testfunctionnameParam2".format(testprefix), "{}testfunctionnameParam3".format(testprefix)]
+
+    x2=myitemFactory.createOrUpdateItem(name=itemname, type=itemtype, quantityType=itemQuantityType, label=itemlabel, category=itemcategory, tags=itemtags, groupNames=itemgroupNames, grouptype=grouptype, functionname=functionname, functionparams=functionparams)
+    x2.state=123.45
+    testutil.doassert(itemname,x2.name,"itemname")
+    testutil.doassert(itemtype.TYPENAME+":"+itemQuantityType, x2.type_, "type")
+    testutil.doassert(123.45, x2.state, "state")
+    testutil.doassert(itemQuantityType, x2.quantityType, "quantityType")
+    testutil.doassert(itemlabel, x2.label, "label")
+    testutil.doassert(itemcategory,x2.category,"category")
+    for aExpectedTag in itemtags:
+        testutil.doassert(aExpectedTag in x2.tags,True,"tag {}".format(aExpectedTag))
+
+    for aExpectedGroupname in itemgroupNames:
+        testutil.doassert(aExpectedGroupname in x2.groupNames   ,True,"tag {}".format(aExpectedGroupname))
+
+
+
+
+
+
+
+
+
+
+
+
+myopenhab = openhab.OpenHAB(base_url,autoUpdate=False)
+testCreateItem(myopenhab)
+
+
+if False:
+    myopenhab = openhab.OpenHAB(base_url, autoUpdate=False)
+
+    testprefix="x1"
+    itemname="{}CreateItemTest".format(testprefix)
+    itemQuantityType="Angle" # "Length",Temperature,,Pressure,Speed,Intensity,Dimensionless,Angle
+    itemtype="Number"
+
+    labeltext="das ist eine testzahl:"
+    itemlabel="[{labeltext}%.1f °]".format(labeltext=labeltext)
+    itemcategory="{}TestCategory".format(testprefix)
+    itemtags:List[str]=["{}testtag1".format(testprefix),"{}testtag2".format(testprefix)]
+    itemgroupNames:List[str]=["{}testgroup1".format(testprefix),"{}testgroup2".format(testprefix)]
+    grouptype= "{}testgrouptype".format(testprefix)
+    functionname="{}testfunctionname".format(testprefix)
+    functionparams:List[str]=["{}testfunctionnameParam1".format(testprefix),"{}testfunctionnameParam2".format(testprefix),"{}testfunctionnameParam3".format(testprefix)]
+
+
+
+    #paramdict:Dict[str,Union[str,List[str],Dict[str,Union[str,List]]]]={}
+
+    if itemQuantityType is None:
+        paramdict["type"]=itemtype
+    else:
+        paramdict["type"] = "{}:{}".format(itemtype,itemQuantityType)
+
+    paramdict["name"]=itemname
+
+    if not itemlabel is None:
+        paramdict["label"]=itemlabel
+
+    if not itemcategory is None:
+        paramdict["category"] = itemcategory
+
+    if not itemtags is None:
+        paramdict["tags"] = itemtags
+
+    if not itemgroupNames is None:
+        paramdict["groupNames"] = itemgroupNames
+
+    if not grouptype is None:
+        paramdict["groupType"] = grouptype
+
+    if not functionname is None:
+        paramdict["function"] = {"name":functionname,"params":functionparams}
+
+
+    jsonBody=json.dumps(paramdict)
+    print(jsonBody)
+    myopenhab.req_json_put('/items/{}'.format(itemname), jasonData=jsonBody)
+if False:
     myopenhab = openhab.OpenHAB(base_url,autoUpdate=True)
 
     itemDimmer=myopenhab.get_item("testroom1_LampDimmer")
@@ -107,10 +208,14 @@ if True:
         return result
 
 
+    def onLight_switchCommand(item: openhab.items.Item, event: openhab.events.ItemCommandEvent):
+        log.info("########################### COMMAND of {} to {} (itemsvalue:{}) from OPENHAB".format(event.itemname, event.newValueRaw, item.state))
+
     def onAnyItemCommand(item: openhab.items.Item, event: openhab.events.ItemStateEvent):
         log.info("########################### UPDATE of {} to {} (itemsvalue:{}) from OPENHAB ONLY".format(event.itemname, event.newValueRaw, item.state))
         if not expectedValue is None:
-            assert event.newValue==expectedValue
+            actualValue=event.newValue
+            assert actualValue==expectedValue, "expected value to be {}, but it was {}".format(expectedValue,actualValue)
 
 
     testname="OnOff"
@@ -121,8 +226,11 @@ if True:
     eventData=createEventData(type,itemname,payload)
     testroom1_LampOnOff:openhab.items.SwitchItem = myopenhab.get_item(itemname)
     testroom1_LampOnOff.off()
+    time.sleep(0.5)
     testroom1_LampOnOff.addEventListener(types=openhab.events.ItemCommandEventType,listener=onAnyItemCommand,onlyIfEventsourceIsOpenhab=False)
-    myopenhab.parseEvent(eventData)
+    testroom1_LampOnOff.addEventListener(types=openhab.events.ItemCommandEventType, listener=onLight_switchCommand, onlyIfEventsourceIsOpenhab=False)
+    # testroom1_LampOnOff=None
+    myopenhab._parseEvent(eventData)
 
 
     #itemDimmer = myopenhab.get_item("testroom1_LampDimmer")

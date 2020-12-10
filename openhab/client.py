@@ -104,11 +104,19 @@ class OpenHAB:
                   REST request.
     """
     if not (200 <= req.status_code < 300):
+      logging.getLogger().error(req.content)
       req.raise_for_status()
 
 
 
-  def parseItem(self, event:openhab.events.ItemEvent):
+  def _parseItem(self, event:openhab.events.ItemEvent)->None:
+    """method to parse an ItemEvent from openhab.
+        it interprets the received ItemEvent data.
+        in case the item was previously registered it will then delegate further parsing of the event to item iteself through a call of the items _processExternalEvent method
+
+            Args:
+                  event:openhab.events.ItemEvent holding the eventdata
+        """
     if event.itemname in self.registered_items:
       item=self.registered_items[event.itemname]
       if item is None:
@@ -126,7 +134,14 @@ class OpenHAB:
 
 
 
-  def parseEvent(self,eventData:typing.Dict):
+  def _parseEvent(self, eventData:typing.Dict)->None:
+    """method to parse a event from openhab.
+    it interprets the received event dictionary and populates an openhab.events.event Object.
+    for Itemevents it then calls _parseItem for a more detailed interpretation of the received data
+    then it informs all registered listeners of openhab events
+        Args:
+              eventData send by openhab in a Dict
+    """
     log=logging.getLogger()
     eventreason=eventData["type"]
 
@@ -156,7 +171,7 @@ class OpenHAB:
       else:
         log.debug("received command for '{itemname}'[{datatype}]:{newValue}".format(itemname=itemname, datatype=remoteDatatype, newValueRaw=newValue))
 
-      self.parseItem(event)
+      self._parseItem(event)
       self.informEventListeners(event)
     else:
       log.info("received unknown Event-type in Openhab Event stream: {}".format(eventData))
@@ -182,7 +197,10 @@ class OpenHAB:
 
 
 
-  def sseDaemonThread(self):
+  def _sseDaemonThread(self):
+    """internal method to receice events from openhab.
+    This method blocks and therefore should be started as separate thread.
+    """
     self.logger.info("starting Openhab - Event Deamon")
     next_waittime=initial_waittime=0.1
     while self.__keep_event_deamon_running__:
@@ -194,7 +212,7 @@ class OpenHAB:
         next_waittime = initial_waittime
         for event in messages:
           eventData = json.loads(event.data)
-          self.parseEvent(eventData)
+          self._parseEvent(eventData)
           if not self.__keep_event_deamon_running__:
             return
 
@@ -206,18 +224,22 @@ class OpenHAB:
 
 
 
-  def register_item(self, item: openhab.items.Item):
+  def register_item(self, item: openhab.items.Item)->None:
+    """method to register an instantiated item. registered items can receive commands an updated from openhab.
+        Args:
+          an Item object
+    """
     if not item is None and not item.name is None:
       if not item.name in self.registered_items:
         #self.registered_items[item.name]=weakref.ref(item)
         self.registered_items[item.name] = item
 
-  def __installSSEClient__(self):
+  def __installSSEClient__(self)->None:
     """ installs an event Stream to receive all Item events"""
 
     #now start readerThread
     self.__keep_event_deamon_running__=True
-    self.sseDaemon = threading.Thread(target=self.sseDaemonThread, args=(), daemon=True)
+    self.sseDaemon = threading.Thread(target=self._sseDaemonThread, args=(), daemon=True)
     self.sseDaemon.start()
 
   def req_get(self, uri_path: str) -> typing.Any:
@@ -253,6 +275,9 @@ class OpenHAB:
     self._check_req_return(r)
 
     return None
+  def req_json_put(self, uri_path: str, jasonData: str = None) -> None:
+    r = self.session.put(self.base_url + uri_path, data=jasonData, headers={'Content-Type': 'application/json',"Accept": "application/json"}, timeout=self.timeout)
+    self._check_req_return(r)
 
   def req_put(self, uri_path: str, data: typing.Optional[dict] = None) -> None:
     """Helper method for initiating a HTTP PUT request.
