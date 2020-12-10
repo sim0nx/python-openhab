@@ -21,9 +21,11 @@
 # pylint: disable=bad-indentation
 from __future__ import annotations
 import logging
+import inspect
 import re
 import typing
-
+import json
+import time
 import dateutil.parser
 
 import openhab.types
@@ -33,11 +35,109 @@ from datetime import datetime, timedelta
 __author__ = 'Georges Toth <georges@trypill.org>'
 __license__ = 'AGPLv3+'
 
+class ItemFactory:
+  def __init__(self,openhabClient:openhab.client.OpenHAB):
+    self.openHABClient=openhabClient
+
+  def createOrUpdateItem(self,
+                         name: str,
+                         type: typing.Union[str, typing.Type[Item]],
+                         quantityType: typing.Optional[str] = None,
+                         label: typing.Optional[str] = None,
+                         category: typing.Optional[str] = None,
+                         tags: typing.Optional[typing.List[str]] = None,
+                         groupNames: typing.Optional[typing.List[str]] = None,
+                         grouptype: typing.Optional[str] = None,
+                         functionname: typing.Optional[str] = None,
+                         functionparams: typing.Optional[typing.List[str]] = None
+                         ) -> Item:
+    self.createOrUpdateItemAsync(name=name,
+                                 type=type,
+                                 quantityType=quantityType,
+                                 label=label,
+                                 category=category,
+                                 tags=tags,
+                                 groupNames=groupNames,
+                                 grouptype=grouptype,
+                                 functionname=functionname,
+                                 functionparams=functionparams)
+
+    time.sleep(0.05)
+    result = None
+    retrycounter = 10
+    while True:
+      try:
+        result = self.getItem(name)
+        return result
+      except Exception as e:
+        retrycounter -= 1
+        if retrycounter < 0:
+          raise e
+        else:
+          time.sleep(0.05)
+
+
+
+  def createOrUpdateItemAsync(self,
+                              name:str,
+                              type:typing.Union[str, typing.Type[Item]],
+                              quantityType:typing.Optional[str]=None,
+                              label:typing.Optional[str]=None,
+                              category:typing.Optional[str]=None,
+                              tags: typing.Optional[typing.List[str]]=None,
+                              groupNames: typing.Optional[typing.List[str]]=None,
+                              grouptype:typing.Optional[str]=None,
+                              functionname:typing.Optional[str]=None,
+                              functionparams: typing.Optional[typing.List[str]]=None
+                              )->None:
+
+    paramdict: typing.Dict[str, typing.Union[str, typing.List[str], typing.Dict[str, typing.Union[str, typing.List]]]] = {}
+
+    if isinstance(type, str):
+      itemtypename=type
+    elif inspect.isclass(type):
+      if issubclass(type, Item):
+        itemtypename=type.TYPENAME
+    if quantityType is None:
+        paramdict["type"]=itemtypename
+    else:
+        paramdict["type"] = "{}:{}".format(itemtypename, quantityType)
+
+    paramdict["name"]=name
+
+    if not label is None:
+        paramdict["label"]=label
+
+    if not category is None:
+        paramdict["category"] = category
+
+    if not tags is None:
+        paramdict["tags"] = tags
+
+    if not groupNames is None:
+        paramdict["groupNames"] = groupNames
+
+    if not grouptype is None:
+        paramdict["groupType"] = grouptype
+
+    if not functionname is None and not functionparams is None:
+        paramdict["function"] = {"name":functionname,"params":functionparams}
+
+
+    jsonBody=json.dumps(paramdict)
+    logging.getLogger().debug("about to create item with PUT request:{}".format(jsonBody))
+    self.openHABClient.req_json_put('/items/{}'.format(name), jasonData=jsonBody)
+
+
+  def getItem(self,itemname):
+    return self.openHABClient.get_item(itemname)
+
 
 class Item:
   """Base item class."""
 
   types = []  # type: typing.List[typing.Type[openhab.types.CommandType]]
+  TYPENAME = "unknown"
 
   def __init__(self, openhab_conn: 'openhab.client.OpenHAB', json_data: dict) -> None:
     """Constructor.
@@ -50,6 +150,8 @@ class Item:
     self.openhab = openhab_conn
     self.autoUpdate = self.openhab.autoUpdate
     self.type_ = None
+    self.quantityType = None
+    self._unitOfMeasure = ""
     self.group = False
     self.name = ''
     self._state = None  # type: typing.Optional[typing.Any]
@@ -66,6 +168,11 @@ class Item:
     self.openhab.register_item(self)
     self.eventListeners: typing.Dict[typing.Callable[[openhab.events.ItemEvent],None],Item.EventListener]={}
     #typing.List[typing.Callable] = []
+
+
+
+
+
 
   def init_from_json(self, json_data: dict):
     """Initialize this object from a json configuration as fetched from openHAB.
@@ -86,6 +193,20 @@ class Item:
 
     else:
       self.type_ = json_data['type']
+      parts=self.type_.split(":")
+      if len(parts)==2:
+        self.quantityType=parts[1]
+    if "editable" in json_data:
+      self.editable=json_data['editable']
+    if "label" in json_data:
+      self.label=json_data['label']
+    if "category" in json_data:
+      self.category=json_data['category']
+    if "tags" in json_data:
+      self.tags=json_data['tags']
+    if "groupNames" in json_data:
+      self.groupNames=json_data['groupNames']
+
     self.__set_state(json_data['state'])
 
   @property
@@ -106,9 +227,9 @@ class Item:
     oldstate= self._state
     self.update(value)
     # if oldstate==self._state:
-    #   event=openhab.events.ItemStateEvent( itemname=self.name,source=openhab.events.EventSourceInternal, remoteDatatype=self.type_,newValueRaw=self._state, asUpdate=False)
+    #   event=openhab.events.ItemStateEvent( name=self.name,source=openhab.events.EventSourceInternal, remoteDatatype=self.type_,newValueRaw=self._state, asUpdate=False)
     # else:
-    #   event = openhab.events.ItemStateChangedEvent(itemname=self.name,source=openhab.events.EventSourceInternal, remoteDatatype=self.type_, newValueRaw=self._state, oldRemoteDatatype=self.type_,oldValueRaw=oldstate, asUpdate=False)
+    #   event = openhab.events.ItemStateChangedEvent(name=self.name,source=openhab.events.EventSourceInternal, remoteDatatype=self.type_, newValueRaw=self._state, oldRemoteDatatype=self.type_,oldValueRaw=oldstate, asUpdate=False)
     # self._processEvent(event)
 
   @property
@@ -389,6 +510,7 @@ class DateTimeItem(Item):
   """DateTime item type."""
 
   types = [openhab.types.DateTimeType]
+  TYPENAME = "DateTime"
 
   def __gt__(self, other):
     return self._state > other
@@ -430,6 +552,7 @@ class DateTimeItem(Item):
 
 class PlayerItem(Item):
   """PlayerItem item type."""
+  TYPENAME = "Player"
 
   types = [openhab.types.PlayerType]
 
@@ -453,7 +576,9 @@ class PlayerItem(Item):
 class SwitchItem(Item):
   """SwitchItem item type."""
 
+
   types = [openhab.types.OnOffType]
+  TYPENAME = "Switch"
 
   def on(self) -> None:
     """Set the state of the switch to ON."""
@@ -475,6 +600,7 @@ class NumberItem(Item):
   """NumberItem item type."""
 
   types = [openhab.types.DecimalType]
+  TYPENAME = "Number"
 
   def _parse_rest(self, value: str) -> float:
     """Parse a REST result into a native object.
@@ -518,6 +644,7 @@ class ContactItem(Item):
   """Contact item type."""
 
   types = [openhab.types.OpenCloseType]
+  TYPENAME = "Contact"
 
   def command(self, *args, **kwargs) -> None:
     """This overrides the `Item` command method.
@@ -539,6 +666,7 @@ class DimmerItem(Item):
   """DimmerItem item type."""
 
   types = [openhab.types.OnOffType, openhab.types.PercentType, openhab.types.IncreaseDecreaseType]
+  TYPENAME = "Dimmer"
 
   def _parse_rest(self, value: str) -> int:
     """Parse a REST result into a native object.
@@ -587,6 +715,7 @@ class ColorItem(Item):
 
   types = [openhab.types.OnOffType, openhab.types.PercentType, openhab.types.IncreaseDecreaseType,
            openhab.types.ColorType]
+  TYPENAME = "Color"
 
   def _parse_rest(self, value: str) -> str:
     """Parse a REST result into a native object.
@@ -634,6 +763,7 @@ class RollershutterItem(Item):
   """RollershutterItem item type."""
 
   types = [openhab.types.UpDownType, openhab.types.PercentType, openhab.types.StopType]
+  TYPENAME = "Rollershutter"
 
   def _parse_rest(self, value: str) -> int:
     """Parse a REST result into a native object.
