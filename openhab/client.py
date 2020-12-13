@@ -223,6 +223,8 @@ class OpenHAB:
 
 
 
+  def get_registered_items(self)->weakref.WeakValueDictionary:
+    return self.registered_items
 
   def register_item(self, item: openhab.items.Item)->None:
     """method to register an instantiated item. registered items can receive commands an updated from openhab.
@@ -275,8 +277,39 @@ class OpenHAB:
     self._check_req_return(r)
 
     return None
-  def req_json_put(self, uri_path: str, jasonData: str = None) -> None:
-    r = self.session.put(self.base_url + uri_path, data=jasonData, headers={'Content-Type': 'application/json',"Accept": "application/json"}, timeout=self.timeout)
+
+  def req_json_put(self, uri_path: str, jsonData: str = None) -> None:
+    """Helper method for initiating a HTTP PUT request.
+
+        Besides doing the actual request, it also checks the return value and returns the resulting decoded
+        JSON data.
+
+        Args:
+          uri_path (str): The path to be used in the PUT request.
+          jsondata (str): the request data as jason
+
+
+        Returns:
+          None: No data is returned.
+        """
+
+    r = self.session.put(self.base_url + uri_path, data=jsonData, headers={'Content-Type': 'application/json', "Accept": "application/json"}, timeout=self.timeout)
+    self._check_req_return(r)
+
+  def req_del(self,  uri_path: str)->None:
+    """Helper method for initiating a HTTP DELETE request.
+
+        Besides doing the actual request, it also checks the return value and returns the resulting decoded
+        JSON data.
+
+        Args:
+          uri_path (str): The path to be used in the DELETE request.
+
+
+        Returns:
+          None: No data is returned.
+        """
+    r= self.session.delete(self.base_url + uri_path,headers={"Accept": "application/json"})
     self._check_req_return(r)
 
   def req_put(self, uri_path: str, data: typing.Optional[dict] = None) -> None:
