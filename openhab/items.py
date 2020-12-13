@@ -19,6 +19,8 @@
 #
 
 # pylint: disable=bad-indentation
+
+
 from __future__ import annotations
 import logging
 import inspect
@@ -36,7 +38,15 @@ __author__ = 'Georges Toth <georges@trypill.org>'
 __license__ = 'AGPLv3+'
 
 class ItemFactory:
+  """A factory to get an Item from Openhab or create new items in openHAB"""
+
   def __init__(self,openhabClient:openhab.client.OpenHAB):
+    """Constructor.
+
+        Args:
+          openhab_conn (openhab.OpenHAB): openHAB object.
+
+        """
     self.openHABClient=openhabClient
 
   def createOrUpdateItem(self,
@@ -51,6 +61,31 @@ class ItemFactory:
                          functionname: typing.Optional[str] = None,
                          functionparams: typing.Optional[typing.List[str]] = None
                          ) -> Item:
+    """creates a new item in openhab if there is no item with name 'name' yet.
+    if there is an item with 'name' already in openhab, the item gets updated with the infos provided. be aware that not provided fields will be deleted in openhab.
+    consider to get the existing item via 'getItem' and then read out existing fields to populate the parameters here.
+
+    This function blocks until the item is created.
+
+
+        Args:
+          name (str): unique name of the item
+          type ( str or any Itemclass): the type used in openhab (like Group, Number, Contact, DateTime, Rollershutter, Color, Dimmer, Switch, Player)
+                           server.
+                           To create groups use the itemtype 'Group'!
+          quantityType (str): optional quantityType ( like Angle, Temperature, Illuminance (see https://www.openhab.org/docs/concepts/units-of-measurement.html))
+          label (str): optional openhab label (see https://www.openhab.org/docs/configuration/items.html#label)
+          category (str): optional category. no documentation found
+          tags (List of str): optional list of tags (see https://www.openhab.org/docs/configuration/items.html#tags)
+          groupNames (List of str): optional list of groups this item belongs to.
+          grouptype (str): optional grouptype. no documentation found
+          functionname (str): optional functionname. no documentation found
+          functionparams (List of str): optional list of function Params. no documentation found
+
+        Returns:
+          the created Item
+        """
+
     self.createOrUpdateItemAsync(name=name,
                                  type=type,
                                  quantityType=quantityType,
@@ -61,6 +96,8 @@ class ItemFactory:
                                  grouptype=grouptype,
                                  functionname=functionname,
                                  functionparams=functionparams)
+
+
 
     time.sleep(0.05)
     result = None
@@ -90,7 +127,29 @@ class ItemFactory:
                               functionname:typing.Optional[str]=None,
                               functionparams: typing.Optional[typing.List[str]]=None
                               )->None:
+    """creates a new item in openhab if there is no item with name 'name' yet.
+      if there is an item with 'name' already in openhab, the item gets updated with the infos provided. be aware that not provided fields will be deleted in openhab.
+      consider to get the existing item via 'getItem' and then read out existing fields to populate the parameters here.
 
+      This function does not wait for openhab to create the item. Use this function if you need to create many items quickly.
+
+
+          Args:
+            name (str): unique name of the item
+            type ( str or any Itemclass): the type used in openhab (like Group, Number, Contact, DateTime, Rollershutter, Color, Dimmer, Switch, Player)
+                             server.
+                             To create groups use the itemtype 'Group'!
+            quantityType (str): optional quantityType ( like Angle, Temperature, Illuminance (see https://www.openhab.org/docs/concepts/units-of-measurement.html))
+            label (str): optional openhab label (see https://www.openhab.org/docs/configuration/items.html#label)
+            category (str): optional category. no documentation found
+            tags (List of str): optional list of tags (see https://www.openhab.org/docs/configuration/items.html#tags)
+            groupNames (List of str): optional list of groups this item belongs to.
+            grouptype (str): optional grouptype. no documentation found
+            functionname (str): optional functionname. no documentation found
+            functionparams (List of str): optional list of function Params. no documentation found
+
+
+          """
     paramdict: typing.Dict[str, typing.Union[str, typing.List[str], typing.Dict[str, typing.Union[str, typing.List]]]] = {}
 
     if isinstance(type, str):
@@ -126,7 +185,7 @@ class ItemFactory:
 
     jsonBody=json.dumps(paramdict)
     logging.getLogger().debug("about to create item with PUT request:{}".format(jsonBody))
-    self.openHABClient.req_json_put('/items/{}'.format(name), jasonData=jsonBody)
+    self.openHABClient.req_json_put('/items/{}'.format(name), jsonData=jsonBody)
 
 
   def getItem(self,itemname):
@@ -139,7 +198,7 @@ class Item:
   types = []  # type: typing.List[typing.Type[openhab.types.CommandType]]
   TYPENAME = "unknown"
 
-  def __init__(self, openhab_conn: 'openhab.client.OpenHAB', json_data: dict) -> None:
+  def __init__(self, openhab_conn: 'openhab.client.OpenHAB', json_data: dict, auto_update:typing.Optional[bool]=True) -> None:
     """Constructor.
 
     Args:
@@ -148,7 +207,7 @@ class Item:
                        server.
     """
     self.openhab = openhab_conn
-    self.autoUpdate = self.openhab.autoUpdate
+    self.autoUpdate = auto_update
     self.type_ = None
     self.quantityType = None
     self._unitOfMeasure = ""
@@ -294,9 +353,15 @@ class Item:
     else:
       return True
 
+  def delete(self):
+    """deletes the item from openhab """
+    self.openhab.req_del('/items/{}'.format(self.name))
+    self._state=None
+    self.removeAllEventListener()
 
 
   def _processExternalEvent(self, event:openhab.events.ItemEvent):
+    if not self.autoUpdate: return
     self.logger.info("processing external event")
     newValue,uom=self._parse_rest(event.newValueRaw)
     event.newValue=newValue
@@ -381,6 +446,9 @@ class Item:
     else:
       eventListener=Item.EventListener(listeningTypes=types,listener=listener,onlyIfEventsourceIsOpenhab=onlyIfEventsourceIsOpenhab,alsoGetMyEchosFromOpenHAB=alsoGetMyEchosFromOpenHAB)
       self.eventListeners[listener]=eventListener
+
+  def removeAllEventListener(self):
+    self.eventListeners=[]
 
   def removeEventListener(self,types:typing.List[openhab.events.EventType],listener:typing.Callable[[openhab.events.ItemEvent],None]):
     if listener in self.eventListeners:
@@ -504,6 +572,7 @@ class Item:
       return self._raw_state == 'UNDEF'
 
     return False
+
 
 
 class DateTimeItem(Item):

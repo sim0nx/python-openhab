@@ -1,4 +1,6 @@
+from __future__ import annotations
 from typing import TYPE_CHECKING, List, Set, Dict, Tuple, Union, Any, Optional, NewType, Callable
+
 
 import openhab
 import openhab.events
@@ -55,42 +57,6 @@ def executeParseCheck():
 
 
 
-def testCreateItem(myopenhab:openhab.OpenHAB):
-    myitemFactory = openhab.items.ItemFactory(myopenhab)
-    random.seed()
-    testprefix = "x2_{}".format(random.randint(1,1000))
-    itemname = "{}CreateItemTest".format(testprefix)
-    itemQuantityType = "Angle"  # "Length",Temperature,,Pressure,Speed,Intensity,Dimensionless,Angle
-    itemtype = "Number"
-    itemtype = openhab.items.NumberItem
-
-    labeltext = "das ist eine testzahl:"
-    itemlabel = "[{labeltext}%.1f °]".format(labeltext=labeltext)
-    itemcategory = "{}TestCategory".format(testprefix)
-    itemtags: List[str] = ["{}testtag1".format(testprefix), "{}testtag2".format(testprefix)]
-    itemgroupNames: List[str] = ["{}testgroup1".format(testprefix), "{}testgroup2".format(testprefix)]
-    grouptype = "{}testgrouptype".format(testprefix)
-    functionname = "{}testfunctionname".format(testprefix)
-    functionparams: List[str] = ["{}testfunctionnameParam1".format(testprefix), "{}testfunctionnameParam2".format(testprefix), "{}testfunctionnameParam3".format(testprefix)]
-
-    x2=myitemFactory.createOrUpdateItem(name=itemname, type=itemtype, quantityType=itemQuantityType, label=itemlabel, category=itemcategory, tags=itemtags, groupNames=itemgroupNames, grouptype=grouptype, functionname=functionname, functionparams=functionparams)
-    x2.state=123.45
-    testutil.doassert(itemname,x2.name,"itemname")
-    testutil.doassert(itemtype.TYPENAME+":"+itemQuantityType, x2.type_, "type")
-    testutil.doassert(123.45, x2.state, "state")
-    testutil.doassert(itemQuantityType, x2.quantityType, "quantityType")
-    testutil.doassert(itemlabel, x2.label, "label")
-    testutil.doassert(itemcategory,x2.category,"category")
-    for aExpectedTag in itemtags:
-        testutil.doassert(aExpectedTag in x2.tags,True,"tag {}".format(aExpectedTag))
-
-    for aExpectedGroupname in itemgroupNames:
-        testutil.doassert(aExpectedGroupname in x2.groupNames   ,True,"tag {}".format(aExpectedGroupname))
-
-
-
-
-
 
 
 
@@ -99,7 +65,7 @@ def testCreateItem(myopenhab:openhab.OpenHAB):
 
 
 myopenhab = openhab.OpenHAB(base_url,autoUpdate=False)
-testCreateItem(myopenhab)
+
 
 
 if False:
@@ -151,7 +117,7 @@ if False:
 
     jsonBody=json.dumps(paramdict)
     print(jsonBody)
-    myopenhab.req_json_put('/items/{}'.format(itemname), jasonData=jsonBody)
+    myopenhab.req_json_put('/items/{}'.format(itemname), jsonData=jsonBody)
 if False:
     myopenhab = openhab.OpenHAB(base_url,autoUpdate=True)
 
