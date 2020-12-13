@@ -38,7 +38,7 @@ __author__ = 'Georges Toth <georges@trypill.org>'
 __license__ = 'AGPLv3+'
 
 class ItemFactory:
-  """A factory to get an Item from Openhab or create new items in openHAB"""
+  """A factory to get an Item from Openhab, create new or delete existing items in openHAB"""
 
   def __init__(self,openhabClient:openhab.client.OpenHAB):
     """Constructor.
@@ -283,13 +283,8 @@ class Item:
 
   @state.setter
   def state(self, value: typing.Any):
-    oldstate= self._state
     self.update(value)
-    # if oldstate==self._state:
-    #   event=openhab.events.ItemStateEvent( name=self.name,source=openhab.events.EventSourceInternal, remoteDatatype=self.type_,newValueRaw=self._state, asUpdate=False)
-    # else:
-    #   event = openhab.events.ItemStateChangedEvent(name=self.name,source=openhab.events.EventSourceInternal, remoteDatatype=self.type_, newValueRaw=self._state, oldRemoteDatatype=self.type_,oldValueRaw=oldstate, asUpdate=False)
-    # self._processEvent(event)
+
 
   @property
   def members(self):
@@ -341,6 +336,7 @@ class Item:
     return _value
 
   def _isMyOwnChange(self, event):
+    """find out if the incoming event is actually just a echo of my previous command or change"""
     now = datetime.now()
     self.logger.debug("_isMyOwnChange:event.source:{}, event.type{}, self._state:{}, event.newValue:{},self.lastCommandSent:{}, self.lastUpdateSent:{} , now:{}".format(event.source,event.type,self._state,event.newValue ,self.lastCommandSent,self.lastUpdateSent,now))
     if event.source == openhab.events.EventSourceOpenhab:
@@ -367,9 +363,11 @@ class Item:
     event.newValue=newValue
     event.unitOfMeasure=uom
     if event.type==openhab.events.ItemStateChangedEventType:
-      oldValue,ouom=self._parse_rest(event.oldValueRaw)
-      event.oldValue=oldValue
-      event.oldUnitOfMeasure=ouom
+      try:
+        oldValue,ouom=self._parse_rest(event.oldValueRaw)
+      except:
+        event.oldValue=None
+        event.oldUnitOfMeasure=None
     isMyOwnChange=self._isMyOwnChange(event)
     self.logger.info("external event:{}".format(event))
     if not isMyOwnChange:
@@ -397,7 +395,16 @@ class Item:
 
 
   class EventListener(object):
+    """EventListener Objects hold data about a registered event listener"""
     def __init__(self,listeningTypes:typing.Set[openhab.events.EventType],listener:typing.Callable[[openhab.events.ItemEvent],None],onlyIfEventsourceIsOpenhab,alsoGetMyEchosFromOpenHAB):
+      """Constructor of an EventListener Object
+        Args:
+          listeningTypes (openhab.events.EventType or set of openhab.events.EventType): the eventTypes the listener is interested in.
+          onlyIfEventsourceIsOpenhab (bool): the listener only wants events that are coming from openhab.
+          alsoGetMyEchosFromOpenHAB (bool): the listener also wants to receive events coming from openhab that originally were triggered by commands or changes by our item itself.
+
+
+      """
       allTypes = {openhab.events.ItemStateEvent.type, openhab.events.ItemCommandEvent.type, openhab.events.ItemStateChangedEvent.type}
       if listeningTypes is None:
         self.listeningTypes = allTypes
@@ -413,6 +420,11 @@ class Item:
       self.alsoGetMyEchosFromOpenHAB=alsoGetMyEchosFromOpenHAB
 
     def addTypes(self,listeningTypes:typing.Set[openhab.events.EventType]):
+      """add aditional listening types
+              Args:
+                listeningTypes (openhab.events.EventType or set of openhab.events.EventType): the additional eventTypes the listener is interested in.
+
+            """
       if listeningTypes is None: return
       elif not hasattr(listeningTypes, '__iter__'):
         self.listeningTypes.add(listeningTypes)
@@ -422,6 +434,11 @@ class Item:
         self.listeningTypes.update(listeningTypes)
 
     def removeTypes(self,listeningTypes:typing.Set[openhab.events.EventType]):
+      """remove listening types
+          Args:
+            listeningTypes (openhab.events.EventType or set of openhab.events.EventType): the eventTypes the listener is not interested in anymore
+
+        """
       if listeningTypes is None:
         self.listeningTypes.clear()
       elif not hasattr(listeningTypes, '__iter__'):
@@ -436,21 +453,40 @@ class Item:
 
 
 
-  def addEventListener(self,types:typing.List[openhab.events.EventType],listener:typing.Callable[[openhab.events.ItemEvent],None],onlyIfEventsourceIsOpenhab=True,alsoGetMyEchosFromOpenHAB=False):
+  def addEventListener(self,listeningTypes:typing.Set[openhab.events.EventType],listener:typing.Callable[[openhab.items.Item,openhab.events.ItemEvent],None],onlyIfEventsourceIsOpenhab=True,alsoGetMyEchosFromOpenHAB=False):
+    """add a Listener interested in changes of items happening in openhab
+        Args:
+          Args:
+          listeningTypes (openhab.events.EventType or set of openhab.events.EventType): the eventTypes the listener is interested in.
+          listener (Callable[[openhab.items.Item,openhab.events.ItemEvent],None]: a method with 2 parameters:
+            item (openhab.items.Item): the item that received a command, change or update
+            event (openhab.events.ItemEvent): the item Event holding the actual change
+          onlyIfEventsourceIsOpenhab (bool): the listener only wants events that are coming from openhab.
+          alsoGetMyEchosFromOpenHAB (bool): the listener also wants to receive events coming from openhab that originally were triggered by commands or changes by our item itself.
 
+
+      """
 
     if listener in self.eventListeners:
       eventListener= self.eventListeners[listener]
-      eventListener.addTypes(types)
+      eventListener.addTypes(listeningTypes)
       eventListener.onlyIfEventsourceIsOpenhab=onlyIfEventsourceIsOpenhab
     else:
-      eventListener=Item.EventListener(listeningTypes=types,listener=listener,onlyIfEventsourceIsOpenhab=onlyIfEventsourceIsOpenhab,alsoGetMyEchosFromOpenHAB=alsoGetMyEchosFromOpenHAB)
+      eventListener=Item.EventListener(listeningTypes=listeningTypes,listener=listener,onlyIfEventsourceIsOpenhab=onlyIfEventsourceIsOpenhab,alsoGetMyEchosFromOpenHAB=alsoGetMyEchosFromOpenHAB)
       self.eventListeners[listener]=eventListener
 
   def removeAllEventListener(self):
     self.eventListeners=[]
 
   def removeEventListener(self,types:typing.List[openhab.events.EventType],listener:typing.Callable[[openhab.events.ItemEvent],None]):
+    """removes a previously registered Listener interested in changes of items happening in openhab
+            Args:
+              Args:
+              listeningTypes (openhab.events.EventType or set of openhab.events.EventType): the eventTypes the listener is interested in.
+              listener: the previously registered listener method.
+
+
+          """
     if listener in self.eventListeners:
       eventListener = self.eventListeners[listener]
       eventListener.removeTypes(types)
@@ -692,6 +728,8 @@ class NumberItem(Item):
 
         #logging.getLogger().debug("original value:{}, myvalue:{}, my UoM:{}".format(m,value,unitOfMeasure))
         return (float(value),unitOfMeasure)
+      else:
+        return value
     except Exception as e:
       self.logger.error("error in parsing new value '{}' for '{}'".format(value,self.name),e)
 

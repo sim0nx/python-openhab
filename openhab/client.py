@@ -61,8 +61,8 @@ class OpenHAB:
       http_auth (AuthBase, optional): An alternative to username/password pair, is to
                             specify a custom http authentication object of type :class:`requests.auth.AuthBase`.
       timeout (float, optional): An optional timeout for REST transactions
-      autoUpdate (bool, optional): Register for Openhab Item Events to actively get informed about changes.
-      maxEchoToOpenHAB_ms (int, optional): interpret Events from openHAB with same statevalue as we have coming within maxEchoToOpenhabMS millisends since our update/command as echos of our update//command
+      autoUpdate (bool, optional): True: receive Openhab Item Events to actively get informed about changes.
+      maxEchoToOpenHAB_ms (int, optional): interpret Events from openHAB which hold a state-value equal to items current state-value which are coming in within maxEchoToOpenhabMS millisends since our update/command as echos of our own update//command
     Returns:
       OpenHAB: openHAB class instance.
     """
@@ -172,11 +172,15 @@ class OpenHAB:
         log.debug("received command for '{itemname}'[{datatype}]:{newValue}".format(itemname=itemname, datatype=remoteDatatype, newValueRaw=newValue))
 
       self._parseItem(event)
-      self.informEventListeners(event)
+      self._informEventListeners(event)
     else:
       log.info("received unknown Event-type in Openhab Event stream: {}".format(eventData))
 
-  def informEventListeners(self,event:openhab.events.ItemEvent):
+  def _informEventListeners(self, event:openhab.events.ItemEvent):
+    """internal method to send itemevents to listeners.
+          Args:
+                event:openhab.events.ItemEvent to be sent to listeners
+        """
     for aListener in self.eventListeners:
       try:
         aListener(event)
@@ -184,9 +188,17 @@ class OpenHAB:
         self.logger.error("error executing Eventlistener for event:{}.".format(event.itemname),e)
 
   def addEventListener(self, listener:typing.Callable[[openhab.events.ItemEvent],None]):
+    """method to register a callback function to get informed about all Item-Events received from openhab.
+          Args:
+              listener:typing.Callable[[openhab.events.ItemEvent] a method with one parameter of type openhab.events.ItemEvent which will be called for every event
+        """
     self.eventListeners.append(listener)
 
   def removeEventListener(self, listener:typing.Optional[typing.Callable[[openhab.events.ItemEvent],None]]=None):
+    """method to unregister a callback function to stop getting informed about all Item-Events received from openhab.
+          Args:
+              listener:typing.Callable[[openhab.events.ItemEvent] the method to be removed.
+        """
     if listener is None:
       self.eventListeners.clear()
     elif listener in self.eventListeners:
@@ -198,7 +210,7 @@ class OpenHAB:
 
 
   def _sseDaemonThread(self):
-    """internal method to receice events from openhab.
+    """internal method to receive events from openhab.
     This method blocks and therefore should be started as separate thread.
     """
     self.logger.info("starting Openhab - Event Deamon")
@@ -224,10 +236,15 @@ class OpenHAB:
 
 
   def get_registered_items(self)->weakref.WeakValueDictionary:
+    """get a Dict of weak references to registered items.
+            Args:
+              an Item object
+        """
     return self.registered_items
 
   def register_item(self, item: openhab.items.Item)->None:
     """method to register an instantiated item. registered items can receive commands an updated from openhab.
+    Usually you don´t need to register as Items register themself.
         Args:
           an Item object
     """

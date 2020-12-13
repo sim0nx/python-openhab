@@ -1,3 +1,24 @@
+# -*- coding: utf-8 -*-
+"""tests for creating and deletion of items """
+
+#
+# Alexey Grubauer (c) 2020-present <alexey@ingenious-minds.at>
+#
+# python-openhab is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# python-openhab is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with python-openhab.  If not, see <http://www.gnu.org/licenses/>.
+#
+# pylint: disable=bad-indentation
+
 from __future__ import annotations
 from typing import TYPE_CHECKING, List, Set, Dict, Tuple, Union, Any, Optional, NewType, Callable
 
@@ -27,48 +48,80 @@ base_url = 'http://10.10.20.81:8080/rest'
 
 
 
-def testCreateItems(myopenhab:openhab.OpenHAB):
+def test_create_and_delete_items(myopenhab:openhab.OpenHAB, nameprefix):
+    log.info("starting tests 'create and delete items'")
     myitemFactory = openhab.items.ItemFactory(myopenhab)
-    random.seed()
-    nameprefix = "x2_{}".format(random.randint(1, 1000))
-    knxshuttergroup=myopenhab.get_item("gKNXImport_shutter")
-    log.info("knxshuttergroup:{}".format(knxshuttergroup))
 
-    aGroupItem:openhab.items.Item =testGroup(myitemFactory,nameprefix)
-    log.info("the new group:{}".format(aGroupItem))
-    aNumberItem=testNumberItem(myitemFactory,nameprefix)
-
-    aContactItem:openhab.items.ContactItem=testContactItem(myitemFactory,nameprefix)
-    log.info("the new aContactItem:{}".format(aContactItem))
-
-    aDatetimeItem:openhab.items.DateTimeItem=testDateTimeItem(myitemFactory,nameprefix)
-    log.info("the new aDatetimeItem:{}".format(aDatetimeItem))
-
-    aRollershutterItem:openhab.items.RollershutterItem = testRollershutterItem(myitemFactory, nameprefix)
-    log.info("the new aRollershutterItem:{}".format(aRollershutterItem))
-
-    aColorItem:openhab.items.ColorItem = testColorItem(myitemFactory, nameprefix)
-    log.info("the new aColorItem:{}".format(aColorItem))
-
-    aDimmerItem:openhab.items.DimmerItem = testDimmerItem(myitemFactory, nameprefix)
-    log.info("the new aDimmerItem:{}".format(aDimmerItem))
-
-    aSwitchItem:openhab.items.SwitchItem = testSwitchItem(myitemFactory, nameprefix)
-    log.info("the new Switch:{}".format(aSwitchItem))
-
-    aPlayerItem:openhab.items.PlayerItem = testPlayerItem(myitemFactory, nameprefix)
-    log.info("the new Player:{}".format(aPlayerItem))
-
-    coloritemname=aColorItem.name
-    aColorItem.delete()
     try:
-        shouldNotWork=myitemFactory.getItem(coloritemname)
-        testutil.doassert(False,True,"this lookup should raise a exception because the item should have been removed.")
-    except:
-        pass
+        aGroupItem:openhab.items.Item =testGroup(myitemFactory,nameprefix)
+        log.info("the new group:{}".format(aGroupItem))
+        aNumberItem=testNumberItem(myitemFactory,nameprefix)
+
+        aContactItem:openhab.items.ContactItem=testContactItem(myitemFactory,nameprefix)
+        log.info("the new aContactItem:{}".format(aContactItem))
+
+        aDatetimeItem:openhab.items.DateTimeItem=testDateTimeItem(myitemFactory,nameprefix)
+        log.info("the new aDatetimeItem:{}".format(aDatetimeItem))
+
+        aRollershutterItem:openhab.items.RollershutterItem = testRollershutterItem(myitemFactory, nameprefix)
+        log.info("the new aRollershutterItem:{}".format(aRollershutterItem))
+
+        aColorItem:openhab.items.ColorItem = testColorItem(myitemFactory, nameprefix)
+        log.info("the new aColorItem:{}".format(aColorItem))
+
+        aDimmerItem:openhab.items.DimmerItem = testDimmerItem(myitemFactory, nameprefix)
+        log.info("the new aDimmerItem:{}".format(aDimmerItem))
+
+        aSwitchItem:openhab.items.SwitchItem = testSwitchItem(myitemFactory, nameprefix)
+        log.info("the new Switch:{}".format(aSwitchItem))
+
+        aPlayerItem:openhab.items.PlayerItem = testPlayerItem(myitemFactory, nameprefix)
+        log.info("the new Player:{}".format(aPlayerItem))
+
+        log.info("creation tests worked")
+    finally:
+        aGroupItem.delete()
+        aNumberItem.delete()
+        aContactItem.delete()
+        aDatetimeItem.delete()
+        aRollershutterItem.delete()
+
+        coloritemname=aColorItem.name
+        aColorItem.delete()
+        try:
+            shouldNotWork=myitemFactory.getItem(coloritemname)
+            testutil.doassert(False,True,"this getItem should raise a exception because the item should have been removed.")
+        except:
+            pass
+        log.info("deletion of coloritem worked")
+        aDimmerItem.delete()
+        aSwitchItem.delete()
+        aPlayerItem.delete()
 
 
-    #Group, Number, Contact, DateTime, Rollershutter, Color, Dimmer, Switch, Player
+
+
+
+
+
+    log.info("test 'create and delete items' finished successfully")
+
+
+def delete_all_items_starting_with(myopenhab:openhab.OpenHAB, nameprefix):
+    log.info("starting to delete all items starting with '{}'".format(nameprefix))
+    if nameprefix is None: return
+    if len(nameprefix) < 3:
+        log.warning("don´t think that you really want to do this")
+        return
+    allItems=myopenhab.fetch_all_items()
+    count=0
+    for aItemname in allItems:
+        if aItemname.startswith(nameprefix):
+            aItem=allItems[aItemname]
+            aItem.delete()
+            count+=1
+    log.info("finished to delete all items starting with '{}'. deleted {} items".format(nameprefix,count))
+
 
 def testNumberItem(itemFactory,nameprefix):
 
@@ -251,11 +304,9 @@ def testPlayerItem(itemFactory,nameprefix):
 
 myopenhab = openhab.OpenHAB(base_url,autoUpdate=False)
 keeprunning=True
-testCreateItems(myopenhab)
+random.seed()
+nameprefix = "x2_{}".format(random.randint(1, 1000))
 
-
-while keeprunning:
-    time.sleep(10)
-
-    x=0
+test_create_and_delete_items(myopenhab, nameprefix)
+#delete_all_items_starting_with(myopenhab,"x2_")
 
