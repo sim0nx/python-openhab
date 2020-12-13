@@ -42,7 +42,7 @@ class OpenHAB:
                password: typing.Optional[str] = None,
                http_auth: typing.Optional[requests.auth.AuthBase] = None,
                timeout: typing.Optional[float] = None) -> None:
-    """Constructor.
+    """Class constructor.
 
     Args:
       base_url (str): The openHAB REST URL, e.g. http://example.com/rest
@@ -85,7 +85,7 @@ class OpenHAB:
       ValueError: Raises a ValueError exception in case of a non-successful
                   REST request.
     """
-    if not (200 <= req.status_code < 300):
+    if not 200 <= req.status_code < 300:
       req.raise_for_status()
 
   def req_get(self, uri_path: str) -> typing.Any:
@@ -120,8 +120,6 @@ class OpenHAB:
     r = self.session.post(self.base_url + uri_path, data=data, headers={'Content-Type': 'text/plain'}, timeout=self.timeout)
     self._check_req_return(r)
 
-    return None
-
   def req_put(self, uri_path: str, data: typing.Optional[dict] = None) -> None:
     """Helper method for initiating a HTTP PUT request.
 
@@ -137,8 +135,6 @@ class OpenHAB:
     """
     r = self.session.put(self.base_url + uri_path, data=data, headers={'Content-Type': 'text/plain'}, timeout=self.timeout)
     self._check_req_return(r)
-
-    return None
 
   # fetch all items
   def fetch_all_items(self) -> typing.Dict[str, openhab.items.Item]:
@@ -181,21 +177,21 @@ class OpenHAB:
     Returns:
       Item: A corresponding Item class instance with the state of the item.
     """
-    type = json_data['type']
-    if type == 'Group' and 'groupType' in json_data:
-      type = json_data["groupType"]
+    _type = json_data['type']
+    if _type == 'Group' and 'groupType' in json_data:
+      _type = json_data["groupType"]
 
-    if type == 'Switch':
+    if _type == 'Switch':
       return openhab.items.SwitchItem(self, json_data)
 
-    if type == 'DateTime':
+    if _type == 'DateTime':
       return openhab.items.DateTimeItem(self, json_data)
 
-    if type == 'Contact':
+    if _type == 'Contact':
       return openhab.items.ContactItem(self, json_data)
 
-    if type.startswith('Number'):
-      if type.startswith('Number:'):
+    if _type.startswith('Number'):
+      if _type.startswith('Number:'):
         m = re.match(r'''^([^\s]+)''', json_data['state'])
 
         if m:
@@ -203,16 +199,16 @@ class OpenHAB:
 
       return openhab.items.NumberItem(self, json_data)
 
-    if type == 'Dimmer':
+    if _type == 'Dimmer':
       return openhab.items.DimmerItem(self, json_data)
 
-    if type == 'Color':
+    if _type == 'Color':
       return openhab.items.ColorItem(self, json_data)
 
-    if type == 'Rollershutter':
+    if _type == 'Rollershutter':
       return openhab.items.RollershutterItem(self, json_data)
 
-    if type == 'Player':
+    if _type == 'Player':
       return openhab.items.PlayerItem(self, json_data)
 
     return openhab.items.Item(self, json_data)
