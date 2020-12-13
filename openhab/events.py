@@ -37,12 +37,14 @@ EventSourceOpenhab : EventSource = EventSource("Openhab")
 
 @dataclass
 class ItemEvent(object):
+    """The base class for all ItemEvents"""
     type = ItemEventType
     itemname: str
     source: EventSource
 
 @dataclass
 class ItemStateEvent(ItemEvent):
+    """a Event representing a state event on a Item"""
     type = ItemStateEventType
     remoteDatatype: str
     newValue: typing.Any
@@ -53,6 +55,7 @@ class ItemStateEvent(ItemEvent):
 
 @dataclass
 class ItemCommandEvent(ItemEvent):
+    """a Event representing a command event on a Item"""
     type = ItemCommandEventType
     remoteDatatype: str
     newValue: typing.Any
@@ -62,6 +65,7 @@ class ItemCommandEvent(ItemEvent):
 
 @dataclass
 class ItemStateChangedEvent(ItemStateEvent):
+    """a Event representing a state change event on a Item"""
     type = ItemStateChangedEventType
     oldRemoteDatatype: str
     oldValueRaw: str
