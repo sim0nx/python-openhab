@@ -18,7 +18,6 @@
 # along with python-openhab.  If not, see <http://www.gnu.org/licenses/>.
 #
 # pylint: disable=bad-indentation
-from __future__ import annotations
 from typing import TYPE_CHECKING, List, Set, Dict, Tuple, Union, Any, Optional, NewType, Callable
 import openhab
 import openhab.events
@@ -112,10 +111,7 @@ if True:
 
 
         def create_event_data(type, itemname, payload):
-            result = {}
-            result["data_type"] = type
-            result["topic"] = "smarthome/items/{itemname}/state".format(itemname=itemname)
-            result["payload"] = payload
+            result = {"data_type": type, "topic": "smarthome/items/{itemname}/state".format(itemname=itemname), "payload": payload}
             return result
 
 

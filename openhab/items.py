@@ -19,9 +19,8 @@
 #
 
 # pylint: disable=bad-indentation
-
-import datetime
 from __future__ import annotations
+import datetime
 import logging
 import inspect
 import re
@@ -329,7 +328,8 @@ class Item:
   def _is_my_own_change(self, event):
     """find out if the incoming event is actually just a echo of my previous command or change"""
     now = datetime.now()
-    self.logger.debug("_isMyOwnChange:event.source:{}, event.data_type{}, self._state:{}, event.new_value:{},self.lastCommandSent:{}, self.lastUpdateSent:{} , now:{}".format(event.source, event.type, self._state, event.new_value, self.lastCommandSent, self.lastUpdateSent, now))
+    self.logger.debug("_isMyOwnChange:event.source:{}, event.data_type{}, self._state:{}, event.new_value:{},self.lastCommandSent:{}, self.lastUpdateSent:{} , now:{}".format(
+      event.source, event.type, self._state, event.new_value, self.lastCommandSent, self.lastUpdateSent, now))
     if event.source == openhab.events.EventSourceOpenhab:
       if event.type in [openhab.events.ItemCommandEventType, openhab.events.ItemStateChangedEventType, openhab.events.ItemStateEventType]:
         if self._state == event.new_value:
@@ -442,7 +442,9 @@ class Item:
       else:
         self.listeningTypes.difference_update(listening_types)
 
-  def add_event_listener(self, listening_types: typing.Set[openhab.events.EventType], listener: typing.Callable[[openhab.items.Item, openhab.events.ItemEvent], None], only_if_eventsource_is_openhab=True, also_get_my_echos_from_openhab=False):
+  def add_event_listener(self, listening_types: typing.Set[openhab.events.EventType], listener: typing.Callable[[openhab.items.Item, openhab.events.ItemEvent], None],
+                         only_if_eventsource_is_openhab=True,
+                         also_get_my_echos_from_openhab=False):
     """add a Listener interested in changes of items happening in openhab
         Args:
           Args:
@@ -467,7 +469,7 @@ class Item:
   def remove_all_event_listeners(self):
     self.event_listeners = []
 
-  def remove_event_listener(self, types: typing.List[openhab.events.EventType], listener: typing.Callable[[openhab.items.Item, openhab.events.ItemEvent], None]):
+  def remove_event_listener(self, types: typing.Set[openhab.events.EventType], listener: typing.Callable[[openhab.items.Item, openhab.events.ItemEvent], None]):
     """removes a previously registered Listener interested in changes of items happening in openhab
             Args:
               Args:
@@ -721,7 +723,7 @@ class NumberItem(Item):
       str: The unit Of Measure or empty string
     """
     if value in ('UNDEF', 'NULL'):
-      return value
+      return value, ""
     # m = re.match(r'''^(-?[0-9.]+)''', value)
     try:
       m = re.match("(-?[0-9.]+)\s?(.*)?$", value)

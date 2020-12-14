@@ -62,7 +62,8 @@ class OpenHAB:
                             specify a custom http authentication object of data_type :class:`requests.auth.AuthBase`.
       timeout (float, optional): An optional timeout for REST transactions
       auto_update (bool, optional): True: receive Openhab Item Events to actively get informed about changes.
-      max_echo_to_openhab_ms (int, optional): interpret Events from openHAB which hold a state-value equal to items current state-value which are coming in within maxEchoToOpenhabMS milliseconds since our update/command as echos of our own update//command
+      max_echo_to_openhab_ms (int, optional): interpret Events from openHAB which hold a state-value equal to items current state-value
+                                              which are coming in within maxEchoToOpenhabMS milliseconds since our update/command as echos of our own update//command
     Returns:
       OpenHAB: openHAB class instance.
     """
@@ -174,7 +175,12 @@ class OpenHAB:
                                                        old_value="",
                                                        old_unit_of_measure="",
                                                        as_update=False)
-          log.debug("received ItemStateChanged for '{itemname}'[{olddatatype}->{datatype}]:{oldState}->{newValue}".format(itemname=item_name, olddatatype=old_remote_datatype, datatype=remote_datatype, oldState=old_value, newValue=new_value))
+          log.debug("received ItemStateChanged for '{itemname}'[{olddatatype}->{datatype}]:{oldState}->{newValue}".format(
+            itemname=item_name,
+            olddatatype=old_remote_datatype,
+            datatype=remote_datatype,
+            oldState=old_value,
+            newValue=new_value))
 
         else:
           log.debug("received command for '{itemname}'[{datatype}]:{newValue}".format(itemname=item_name, datatype=remote_datatype, newValue=new_value))
@@ -292,7 +298,6 @@ class OpenHAB:
     """
     r = self.session.post(self.base_url + uri_path, data=data, headers={'Content-Type': 'text/plain'}, timeout=self.timeout)
     self._check_req_return(r)
-
 
   def req_json_put(self, uri_path: str, json_data: str = None) -> None:
     """Helper method for initiating a HTTP PUT request.
