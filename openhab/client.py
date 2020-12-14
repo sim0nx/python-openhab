@@ -131,14 +131,14 @@ class OpenHAB:
               event_data send by openhab in a Dict
     """
     log = logging.getLogger()
-    if "data_type" in event_data:
+    if "type" in event_data:
+      event_reason = event_data["type"]
 
-      event_reason = event_data["data_type"]
       if event_reason in ["ItemCommandEvent", "ItemStateEvent", "ItemStateChangedEvent"]:
         item_name = event_data["topic"].split("/")[-2]
         event = None
         payload_data = json.loads(event_data["payload"])
-        remote_datatype = payload_data["data_type"]
+        remote_datatype = payload_data["type"]
         new_value = payload_data["value"]
         log.debug("####### new Event arrived:")
         log.debug("item name:{}".format(item_name))

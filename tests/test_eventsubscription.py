@@ -36,24 +36,24 @@ log.debug("debugmessage")
 
 base_url = 'http://10.10.20.81:8080/rest'
 
-testdata: Dict[str, Tuple[str, str, str]] = {'OnOff': ('ItemCommandEvent', 'testroom1_LampOnOff', '{"data_type":"OnOff","value":"ON"}'),
-                                             'Decimal': ('ItemCommandEvent', 'xx', '{"data_type":"Decimal","value":"170.0"}'),
-                                             'DateTime': ('ItemCommandEvent', 'xx', '{"data_type":"DateTime","value":"2020-12-04T15:53:33.968+0100"}'),
-                                             'UnDef': ('ItemCommandEvent', 'xx', '{"data_type":"UnDef","value":"UNDEF"}'),
-                                             'String': ('ItemCommandEvent', 'xx', '{"data_type":"String","value":"WANING_GIBBOUS"}'),
-                                             'Quantitykm': ('ItemCommandEvent', 'xx', '{"data_type":"Quantity","value":"389073.99674024084 km"}'),
-                                             'Quantitykm grad': ('ItemCommandEvent', 'xx', '{"data_type":"Quantity","value":"233.32567712620255 °"}'),
-                                             'Quantitywm2': ('ItemCommandEvent', 'xx', '{"data_type":"Quantity","value":"0.0 W/m²"}'),
-                                             'Percent': ('ItemCommandEvent', 'xx', '{"data_type":"Percent","value":"52"}'),
-                                             'UpDown': ('ItemCommandEvent', 'xx', '{"data_type":"UpDown","value":"DOWN"}'),
-                                             'OnOffChange': ('ItemStateChangedEvent', 'xx', '{"data_type":"OnOff","value":"OFF","oldType":"OnOff","old_value_raw":"ON"}'),
-                                             'DecimalChange': ('ItemStateChangedEvent', 'xx', '{"data_type":"Decimal","value":"170.0","oldType":"Decimal","old_value_raw":"186.0"}'),
-                                             'QuantityChange': ('ItemStateChangedEvent', 'xx', '{"data_type":"Quantity","value":"389073.99674024084 km","oldType":"Quantity","old_value_raw":"389076.56223012594 km"}'),
-                                             'QuantityGradChange': ('ItemStateChangedEvent', 'xx', '{"data_type":"Quantity","value":"233.32567712620255 °","oldType":"Quantity","old_value_raw":"233.1365666436372 °"}'),
-                                             'DecimalChangeFromNull': ('ItemStateChangedEvent', 'xx', '{"data_type":"Decimal","value":"0.5","oldType":"UnDef","old_value_raw":"NULL"}'),
-                                             'DecimalChangeFromNullToUNDEF': ('ItemStateChangedEvent', 'xx', '{"data_type":"Decimal","value":"15","oldType":"UnDef","old_value_raw":"NULL"}'),
-                                             'PercentChange': ('ItemStateChangedEvent', 'xx', '{"data_type":"Percent","value":"52","oldType":"UnDef","old_value_raw":"NULL"}'),
-                                             'Datatypechange': ('ItemStateChangedEvent', 'xx', '{"data_type":"OnOff","value":"ON","oldType":"UnDef","old_value_raw":"NULL"}')
+testdata: Dict[str, Tuple[str, str, str]] = {'OnOff': ('ItemCommandEvent', 'testroom1_LampOnOff', '{"type":"OnOff","value":"ON"}'),
+                                             'Decimal': ('ItemCommandEvent', 'xx', '{"type":"Decimal","value":"170.0"}'),
+                                             'DateTime': ('ItemCommandEvent', 'xx', '{"type":"DateTime","value":"2020-12-04T15:53:33.968+0100"}'),
+                                             'UnDef': ('ItemCommandEvent', 'xx', '{"type":"UnDef","value":"UNDEF"}'),
+                                             'String': ('ItemCommandEvent', 'xx', '{"type":"String","value":"WANING_GIBBOUS"}'),
+                                             'Quantitykm': ('ItemCommandEvent', 'xx', '{"type":"Quantity","value":"389073.99674024084 km"}'),
+                                             'Quantitykm grad': ('ItemCommandEvent', 'xx', '{"type":"Quantity","value":"233.32567712620255 °"}'),
+                                             'Quantitywm2': ('ItemCommandEvent', 'xx', '{"type":"Quantity","value":"0.0 W/m²"}'),
+                                             'Percent': ('ItemCommandEvent', 'xx', '{"type":"Percent","value":"52"}'),
+                                             'UpDown': ('ItemCommandEvent', 'xx', '{"type":"UpDown","value":"DOWN"}'),
+                                             'OnOffChange': ('ItemStateChangedEvent', 'xx', '{"type":"OnOff","value":"OFF","oldType":"OnOff","old_value_raw":"ON"}'),
+                                             'DecimalChange': ('ItemStateChangedEvent', 'xx', '{"type":"Decimal","value":"170.0","oldType":"Decimal","old_value_raw":"186.0"}'),
+                                             'QuantityChange': ('ItemStateChangedEvent', 'xx', '{"type":"Quantity","value":"389073.99674024084 km","oldType":"Quantity","old_value_raw":"389076.56223012594 km"}'),
+                                             'QuantityGradChange': ('ItemStateChangedEvent', 'xx', '{"type":"Quantity","value":"233.32567712620255 °","oldType":"Quantity","old_value_raw":"233.1365666436372 °"}'),
+                                             'DecimalChangeFromNull': ('ItemStateChangedEvent', 'xx', '{"type":"Decimal","value":"0.5","oldType":"UnDef","old_value_raw":"NULL"}'),
+                                             'DecimalChangeFromNullToUNDEF': ('ItemStateChangedEvent', 'xx', '{"type":"Decimal","value":"15","oldType":"UnDef","old_value_raw":"NULL"}'),
+                                             'PercentChange': ('ItemStateChangedEvent', 'xx', '{"type":"Percent","value":"52","oldType":"UnDef","old_value_raw":"NULL"}'),
+                                             'Datatypechange': ('ItemStateChangedEvent', 'xx', '{"type":"OnOff","value":"ON","oldType":"UnDef","old_value_raw":"NULL"}')
                                              }
 testitems: Dict[str, openhab.items.Item] = {}
 
@@ -111,7 +111,7 @@ if True:
 
 
         def create_event_data(type, itemname, payload):
-            result = {"data_type": type, "topic": "smarthome/items/{itemname}/state".format(itemname=itemname), "payload": payload}
+            result = {"type": type, "topic": "smarthome/items/{itemname}/state".format(itemname=itemname), "payload": payload}
             return result
 
 
@@ -132,7 +132,7 @@ if True:
         expected_switch_Value = "ON"
         type = 'ItemCommandEvent'
 
-        payload = '{"data_type":"OnOff","value":"ON"}'
+        payload = '{"type":"OnOff","value":"ON"}'
         eventData = create_event_data(type, itemname, payload)
         switchItem.add_event_listener(listening_types=openhab.events.ItemCommandEventType, listener=on_any_item_command, only_if_eventsource_is_openhab=False)
         switchItem.add_event_listener(listening_types=openhab.events.ItemCommandEventType, listener=on_light_switch_command, only_if_eventsource_is_openhab=False)
