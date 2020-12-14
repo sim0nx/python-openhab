@@ -30,7 +30,7 @@ __license__ = 'AGPLv3+'
 
 
 class CommandType(metaclass=abc.ABCMeta):
-  """Base command type class."""
+  """Base command data_type class."""
 
   @classmethod
   @abc.abstractmethod
@@ -39,8 +39,8 @@ class CommandType(metaclass=abc.ABCMeta):
     directly, we throw a NotImplementedError exception.
 
     Args:
-      value (Object): The value to validate. The type of the value depends on the item
-                      type and is checked accordingly.
+      value (Object): The value to validate. The data_type of the value depends on the item
+                      data_type and is checked accordingly.
 
     Raises:
       NotImplementedError: Raises NotImplementedError as the base class should never
@@ -50,13 +50,13 @@ class CommandType(metaclass=abc.ABCMeta):
 
 
 class StringType(CommandType):
-  """StringType type class."""
+  """StringType data_type class."""
 
   @classmethod
   def validate(cls, value: str) -> None:
     """Value validation method.
 
-    Valid values are andy of type string.
+    Valid values are andy of data_type string.
 
     Args:
       value (str): The value to validate.
@@ -69,7 +69,7 @@ class StringType(CommandType):
 
 
 class OnOffType(StringType):
-  """OnOffType type class."""
+  """OnOffType data_type class."""
 
   @classmethod
   def validate(cls, value: str) -> None:
@@ -90,7 +90,7 @@ class OnOffType(StringType):
 
 
 class OpenCloseType(StringType):
-  """OpenCloseType type class."""
+  """OpenCloseType data_type class."""
 
   @classmethod
   def validate(cls, value: str) -> None:
@@ -111,7 +111,7 @@ class OpenCloseType(StringType):
 
 
 class ColorType(StringType):
-  """ColorType type class."""
+  """ColorType data_type class."""
 
   @classmethod
   def validate(cls, value: str) -> None:
@@ -136,13 +136,13 @@ class ColorType(StringType):
 
 
 class DecimalType(CommandType):
-  """DecimalType type class."""
+  """DecimalType data_type class."""
 
   @classmethod
   def validate(cls, value: typing.Union[float, int]) -> None:
     """Value validation method.
 
-    Valid values are any of type ``float`` or ``int``.
+    Valid values are any of data_type ``float`` or ``int``.
 
     Args:
       value (float): The value to validate.
@@ -155,13 +155,13 @@ class DecimalType(CommandType):
 
 
 class PercentType(DecimalType):
-  """PercentType type class."""
+  """PercentType data_type class."""
 
   @classmethod
   def validate(cls, value: typing.Union[float, int]) -> None:
     """Value validation method.
 
-    Valid values are any of type ``float`` or ``int`` and must be greater of equal to 0
+    Valid values are any of data_type ``float`` or ``int`` and must be greater of equal to 0
     and smaller or equal to 100.
 
     Args:
@@ -177,7 +177,7 @@ class PercentType(DecimalType):
 
 
 class IncreaseDecreaseType(StringType):
-  """IncreaseDecreaseType type class."""
+  """IncreaseDecreaseType data_type class."""
 
   @classmethod
   def validate(cls, value: str) -> None:
@@ -198,13 +198,13 @@ class IncreaseDecreaseType(StringType):
 
 
 class DateTimeType(CommandType):
-  """DateTimeType type class."""
+  """DateTimeType data_type class."""
 
   @classmethod
   def validate(cls, value: datetime.datetime) -> None:
     """Value validation method.
 
-    Valid values are any of type ``datetime.datetime``.
+    Valid values are any of data_type ``datetime.datetime``.
 
     Args:
       value (datetime.datetime): The value to validate.
@@ -217,7 +217,7 @@ class DateTimeType(CommandType):
 
 
 class UpDownType(StringType):
-  """UpDownType type class."""
+  """UpDownType data_type class."""
 
   @classmethod
   def validate(cls, value: str) -> None:
@@ -238,7 +238,7 @@ class UpDownType(StringType):
 
 
 class StopType(StringType):
-  """UpDownType type class."""
+  """UpDownType data_type class."""
 
   @classmethod
   def validate(cls, value: str) -> None:
@@ -259,7 +259,7 @@ class StopType(StringType):
 
 
 class PlayerType(StringType):
-  """PlayerType type class."""
+  """PlayerType data_type class."""
 
   @classmethod
   def validate(cls, value: str) -> None:

@@ -24,50 +24,48 @@ import typing
 from dataclasses import dataclass
 
 
-EventType= typing.NewType('EventType', str)
-ItemEventType : EventType = EventType("Item")
-ItemStateEventType : EventType = EventType("ItemState")
-ItemCommandEventType : EventType = EventType("ItemCommand")
-ItemStateChangedEventType : EventType = EventType("ItemStateChanged")
+EventType = typing.NewType('EventType', str)
+ItemEventType: EventType = EventType("Item")
+ItemStateEventType: EventType = EventType("ItemState")
+ItemCommandEventType: EventType = EventType("ItemCommand")
+ItemStateChangedEventType: EventType = EventType("ItemStateChanged")
 
 
-EventSource= typing.NewType('EventSource', str)
-EventSourceInternal : EventSource = EventSource("Internal")
-EventSourceOpenhab : EventSource = EventSource("Openhab")
+EventSource = typing.NewType('EventSource', str)
+EventSourceInternal: EventSource = EventSource("Internal")
+EventSourceOpenhab: EventSource = EventSource("Openhab")
+
 
 @dataclass
 class ItemEvent(object):
     """The base class for all ItemEvents"""
     type = ItemEventType
-    itemname: str
+    item_name: str
     source: EventSource
+    remote_datatype: str
+    new_value: typing.Any
+    new_value_raw: typing.Any
+    unit_of_measure: str
+
 
 @dataclass
 class ItemStateEvent(ItemEvent):
     """a Event representing a state event on a Item"""
     type = ItemStateEventType
-    remoteDatatype: str
-    newValue: typing.Any
-    newValueRaw: str
-    asUpdate:bool
-    unitOfMeasure: str
+    as_update: bool
 
 
 @dataclass
 class ItemCommandEvent(ItemEvent):
     """a Event representing a command event on a Item"""
     type = ItemCommandEventType
-    remoteDatatype: str
-    newValue: typing.Any
-    newValueRaw: typing.Any
-    unitOfMeasure: str
 
 
 @dataclass
 class ItemStateChangedEvent(ItemStateEvent):
     """a Event representing a state change event on a Item"""
     type = ItemStateChangedEventType
-    oldRemoteDatatype: str
-    oldValueRaw: str
-    oldValue: typing.Any
-    oldUnitOfMeasure: str
+    old_remote_datatype: str
+    old_value_raw: str
+    old_value: typing.Any
+    old_unit_of_measure: str
