@@ -19,9 +19,8 @@
 #
 
 # pylint: disable=bad-indentation
-
-
 from __future__ import annotations
+import datetime
 import logging
 import inspect
 import re
@@ -225,7 +224,7 @@ class Item:
     self.openhab.register_item(self)
     self.event_listeners: typing.Dict[typing.Callable[[openhab.items.Item, openhab.events.ItemEvent], None], Item.EventListener] = {}
 
-  def init_from_json(self, json_data: dict):
+  def init_from_json(self, json_data: dict) -> None:
     """Initialize this object from a json configuration as fetched from openHAB.
 
     Args:
@@ -274,12 +273,12 @@ class Item:
     return self._state
 
   @state.setter
-  def state(self, value: typing.Any):
+  def state(self, value: typing.Any) -> None:
     self.update(value)
 
   @property
-  def members(self):
-    """If item is a data_type of Group, it will return all member items for this group.
+  def members(self) -> typing.Dict[str, typing.Any]:
+    """If item is a type of Group, it will return all member items for this group.
 
     For none group item empty dictionary will be returned.
 
@@ -289,7 +288,7 @@ class Item:
     """
     return self._members
 
-  def _validate_value(self, value: typing.Union[str, typing.Type[openhab.types.CommandType]]):
+  def _validate_value(self, value: typing.Union[str, typing.Type[openhab.types.CommandType]]) -> None:
     """Private method for verifying the new value before modifying the state of the item."""
     if self.type_ == 'String':
       if not isinstance(value, (str, bytes)):
@@ -329,7 +328,8 @@ class Item:
   def _is_my_own_change(self, event):
     """find out if the incoming event is actually just a echo of my previous command or change"""
     now = datetime.now()
-    self.logger.debug("_isMyOwnChange:event.source:{}, event.data_type{}, self._state:{}, event.new_value:{},self.lastCommandSent:{}, self.lastUpdateSent:{} , now:{}".format(event.source, event.type, self._state, event.new_value, self.lastCommandSent, self.lastUpdateSent, now))
+    self.logger.debug("_isMyOwnChange:event.source:{}, event.data_type{}, self._state:{}, event.new_value:{},self.lastCommandSent:{}, self.lastUpdateSent:{} , now:{}".format(
+      event.source, event.type, self._state, event.new_value, self.lastCommandSent, self.lastUpdateSent, now))
     if event.source == openhab.events.EventSourceOpenhab:
       if event.type in [openhab.events.ItemCommandEventType, openhab.events.ItemStateChangedEventType, openhab.events.ItemStateEventType]:
         if self._state == event.new_value:
@@ -442,7 +442,9 @@ class Item:
       else:
         self.listeningTypes.difference_update(listening_types)
 
-  def add_event_listener(self, listening_types: typing.Set[openhab.events.EventType], listener: typing.Callable[[openhab.items.Item, openhab.events.ItemEvent], None], only_if_eventsource_is_openhab=True, also_get_my_echos_from_openhab=False):
+  def add_event_listener(self, listening_types: typing.Set[openhab.events.EventType], listener: typing.Callable[[openhab.items.Item, openhab.events.ItemEvent], None],
+                         only_if_eventsource_is_openhab=True,
+                         also_get_my_echos_from_openhab=False):
     """add a Listener interested in changes of items happening in openhab
         Args:
           Args:
@@ -467,7 +469,7 @@ class Item:
   def remove_all_event_listeners(self):
     self.event_listeners = []
 
-  def remove_event_listener(self, types: typing.List[openhab.events.EventType], listener: typing.Callable[[openhab.items.Item, openhab.events.ItemEvent], None]):
+  def remove_event_listener(self, types: typing.Set[openhab.events.EventType], listener: typing.Callable[[openhab.items.Item, openhab.events.ItemEvent], None]):
     """removes a previously registered Listener interested in changes of items happening in openhab
             Args:
               Args:
@@ -492,6 +494,7 @@ class Item:
       self._state, self._unitOfMeasure = self._parse_rest(value)
 
   def __str__(self) -> str:
+    """String representation."""
     return '<{0} - {1} : {2}>'.format(self.type_, self.name, self._state)
 
   def _update(self, value: typing.Any) -> None:
@@ -605,16 +608,32 @@ class DateTimeItem(Item):
   types = [openhab.types.DateTimeType]
   TYPENAME = "DateTime"
 
-  def __gt__(self, other):
+  def __gt__(self, other: datetime.datetime) -> bool:
+    """Greater than comparison."""
+    if self._state is None or not isinstance(other, datetime.datetime):
+      raise NotImplementedError('You can only compare two DateTimeItem objects.')
+
     return self._state > other
 
-  def __lt__(self, other):
+  def __lt__(self, other: object) -> bool:
+    """Less than comparison."""
+    if not isinstance(other, datetime.datetime):
+      raise NotImplementedError('You can only compare two DateTimeItem objects.')
+
     return not self.__gt__(other)
 
-  def __eq__(self, other):
+  def __eq__(self, other: object) -> bool:
+    """Equality comparison."""
+    if not isinstance(other, datetime.datetime):
+      raise NotImplementedError('You can only compare two DateTimeItem objects.')
+
     return self._state == other
 
-  def __ne__(self, other):
+  def __ne__(self, other: object) -> bool:
+    """Not equal comparison."""
+    if not isinstance(other, datetime.datetime):
+      raise NotImplementedError('You can only compare two DateTimeItem objects.')
+
     return not self.__eq__(other)
 
   def _parse_rest(self, value) -> typing.Tuple[datetime, str]:
@@ -629,7 +648,7 @@ class DateTimeItem(Item):
     """
     return dateutil.parser.parse(value), ""
 
-  def _rest_format(self, value):
+  def _rest_format(self, value: datetime.datetime) -> str:
     """Format a value before submitting to openHAB.
 
     Args:
@@ -704,7 +723,7 @@ class NumberItem(Item):
       str: The unit Of Measure or empty string
     """
     if value in ('UNDEF', 'NULL'):
-      return value
+      return value, ""
     # m = re.match(r'''^(-?[0-9.]+)''', value)
     try:
       m = re.match("(-?[0-9.]+)\s?(.*)?$", value)

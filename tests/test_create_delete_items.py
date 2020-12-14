@@ -44,9 +44,9 @@ log.debug("ddddd")
 base_url = 'http://10.10.20.81:8080/rest'
 
 
-def test_create_and_delete_items(myopenhab: openhab.OpenHAB, nameprefix):
+def test_create_and_delete_items(openhab: openhab.OpenHAB, nameprefix):
     log.info("starting tests 'create and delete items'")
-    my_item_factory = openhab.items.ItemFactory(myopenhab)
+    my_item_factory = openhab.items.ItemFactory(openhab)
     a_group_item = None
     a_number_item = None
     a_contact_item = None
@@ -145,7 +145,16 @@ def test_NumberItem(item_factory, nameprefix):
     functionname = "{}testfunctionname".format(nameprefix)
     functionparams: List[str] = ["{}testfunctionnameParam1".format(nameprefix), "{}testfunctionnameParam2".format(nameprefix), "{}testfunctionnameParam3".format(nameprefix)]
 
-    x2 = item_factory.create_or_update_item(name=itemname, data_type=itemtype, quantity_type=item_quantity_type, label=itemlabel, category=itemcategory, tags=itemtags, group_names=itemgroup_names, group_type=grouptype, function_name=functionname, function_params=functionparams)
+    x2 = item_factory.create_or_update_item(name=itemname,
+                                            data_type=itemtype,
+                                            quantity_type=item_quantity_type,
+                                            label=itemlabel,
+                                            category=itemcategory,
+                                            tags=itemtags,
+                                            group_names=itemgroup_names,
+                                            group_type=grouptype,
+                                            function_name=functionname,
+                                            function_params=functionparams)
     x2.state = 123.45
     testutil.doassert(itemname, x2.name, "item_name")
     testutil.doassert(itemtype+":"+item_quantity_type, x2.type_, "data_type")
@@ -160,6 +169,7 @@ def test_NumberItem(item_factory, nameprefix):
         testutil.doassert(True, aExpectedGroupname in x2.groupNames, "tag {}".format(aExpectedGroupname))
 
     return x2
+
 
 def testGroup(itemFactory, nameprefix) -> openhab.items.Item:
     itemtype = "Group"
@@ -223,16 +233,16 @@ def test_ColorItem(item_factory, nameprefix):
     itemname = "{}CreateColorItemTest".format(nameprefix)
     itemtype = openhab.items.ColorItem
 
-    x2: openhab.items.ColorItem=item_factory.create_or_update_item(name=itemname, data_type=itemtype)
+    x2: openhab.items.ColorItem = item_factory.create_or_update_item(name=itemname, data_type=itemtype)
 
     x2.on()
     testutil.doassert(itemname, x2.name, "item_name")
     testutil.doassert("ON", x2.state, "itemstate")
-    newValue = "51,52,53"
-    x2.state = newValue
+    new_value = "51,52,53"
+    x2.state = new_value
 
     log.info("itemsate:{}".format(x2.state))
-    testutil.doassert(newValue, x2.state, "itemstate")
+    testutil.doassert(new_value, x2.state, "itemstate")
     return x2
 
 
@@ -301,8 +311,8 @@ def test_PlayerItem(item_factory, nameprefix):
 myopenhab = openhab.OpenHAB(base_url, auto_update=False)
 keeprunning = True
 random.seed()
-nameprefix = "x2_{}".format(random.randint(1, 1000))
+mynameprefix = "x2_{}".format(random.randint(1, 1000))
 
-test_create_and_delete_items(myopenhab, nameprefix)
-# delete_all_items_starting_with(myopenhab,"x2_")
+test_create_and_delete_items(myopenhab, mynameprefix)
+# delete_all_items_starting_with(openhab,"x2_")
 
