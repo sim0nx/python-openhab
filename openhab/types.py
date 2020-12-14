@@ -34,8 +34,8 @@ class CommandType(metaclass=abc.ABCMeta):
 
   @classmethod
   @abc.abstractmethod
-  def validate(cls, value: typing.Any):
-    """Value validation method. As this is the base class which should not be used
+  def validate(cls, value: typing.Any) -> None:
+    """Value validation method. As this is the base class which should not be used\
     directly, we throw a NotImplementedError exception.
 
     Args:
@@ -172,7 +172,7 @@ class PercentType(DecimalType):
     """
     super().validate(value)
 
-    if not (0 <= value <= 100):
+    if not 0 <= value <= 100:
       raise ValueError()
 
 

@@ -1,4 +1,4 @@
-"""module entry point"""
+"""Module entry point."""
 
 from .client import openHAB, OpenHAB
 

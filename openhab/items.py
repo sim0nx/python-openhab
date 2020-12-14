@@ -20,7 +20,7 @@
 
 # pylint: disable=bad-indentation
 
-
+import datetime
 from __future__ import annotations
 import logging
 import inspect
@@ -225,7 +225,7 @@ class Item:
     self.openhab.register_item(self)
     self.event_listeners: typing.Dict[typing.Callable[[openhab.items.Item, openhab.events.ItemEvent], None], Item.EventListener] = {}
 
-  def init_from_json(self, json_data: dict):
+  def init_from_json(self, json_data: dict) -> None:
     """Initialize this object from a json configuration as fetched from openHAB.
 
     Args:
@@ -274,12 +274,12 @@ class Item:
     return self._state
 
   @state.setter
-  def state(self, value: typing.Any):
+  def state(self, value: typing.Any) -> None:
     self.update(value)
 
   @property
-  def members(self):
-    """If item is a data_type of Group, it will return all member items for this group.
+  def members(self) -> typing.Dict[str, typing.Any]:
+    """If item is a type of Group, it will return all member items for this group.
 
     For none group item empty dictionary will be returned.
 
@@ -289,7 +289,7 @@ class Item:
     """
     return self._members
 
-  def _validate_value(self, value: typing.Union[str, typing.Type[openhab.types.CommandType]]):
+  def _validate_value(self, value: typing.Union[str, typing.Type[openhab.types.CommandType]]) -> None:
     """Private method for verifying the new value before modifying the state of the item."""
     if self.type_ == 'String':
       if not isinstance(value, (str, bytes)):
@@ -492,6 +492,7 @@ class Item:
       self._state, self._unitOfMeasure = self._parse_rest(value)
 
   def __str__(self) -> str:
+    """String representation."""
     return '<{0} - {1} : {2}>'.format(self.type_, self.name, self._state)
 
   def _update(self, value: typing.Any) -> None:
@@ -605,16 +606,32 @@ class DateTimeItem(Item):
   types = [openhab.types.DateTimeType]
   TYPENAME = "DateTime"
 
-  def __gt__(self, other):
+  def __gt__(self, other: datetime.datetime) -> bool:
+    """Greater than comparison."""
+    if self._state is None or not isinstance(other, datetime.datetime):
+      raise NotImplementedError('You can only compare two DateTimeItem objects.')
+
     return self._state > other
 
-  def __lt__(self, other):
+  def __lt__(self, other: object) -> bool:
+    """Less than comparison."""
+    if not isinstance(other, datetime.datetime):
+      raise NotImplementedError('You can only compare two DateTimeItem objects.')
+
     return not self.__gt__(other)
 
-  def __eq__(self, other):
+  def __eq__(self, other: object) -> bool:
+    """Equality comparison."""
+    if not isinstance(other, datetime.datetime):
+      raise NotImplementedError('You can only compare two DateTimeItem objects.')
+
     return self._state == other
 
-  def __ne__(self, other):
+  def __ne__(self, other: object) -> bool:
+    """Not equal comparison."""
+    if not isinstance(other, datetime.datetime):
+      raise NotImplementedError('You can only compare two DateTimeItem objects.')
+
     return not self.__eq__(other)
 
   def _parse_rest(self, value) -> typing.Tuple[datetime, str]:
@@ -629,7 +646,7 @@ class DateTimeItem(Item):
     """
     return dateutil.parser.parse(value), ""
 
-  def _rest_format(self, value):
+  def _rest_format(self, value: datetime.datetime) -> str:
     """Format a value before submitting to openHAB.
 
     Args:
