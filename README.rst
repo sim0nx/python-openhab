@@ -107,7 +107,7 @@ Example usage of the library:
         if event.source == openhab.events.EventSourceOpenhab:
             log.info("this change came from openhab")
     # install listener for evetns
-    testroom1_LampOnOff.addEventListener(listeningTypes=openhab.events.ItemCommandEventType, listener=onLight_switchCommand, onlyIfEventsourceIsOpenhab=False)
+    testroom1_LampOnOff.add_event_listener(listening_types=openhab.events.ItemCommandEventType, listener=onLight_switchCommand, only_if_eventsource_is_openhab=False)
     # switch you will receive update also for your changes in the code. (see
     testroom1_LampOnOff.off()
 
@@ -119,7 +119,7 @@ Example usage of the library:
     # first instantiate a Factory:
     itemFactory = openhab.items.ItemFactory(openhab)
     #create the item
-    testDimmer = itemFactory.createOrUpdateItem(name="the_testDimmer", type=openhab.items.DimmerItem)
+    testDimmer = itemFactory.create_or_update_item(name="the_testDimmer", data_type=openhab.items.DimmerItem)
     #use item
     testDimmer.state=95
 
@@ -128,20 +128,28 @@ Example usage of the library:
     # you can set change many item attributes:
     nameprefix="testcase_1_"
     itemname = "{}CreateItemTest".format(nameprefix)
-    itemQuantityType = "Angle"
+    item_quantity_type = "Angle"  # "Length",Temperature,,Pressure,Speed,Intensity,Dimensionless,Angle
     itemtype = "Number"
-    itemtype = openhab.items.NumberItem
 
-    labeltext = "this is a test azimuth:"
+    labeltext = "das ist eine testzahl:"
     itemlabel = "[{labeltext}%.1f °]".format(labeltext=labeltext)
     itemcategory = "{}TestCategory".format(nameprefix)
     itemtags: List[str] = ["{}testtag1".format(nameprefix), "{}testtag2".format(nameprefix)]
-    itemgroupNames: List[str] = ["{}testgroup1".format(nameprefix), "{}testgroup2".format(nameprefix)]
+    itemgroup_names: List[str] = ["{}testgroup1".format(nameprefix), "{}testgroup2".format(nameprefix)]
     grouptype = "{}testgrouptype".format(nameprefix)
     functionname = "{}testfunctionname".format(nameprefix)
     functionparams: List[str] = ["{}testfunctionnameParam1".format(nameprefix), "{}testfunctionnameParam2".format(nameprefix), "{}testfunctionnameParam3".format(nameprefix)]
 
-    testazimuth=itemFactory.createOrUpdateItem(name=itemname, type=itemtype, quantityType=itemQuantityType, label=itemlabel, category=itemcategory, tags=itemtags, groupNames=itemgroupNames, grouptype=grouptype, functionname=functionname, functionparams=functionparams)
+    x2 = item_factory.create_or_update_item(name=itemname,
+                                            data_type=itemtype,
+                                            quantity_type=item_quantity_type,
+                                            label=itemlabel,
+                                            category=itemcategory,
+                                            tags=itemtags,
+                                            group_names=itemgroup_names,
+                                            group_type=grouptype,
+                                            function_name=functionname,
+                                            function_params=functionparams)
 
 Note on NULL and UNDEF
 ----------------------
