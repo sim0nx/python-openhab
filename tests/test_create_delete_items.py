@@ -44,10 +44,12 @@ log.debug("ddddd")
 base_url = 'http://10.10.20.81:8080/rest'
 
 
-def test_create_and_delete_items(openhab: openhab.OpenHAB, nameprefix):
+def test_create_and_delete_items(myopenhab: openhab.OpenHAB, nameprefix):
     log.info("starting tests 'create and delete items'")
-    my_item_factory = openhab.items.ItemFactory(openhab)
+
+    my_item_factory = openhab.items.ItemFactory(myopenhab)
     a_group_item = None
+    a_string_item = None
     a_number_item = None
     a_contact_item = None
     a_datetime_item = None
@@ -59,6 +61,9 @@ def test_create_and_delete_items(openhab: openhab.OpenHAB, nameprefix):
     try:
         a_group_item: openhab.items.Item = testGroup(my_item_factory, nameprefix)
         log.info("the new group:{}".format(a_group_item))
+
+        a_string_item: openhab.items.Item = test_StringItem(my_item_factory, nameprefix)
+        log.info("the new stringItem:{}".format(a_string_item))
 
         a_number_item = test_NumberItem(my_item_factory, nameprefix)
 
@@ -86,24 +91,26 @@ def test_create_and_delete_items(openhab: openhab.OpenHAB, nameprefix):
         log.info("creation tests worked")
     finally:
         if a_group_item is not None:
-            a_group_item.delete()
+          a_group_item.delete()
+        if a_string_item is not None:
+          a_string_item.delete()
         if a_number_item is not None:
-            a_number_item.delete()
+          a_number_item.delete()
         if a_contact_item is not None:
-            a_contact_item.delete()
+          a_contact_item.delete()
         if a_datetime_item is not None:
-            a_datetime_item.delete()
+          a_datetime_item.delete()
         if a_rollershutter_item is not None:
-            a_rollershutter_item.delete()
+          a_rollershutter_item.delete()
 
         if a_color_item is not None:
-            coloritemname = a_color_item.name
-            a_color_item.delete()
-            try:
-                should_not_work = my_item_factory.get_item(coloritemname)
-                testutil.doassert(False, True, "this getItem should raise a exception because the item should have been removed.")
-            except:
-                pass
+          coloritemname = a_color_item.name
+          a_color_item.delete()
+          try:
+              should_not_work = my_item_factory.get_item(coloritemname)
+              testutil.doassert(False, True, "this getItem should raise a exception because the item should have been removed.")
+          except:
+              pass
         if a_dimmer_item is not None:
             a_dimmer_item.delete()
         if a_switch_item is not None:
@@ -178,6 +185,23 @@ def testGroup(itemFactory, nameprefix) -> openhab.items.Item:
     return testgroup_item
 
 
+def test_StringItem(item_factory, nameprefix):
+
+    itemname = "{}CreateStringItemTest".format(nameprefix)
+    itemtype = openhab.items.StringItem
+
+    x2 = item_factory.create_or_update_item(name=itemname, data_type=itemtype)
+    x2.state = "test string value 1"
+    testutil.doassert(itemname, x2.name, "item_name")
+    testutil.doassert("test string value 1", x2.state, "itemstate")
+    x2.state = "test string value 2"
+    testutil.doassert("test string value 2", x2.state, "itemstate")
+
+
+
+    return x2
+
+
 def test_ContactItem(item_factory, nameprefix):
 
     itemname = "{}CreateContactItemTest".format(nameprefix)
@@ -238,11 +262,11 @@ def test_ColorItem(item_factory, nameprefix):
     x2.on()
     testutil.doassert(itemname, x2.name, "item_name")
     testutil.doassert("ON", x2.state, "itemstate")
-    new_value = "51,52,53"
+    new_value = 51,52,53
     x2.state = new_value
 
     log.info("itemsate:{}".format(x2.state))
-    testutil.doassert(new_value, x2.state, "itemstate")
+    testutil.doassert((51,52,53), x2.state, "itemstate")
     return x2
 
 

@@ -21,10 +21,15 @@
 from typing import TYPE_CHECKING, List, Set, Dict, Tuple, Union, Any, Optional, NewType, Callable
 import openhab
 import openhab.events
+import openhab.types
 import time
 import openhab.items as items
 import logging
 import random
+import testutil
+
+from datetime import datetime,timezone
+import pytz
 
 log = logging.getLogger()
 logging.basicConfig(level=10, format="%(levelno)s:%(asctime)s - %(message)s - %(name)s - PID:%(process)d - THREADID:%(thread)d - %(levelname)s - MODULE:%(module)s, -FN:%(filename)s -FUNC:%(funcName)s:%(lineno)d")
@@ -57,105 +62,1032 @@ testdata: Dict[str, Tuple[str, str, str]] = {'OnOff': ('ItemCommandEvent', 'test
                                              }
 testitems: Dict[str, openhab.items.Item] = {}
 
-if True:
-    myopenhab = openhab.OpenHAB(base_url, auto_update=True)
-    myItemfactory = openhab.items.ItemFactory(myopenhab)
-    random.seed()
-    namesuffix = "_{}".format(random.randint(1, 1000))
-    testnumberA: openhab.items.NumberItem = myItemfactory.create_or_update_item(name="test_eventSubscription_numberitem_A{}".format(namesuffix), data_type=openhab.items.NumberItem)
-    testnumberB: openhab.items.NumberItem = myItemfactory.create_or_update_item(name="test_eventSubscription_numberitem_B{}".format(namesuffix), data_type=openhab.items.NumberItem)
-    itemname = "test_eventSubscription_switchitem_A{}".format(namesuffix)
-    switchItem: openhab.items.SwitchItem = myItemfactory.create_or_update_item(name=itemname, data_type=openhab.items.SwitchItem)
-    try:
-        testnumberA.state = 44.0
-        testnumberB.state = 66.0
-        expect_A = None
-        expect_B = None
 
 
-        def on_a_change(item: openhab.items.NumberItem, event: openhab.events.ItemStateEvent):
-            log.info("########################### UPDATE of {itemname} to eventvalue:{eventvalue}(event value raraw:{eventvalueraw}) (itemstate:{itemstate},item_state:{item_state}) from OPENHAB ONLY".format(
-                itemname=event.item_name, eventvalue=event.new_value, eventvalueraw=event.new_value_raw, item_state=item._state, itemstate=item.state))
+
+expected_state = None
+state_correct_count=0
+
+expected_command = None
+command_correct_count=0
+
+expected_new_state = None
+expected_old_state = None
+state_changed_correct_count=0
+
+do_breakpoint=False
+
+def on_item_state(item: openhab.items.Item, event: openhab.events.ItemStateEvent):
+  global  state_correct_count
+  log.info("########################### STATE arrived for {itemname} : eventvalue:{eventvalue}(event value raraw:{eventvalueraw}) (itemstate:{itemstate},item_state:{item_state})".format(
+    itemname=event.item_name, eventvalue=event.value, eventvalueraw=event.value_raw, item_state=item._state, itemstate=item.state))
+  if expected_state is not None:
+    if isinstance(event.value,datetime):
+      testutil.doassert(expected_state, event.value.replace(tzinfo=None), "stateEvent item {} ".format(item.name))
+    else:
+      testutil.doassert(expected_state,event.value,"stateEvent item {} ".format(item.name))
+    state_correct_count += 1
 
 
-        testnumberA.add_event_listener(openhab.events.ItemCommandEventType, on_a_change, only_if_eventsource_is_openhab=True)
+def on_item_statechange(item: openhab.items.Item, event: openhab.events.ItemStateChangedEvent):
+  global state_changed_correct_count
+  log.info("########################### STATE of {itemname} CHANGED from {oldvalue} to {newvalue} (items state: {new_value_item}.".format(itemname=event.item_name,oldvalue=event.old_value,newvalue=event.value, new_value_item=item.state))
+  if expected_new_state is not None:
+    if isinstance(event.value, datetime):
+      testutil.doassert(expected_new_state, event.value.replace(tzinfo=None), "state changed event item {} value".format(item.name))
+    else:
+      testutil.doassert(expected_new_state, event.value, "state changed event item {} new value".format(item.name))
 
 
-        def on_testnumber_b_change(item: openhab.items.NumberItem, event: openhab.events.ItemStateEvent):
-            log.info("########################### UPDATE of {} to {} (itemsvalue:{}) from OPENHAB ONLY".format(event.item_name, event.new_value_raw, item.state))
-            if expect_B is not None:
-                assert item.state == expect_B
+  if expected_old_state is not None:
+    if isinstance(event.old_value, datetime):
+      testutil.doassert(expected_old_state, event.old_value.replace(tzinfo=None), "state changed event item {} old value".format(item.name))
+    else:
+      testutil.doassert(expected_old_state, event.old_value, "OLD state changed event item {} old value".format(item.name))
+
+  state_changed_correct_count +=1
 
 
-        testnumberB.add_event_listener(openhab.events.ItemCommandEventType, on_testnumber_b_change, only_if_eventsource_is_openhab=True)
+
+def on_item_command(item: openhab.items.Item, event: openhab.events.ItemCommandEvent):
+  global command_correct_count
+  log.info("########################### COMMAND arrived for {itemname} : eventvalue:{eventvalue}(event value raraw:{eventvalueraw}) (itemstate:{itemstate},item_state:{item_state})".format(
+    itemname=event.item_name, eventvalue=event.value, eventvalueraw=event.value_raw, item_state=item._state, itemstate=item.state))
+  if expected_command is not None:
+    if isinstance(event.value, datetime):
+      testutil.doassert(expected_command, event.value.replace(tzinfo=None), "command event item {}".format(item.name))
+    else:
+      testutil.doassert(expected_command, event.value, "command event item {}".format(item.name))
+    command_correct_count +=1
 
 
-        def on_testnumber_a_change_all(item: openhab.items.Item, event: openhab.events.ItemStateEvent):
-            if event.source == openhab.events.EventSourceInternal:
-                log.info("########################### INTERNAL UPDATE of {} to {} (itemsvalue:{}) from internal".format(event.item_name, event.new_value_raw, item.state))
-            else:
-                log.info("########################### EXTERNAL UPDATE of {} to {} (itemsvalue:{}) from OPENHAB".format(event.item_name, event.new_value_raw, item.state))
+
+myopenhab = openhab.OpenHAB(base_url, auto_update=True)
+myItemfactory = openhab.items.ItemFactory(myopenhab)
+
+random.seed()
+namesuffix = "_{}".format(random.randint(1, 1000))
+
+test_azimuth=myItemfactory.get_item("testworld_Azimuth")
+test_azimuth.add_event_listener(listening_types=openhab.events.ItemStateEventType, listener=on_item_state)
+test_azimuth.add_event_listener(listening_types=openhab.events.ItemCommandEventType, listener=on_item_command)
+test_azimuth.add_event_listener(listening_types=openhab.events.ItemStateChangedEventType, listener=on_item_statechange)
 
 
-        testnumberA.add_event_listener(openhab.events.ItemCommandEventType, on_testnumber_a_change_all, only_if_eventsource_is_openhab=False)
-
-        time.sleep(2)
-        log.info("###################################### starting test 'internal Event'")
-
-        expect_B = 2
-        testnumberB.state = 2
-        time.sleep(0.1)
-
-        expect_B = None
-        checkcount = 0
 
 
-        def create_event_data(type, itemname, payload):
-            result = {"type": type, "topic": "smarthome/items/{itemname}/state".format(itemname=itemname), "payload": payload}
-            return result
 
 
-        def on_light_switch_command(item: openhab.items.Item, event: openhab.events.ItemCommandEvent):
-            log.info("########################### COMMAND of {} to {} (itemsvalue:{}) from OPENHAB".format(event.item_name, event.new_value_raw, item.state))
+def create_event_data(event_type:openhab.events.ItemEventType, itemname, payload):
+  result= {}
+  if event_type== openhab.events.ItemStateEventType:
+    event_type_topic_path="statechanged"
+  elif event_type== openhab.events.ItemStateChangedEventType:
+    event_type_topic_path="state"
+  elif event_type== openhab.events.ItemCommandEventType:
+    event_type_topic_path="command"
+  result = {"type": event_type, "topic": "smarthome/items/{itemname}/{event_type_topic_path}".format(itemname=itemname,event_type_topic_path=event_type_topic_path), "payload": payload}
+  return result
+
+def create_event_payload(type:str,value:str,oldType:str=None,oldValue:str=None):
+  result='{"type":"'+type+'","value":"'+str(value)+'"'
+  if oldType is None:
+    oldType = type
+  if oldValue is not None:
+    result = result + ', "oldType":"'+oldType+'","oldValue":"'+str(oldValue)+'"'
+  result = result + '}'
+  return result
+
+def test_number_item():
+  global expected_state
+  global state_correct_count
+
+  global expected_command
+  global command_correct_count
+
+  global expected_new_state
+  global expected_old_state
+  global state_changed_correct_count
+
+  global do_breakpoint
+
+  state_correct_count = 0
+  command_correct_count = 0
+  state_changed_correct_count = 0
 
 
-        def on_any_item_command(item: openhab.items.Item, event: openhab.events.ItemStateEvent):
-            log.info("########################### UPDATE of {} to {} (itemsvalue:{}) from OPENHAB ONLY".format(event.item_name, event.new_value_raw, item.state))
-            if expected_switch_Value is not None:
-                global checkcount
-                actual_value = event.new_value
-                assert actual_value == expected_switch_Value, "expected value to be {}, but it was {}".format(expected_switch_Value, actual_value)
-                checkcount += 1
+  try:
+    testitem: openhab.items.NumberItem = myItemfactory.create_or_update_item(name="test_eventSubscription_numberitem_A{}".format(namesuffix), data_type=openhab.items.NumberItem)
+    testitem.add_event_listener(openhab.events.ItemStateEventType, on_item_state, also_get_my_echos_from_openhab=True)
+    testitem.add_event_listener(openhab.events.ItemCommandEventType, on_item_command, also_get_my_echos_from_openhab=True)
+    testitem.add_event_listener(openhab.events.ItemStateChangedEventType, on_item_statechange, also_get_my_echos_from_openhab=True)
+
+    expected_new_state = expected_state = sending_state = 170.3
+    #eventData = create_event_data(openhab.events.ItemStateEventType, testitem.name, '{"type":"Decimal","value":"'+str(sending_state)+'"}')
+    eventData = create_event_data(openhab.events.ItemStateEventType, testitem.name, create_event_payload("Decimal",str(sending_state)))
+    myopenhab._parse_event(eventData)
+    testutil.doassert(1,state_correct_count)
 
 
-        testname = "OnOff"
-        expected_switch_Value = "ON"
-        type = 'ItemCommandEvent'
+    sending_state = openhab.types.UndefType.UNDEF
+    expected_new_state = expected_state = None
+    eventData = create_event_data(openhab.events.ItemStateEventType, testitem.name, create_event_payload("Decimal",str(sending_state)))
+    myopenhab._parse_event(eventData)
+    testutil.doassert(1, state_correct_count)
 
-        payload = '{"type":"OnOff","value":"ON"}'
-        eventData = create_event_data(type, itemname, payload)
-        switchItem.add_event_listener(listening_types=openhab.events.ItemCommandEventType, listener=on_any_item_command, only_if_eventsource_is_openhab=False)
-        switchItem.add_event_listener(listening_types=openhab.events.ItemCommandEventType, listener=on_light_switch_command, only_if_eventsource_is_openhab=False)
+    expected_new_state = expected_state = sending_state = -4
+    eventData = create_event_data(openhab.events.ItemStateEventType, testitem.name, create_event_payload("Decimal",str(sending_state)))
+    myopenhab._parse_event(eventData)
+    testutil.doassert(2, state_correct_count)
 
-        myopenhab._parse_event(eventData)
+    expected_new_state = expected_state = sending_state = 170.3
+    eventData = create_event_data(openhab.events.ItemStateEventType, testitem.name, create_event_payload("Quantity",str(sending_state)))
+    myopenhab._parse_event(eventData)
+    testutil.doassert(3, state_correct_count)
 
-        expected_switch_Value = "OFF"
-        switchItem.off()
+    expected_new_state = expected_state = 180
+    sending_state = "180 °"
+    eventData = create_event_data(openhab.events.ItemStateEventType, testitem.name, create_event_payload("Quantity",str(sending_state)))
+    myopenhab._parse_event(eventData)
+    testutil.doassert(4, state_correct_count)
 
-        expected_switch_Value = "ON"
-        switchItem.on()
+    expected_old_state = 180
+    expected_new_state = expected_state = 190
+    sending_state = "190 °"
+    eventData = create_event_data(openhab.events.ItemStateChangedEventType, testitem.name, create_event_payload("Quantity",str(sending_state),oldValue=expected_old_state))
+    myopenhab._parse_event(eventData)
+    testutil.doassert(4, state_correct_count)
+    testutil.doassert(1, state_changed_correct_count)
 
-        assert checkcount == 3, "not all events got processed successfully"
+    expected_old_state = 190
+    expected_new_state = expected_state = 200
+    sending_state = "200 °"
+    eventData = create_event_data(openhab.events.ItemStateChangedEventType, testitem.name, create_event_payload("Quantity",str(sending_state),oldValue=expected_old_state))
+    myopenhab._parse_event(eventData)
+    testutil.doassert(4, state_correct_count)
+    testutil.doassert(2, state_changed_correct_count)
 
-        log.info("###################################### test 'internal Event' finished successfully")
+    expected_old_state = None
+    expected_command = 200.1
+    sending_command = 200.1
 
-    finally:
-        testnumberA.delete()
-        testnumberB.delete()
-        switchItem.delete()
+    eventData = create_event_data(openhab.events.ItemCommandEventType, testitem.name, create_event_payload("Quantity", str(sending_command)))
+    myopenhab._parse_event(eventData)
+    testutil.doassert(4, state_correct_count)
+    testutil.doassert(2, state_changed_correct_count)
+    testutil.doassert(1, command_correct_count)
 
-    keep_going = True
-    log.info("###################################### tests finished successfully")
-    while keep_going:
-        # waiting for events from openhab
-        time.sleep(10)
+
+    log.info("################## starting tests  with real item on openhab")
+
+    sending_state = 123.4
+    expected_new_state = expected_state = sending_state
+    expected_command = sending_state
+    expected_old_state = None
+
+    testitem.state = sending_state
+    time.sleep(0.5)
+    testutil.doassert(5, state_correct_count)
+    testutil.doassert(3, state_changed_correct_count)
+    testutil.doassert(1, command_correct_count)
+
+
+    expected_old_state = sending_state
+    expected_new_state = expected_state = sending_state = expected_command = 567.8
+
+    testitem.state = sending_state
+    time.sleep(0.5)
+    testutil.doassert(6, state_correct_count)
+    testutil.doassert(4, state_changed_correct_count)
+    testutil.doassert(1, command_correct_count)
+
+
+    expected_old_state = sending_state
+    expected_new_state = expected_state = sending_state = expected_command = 999.99
+
+    testitem.command(sending_state)
+    time.sleep(0.5)
+    testutil.doassert(7, state_correct_count)
+    testutil.doassert(5, state_changed_correct_count)
+    testutil.doassert(2, command_correct_count)
+
+
+
+
+  finally:
+    pass
+    testitem.delete()
+
+
+def test_string_item():
+  global expected_state
+  global state_correct_count
+
+  global expected_command
+  global command_correct_count
+
+  global expected_new_state
+  global expected_old_state
+  global state_changed_correct_count
+
+  global do_breakpoint
+
+  state_correct_count = 0
+  command_correct_count = 0
+  state_changed_correct_count = 0
+
+  try:
+    testitem: openhab.items.StringItem = myItemfactory.create_or_update_item(name="test_eventSubscription_stringitem_A{}".format(namesuffix), data_type=openhab.items.StringItem)
+    testitem.add_event_listener(openhab.events.ItemStateEventType, on_item_state, also_get_my_echos_from_openhab=True)
+    testitem.add_event_listener(openhab.events.ItemCommandEventType, on_item_command, also_get_my_echos_from_openhab=True)
+    testitem.add_event_listener(openhab.events.ItemStateChangedEventType, on_item_statechange, also_get_my_echos_from_openhab=True)
+
+    expected_new_state = expected_state = sending_state = "test value 1"
+    eventData = create_event_data(openhab.events.ItemStateEventType, testitem.name, create_event_payload("String", str(sending_state)))
+    myopenhab._parse_event(eventData)
+
+    testutil.doassert(1, state_correct_count)
+    testutil.doassert(0, state_changed_correct_count)
+    testutil.doassert(0, command_correct_count)
+
+
+
+
+    sending_state = openhab.types.UndefType.UNDEF
+    expected_new_state = expected_state = None
+    eventData = create_event_data(openhab.events.ItemStateEventType, testitem.name, create_event_payload("String", str(sending_state)))
+    myopenhab._parse_event(eventData)
+    testutil.doassert(1, state_correct_count)
+    testutil.doassert(0, state_changed_correct_count)
+    testutil.doassert(0, command_correct_count)
+
+    expected_new_state = expected_state = sending_state = "äöü°"
+    eventData = create_event_data(openhab.events.ItemStateEventType, testitem.name, create_event_payload("String", str(sending_state)))
+    myopenhab._parse_event(eventData)
+    testutil.doassert(2, state_correct_count)
+    testutil.doassert(0, state_changed_correct_count)
+    testutil.doassert(0, command_correct_count)
+
+
+
+    expected_old_state = expected_state
+    expected_new_state = expected_state = sending_state = "test value 2"
+    eventData = create_event_data(openhab.events.ItemStateChangedEventType, testitem.name, create_event_payload("String", str(sending_state), oldValue=expected_old_state))
+    myopenhab._parse_event(eventData)
+    testutil.doassert(2, state_correct_count)
+    testutil.doassert(1, state_changed_correct_count)
+    testutil.doassert(0, command_correct_count)
+
+    expected_old_state = None
+    sending_command = "test value 3"
+    expected_new_state = expected_state = sending_command
+    expected_command = sending_command
+
+    eventData = create_event_data(openhab.events.ItemCommandEventType, testitem.name, create_event_payload("String", str(sending_command)))
+    myopenhab._parse_event(eventData)
+    testutil.doassert(2, state_correct_count)
+    testutil.doassert(1, state_changed_correct_count)
+    testutil.doassert(1, command_correct_count)
+
+    log.info("################## starting tests  with real item on openhab")
+
+    sending_state = "test value 4"
+    expected_new_state = expected_state = sending_state
+    expected_command = sending_state
+    expected_old_state = None
+
+    testitem.state = sending_state
+    time.sleep(0.5)
+    testutil.doassert(3, state_correct_count)
+    testutil.doassert(2, state_changed_correct_count)
+    testutil.doassert(1, command_correct_count)
+
+
+    expected_old_state = sending_state
+    expected_new_state = expected_state = sending_state = expected_command = "test value 5"
+    testitem.command(sending_state)
+    time.sleep(0.5)
+    testutil.doassert(4, state_correct_count)
+    testutil.doassert(3, state_changed_correct_count)
+    testutil.doassert(2, command_correct_count)
+
+
+
+
+  finally:
+    pass
+    testitem.delete()
+
+def test_dateTime_item():
+  global expected_state
+  global state_correct_count
+
+  global expected_command
+  global command_correct_count
+
+  global expected_new_state
+  global expected_old_state
+  global state_changed_correct_count
+
+  global do_breakpoint
+
+  state_correct_count = 0
+  command_correct_count = 0
+  state_changed_correct_count = 0
+
+  try:
+    testitem: openhab.items.DateTimeItem = myItemfactory.create_or_update_item(name="test_eventSubscription_datetimeitem_A{}".format(namesuffix), data_type=openhab.items.DateTimeItem)
+    testitem.add_event_listener(openhab.events.ItemStateEventType, on_item_state, also_get_my_echos_from_openhab=True)
+    testitem.add_event_listener(openhab.events.ItemCommandEventType, on_item_command, also_get_my_echos_from_openhab=True)
+    testitem.add_event_listener(openhab.events.ItemStateChangedEventType, on_item_statechange, also_get_my_echos_from_openhab=True)
+
+    log.info("starting step 1")
+    expected_new_state = expected_state = sending_state = datetime.now()
+    eventData = create_event_data(openhab.events.ItemStateEventType, testitem.name, create_event_payload("DateTime", str(sending_state)))
+    myopenhab._parse_event(eventData)
+    testutil.doassert(1, state_correct_count)
+    testutil.doassert(0, state_changed_correct_count)
+    testutil.doassert(0, command_correct_count)
+
+    log.info("starting step 2")
+    expected_old_state = expected_state
+    expected_new_state = expected_state = sending_state = datetime.now()
+    eventData = create_event_data(openhab.events.ItemStateChangedEventType, testitem.name, create_event_payload("DateTime", str(sending_state), oldValue=expected_old_state))
+    myopenhab._parse_event(eventData)
+    testutil.doassert(1, state_correct_count)
+    testutil.doassert(1, state_changed_correct_count)
+    testutil.doassert(0, command_correct_count)
+
+    log.info("################## starting tests  with real item on openhab")
+    log.info("starting step 3")
+
+    sending_state = datetime(2001,2,3,4,5,6,microsecond=7000)
+    expected_new_state = expected_state = sending_state
+    expected_command = sending_state
+    expected_old_state = None
+
+
+    testitem.state = sending_state
+    time.sleep(0.5)
+    testutil.doassert(2, state_correct_count)
+    testutil.doassert(2, state_changed_correct_count)
+    testutil.doassert(0, command_correct_count)
+
+    log.info("starting step 4")
+    expected_new_state = expected_old_state = expected_state
+    expected_new_state = expected_command = expected_state = sending_state = sending_command = sending_state = datetime(2001,2,3,4,5,6,microsecond=8000)
+    testitem.command(sending_command)
+    time.sleep(0.5)
+    testutil.doassert(3, state_correct_count)
+    testutil.doassert(3, state_changed_correct_count)
+    testutil.doassert(1, command_correct_count)
+
+
+  finally:
+    pass
+    testitem.delete()
+
+
+def test_player_item():
+  global expected_state
+  global state_correct_count
+
+  global expected_command
+  global command_correct_count
+
+  global expected_new_state
+  global expected_old_state
+  global state_changed_correct_count
+
+  global do_breakpoint
+
+  state_correct_count = 0
+  command_correct_count = 0
+  state_changed_correct_count = 0
+
+  try:
+    testitem: openhab.items.PlayerItem = myItemfactory.create_or_update_item(name="test_eventSubscription_playeritem_A{}".format(namesuffix), data_type=openhab.items.PlayerItem)
+    testitem.add_event_listener(openhab.events.ItemStateEventType, on_item_state, also_get_my_echos_from_openhab=True)
+    testitem.add_event_listener(openhab.events.ItemCommandEventType, on_item_command, also_get_my_echos_from_openhab=True)
+    testitem.add_event_listener(openhab.events.ItemStateChangedEventType, on_item_statechange, also_get_my_echos_from_openhab=True)
+
+    expected_new_state = expected_state = sending_state = openhab.types.PlayPauseType.PLAY
+    eventData = create_event_data(openhab.events.ItemStateEventType, testitem.name, create_event_payload("PlayPause", str(sending_state)))
+    myopenhab._parse_event(eventData)
+
+    testutil.doassert(1, state_correct_count)
+    testutil.doassert(0, state_changed_correct_count)
+    testutil.doassert(0, command_correct_count)
+
+
+
+    sending_state = openhab.types.UndefType.UNDEF
+    expected_new_state = expected_state = None
+    eventData = create_event_data(openhab.events.ItemStateEventType, testitem.name, create_event_payload("PlayPause", str(sending_state)))
+    myopenhab._parse_event(eventData)
+
+    testutil.doassert(1, state_correct_count)
+    testutil.doassert(0, state_changed_correct_count)
+    testutil.doassert(0, command_correct_count)
+
+
+
+    expected_new_state = expected_state = sending_state = openhab.types.RewindFastforward.FASTFORWARD
+    eventData = create_event_data(openhab.events.ItemStateEventType, testitem.name, create_event_payload("RewindFastforward", str(sending_state)))
+    myopenhab._parse_event(eventData)
+
+    testutil.doassert(2, state_correct_count)
+    testutil.doassert(0, state_changed_correct_count)
+    testutil.doassert(0, command_correct_count)
+
+
+
+    expected_old_state = expected_state
+    expected_new_state = expected_state = sending_state = openhab.types.PlayPauseType.PAUSE
+    eventData = create_event_data(openhab.events.ItemStateChangedEventType, testitem.name, create_event_payload("PlayPause", str(sending_state), oldType="RewindFastforward" ,oldValue=expected_old_state))
+    myopenhab._parse_event(eventData)
+    testutil.doassert(2, state_correct_count)
+    testutil.doassert(1, state_changed_correct_count)
+    testutil.doassert(0, command_correct_count)
+
+
+
+
+
+    sending_command = openhab.types.NextPrevious.NEXT
+    expected_command = openhab.types.NextPrevious.NEXT
+
+    eventData = create_event_data(openhab.events.ItemCommandEventType, testitem.name, create_event_payload("NextPrevious", str(sending_command)))
+    myopenhab._parse_event(eventData)
+    testutil.doassert(2, state_correct_count)
+    testutil.doassert(1, state_changed_correct_count)
+    testutil.doassert(1, command_correct_count)
+
+    log.info("################## starting tests  with real item on openhab")
+
+
+    sending_command = expected_command = openhab.types.PlayPauseType.PAUSE
+    expected_new_state = expected_state = sending_command
+    expected_old_state = None
+    testitem.command(sending_command)
+
+    time.sleep(0.5)
+    testutil.doassert(3, state_correct_count)
+    testutil.doassert(2, state_changed_correct_count)
+    testutil.doassert(2, command_correct_count)
+
+    expected_old_state = expected_state
+    sending_command = expected_command = openhab.types.PlayPauseType.PLAY
+    expected_new_state = expected_state = sending_command
+    testitem.command(sending_command)
+
+    time.sleep(0.5)
+    testutil.doassert(4, state_correct_count)
+    testutil.doassert(3, state_changed_correct_count)
+    testutil.doassert(3, command_correct_count)
+
+    expected_old_state = openhab.types.PlayPauseType.PLAY
+    sending_command = expected_command = openhab.types.NextPrevious.NEXT
+    expected_new_state = expected_state = openhab.types.PlayPauseType.PLAY
+    testitem.command(sending_command)
+
+    time.sleep(0.5)
+    testutil.doassert(4, state_correct_count) # NEXT is not a state!
+    testutil.doassert(3, state_changed_correct_count) # NEXT is not a state!
+    testutil.doassert(4, command_correct_count)
+
+
+  finally:
+    pass
+    testitem.delete()
+
+
+def test_switch_item():
+  global expected_state
+  global state_correct_count
+
+  global expected_command
+  global command_correct_count
+
+  global expected_new_state
+  global expected_old_state
+  global state_changed_correct_count
+
+  global do_breakpoint
+
+  state_correct_count = 0
+  command_correct_count = 0
+  state_changed_correct_count = 0
+
+  try:
+    testitem: openhab.items.SwitchItem = myItemfactory.create_or_update_item(name="test_eventSubscription_switchitem_A{}".format(namesuffix), data_type=openhab.items.SwitchItem)
+    testitem.add_event_listener(openhab.events.ItemStateEventType, on_item_state, also_get_my_echos_from_openhab=True)
+    testitem.add_event_listener(openhab.events.ItemCommandEventType, on_item_command, also_get_my_echos_from_openhab=True)
+    testitem.add_event_listener(openhab.events.ItemStateChangedEventType, on_item_statechange, also_get_my_echos_from_openhab=True)
+
+    expected_new_state = expected_state = sending_state = openhab.types.OnOffType.ON
+    eventData = create_event_data(openhab.events.ItemStateEventType, testitem.name, create_event_payload("OnOff", str(sending_state)))
+    myopenhab._parse_event(eventData)
+
+    testutil.doassert(1, state_correct_count)
+    testutil.doassert(0, state_changed_correct_count)
+    testutil.doassert(0, command_correct_count)
+
+
+
+    expected_old_state = expected_state
+    expected_new_state = expected_state = sending_state = openhab.types.OnOffType.OFF
+    eventData = create_event_data(openhab.events.ItemStateChangedEventType, testitem.name, create_event_payload("OnOff", str(sending_state), oldValue=expected_old_state))
+    myopenhab._parse_event(eventData)
+    testutil.doassert(1, state_correct_count)
+    testutil.doassert(1, state_changed_correct_count)
+    testutil.doassert(0, command_correct_count)
+
+
+
+
+
+    expected_command = sending_command = openhab.types.OnOffType.ON
+
+
+    eventData = create_event_data(openhab.events.ItemCommandEventType, testitem.name, create_event_payload("OnOff", str(sending_command)))
+    myopenhab._parse_event(eventData)
+    testutil.doassert(1, state_correct_count)
+    testutil.doassert(1, state_changed_correct_count)
+    testutil.doassert(1, command_correct_count)
+
+    log.info("################## starting tests  with real item on openhab")
+
+
+    sending_state = sending_command = expected_command = openhab.types.OnOffType.ON
+    expected_new_state = expected_state = sending_command
+    expected_old_state = None
+    testitem.command(sending_command)
+
+    time.sleep(0.5)
+    testutil.doassert(2, state_correct_count)
+    testutil.doassert(2, state_changed_correct_count)
+    testutil.doassert(2, command_correct_count)
+
+    expected_old_state = sending_state
+    sending_state = openhab.types.OnOffType.OFF
+    expected_new_state = expected_state = sending_state
+
+    testitem.state =sending_state
+
+    time.sleep(0.5)
+    testutil.doassert(3, state_correct_count)
+    testutil.doassert(3, state_changed_correct_count)
+    testutil.doassert(2, command_correct_count)
+
+
+
+  finally:
+    pass
+    testitem.delete()
+
+def test_contact_item():
+  global expected_state
+  global state_correct_count
+
+  global expected_command
+  global command_correct_count
+
+  global expected_new_state
+  global expected_old_state
+  global state_changed_correct_count
+
+  global do_breakpoint
+
+  state_correct_count = 0
+  command_correct_count = 0
+  state_changed_correct_count = 0
+
+  try:
+    testitem: openhab.items.ContactItem = myItemfactory.create_or_update_item(name="test_eventSubscription_contactitem_A{}".format(namesuffix), data_type=openhab.items.ContactItem)
+    testitem.add_event_listener(openhab.events.ItemStateEventType, on_item_state, also_get_my_echos_from_openhab=True)
+    testitem.add_event_listener(openhab.events.ItemCommandEventType, on_item_command, also_get_my_echos_from_openhab=True)
+    testitem.add_event_listener(openhab.events.ItemStateChangedEventType, on_item_statechange, also_get_my_echos_from_openhab=True)
+
+    expected_new_state = expected_state = sending_state = openhab.types.OpenCloseType.OPEN
+    eventData = create_event_data(openhab.events.ItemStateEventType, testitem.name, create_event_payload("OpenClosed", str(sending_state)))
+    myopenhab._parse_event(eventData)
+
+    testutil.doassert(1, state_correct_count)
+    testutil.doassert(0, state_changed_correct_count)
+    testutil.doassert(0, command_correct_count)
+
+
+
+    expected_old_state = expected_state
+    expected_new_state = expected_state = sending_state = openhab.types.OpenCloseType.CLOSED
+    eventData = create_event_data(openhab.events.ItemStateChangedEventType, testitem.name, create_event_payload("OpenClosed", str(sending_state), oldValue=expected_old_state))
+    myopenhab._parse_event(eventData)
+    testutil.doassert(1, state_correct_count)
+    testutil.doassert(1, state_changed_correct_count)
+    testutil.doassert(0, command_correct_count)
+
+
+
+
+
+    expected_command = sending_command = openhab.types.OpenCloseType.OPEN
+
+
+    eventData = create_event_data(openhab.events.ItemCommandEventType, testitem.name, create_event_payload("OpenClosed", str(sending_command)))
+    myopenhab._parse_event(eventData)
+    testutil.doassert(1, state_correct_count)
+    testutil.doassert(1, state_changed_correct_count)
+    testutil.doassert(1, command_correct_count)
+
+    log.info("################## starting tests  with real item on openhab")
+
+
+    sending_state = sending_command = expected_command = openhab.types.OpenCloseType.OPEN
+    expected_new_state = expected_state = sending_command
+    expected_old_state = None
+    testitem.state = sending_state
+
+    time.sleep(0.5)
+    testutil.doassert(2, state_correct_count)
+    testutil.doassert(2, state_changed_correct_count)
+    testutil.doassert(1, command_correct_count)
+
+    expected_old_state = sending_state
+    sending_state = openhab.types.OpenCloseType.CLOSED
+    expected_new_state = expected_state = sending_state
+
+    testitem.state =sending_state
+
+    time.sleep(0.5)
+    testutil.doassert(3, state_correct_count)
+    testutil.doassert(3, state_changed_correct_count)
+    testutil.doassert(1, command_correct_count)
+
+
+
+  finally:
+    pass
+    testitem.delete()
+
+def test_dimmer_item():
+  global expected_state
+  global state_correct_count
+
+  global expected_command
+  global command_correct_count
+
+  global expected_new_state
+  global expected_old_state
+  global state_changed_correct_count
+
+  global do_breakpoint
+
+  state_correct_count = 0
+  command_correct_count = 0
+  state_changed_correct_count = 0
+
+  try:
+    testitem: openhab.items.DimmerItem = myItemfactory.create_or_update_item(name="test_eventSubscription_dimmeritem_A{}".format(namesuffix), data_type=openhab.items.DimmerItem)
+    testitem.add_event_listener(openhab.events.ItemStateEventType, on_item_state, also_get_my_echos_from_openhab=True)
+    testitem.add_event_listener(openhab.events.ItemCommandEventType, on_item_command, also_get_my_echos_from_openhab=True)
+    testitem.add_event_listener(openhab.events.ItemStateChangedEventType, on_item_statechange, also_get_my_echos_from_openhab=True)
+
+    expected_new_state = expected_state = sending_state = 45.67
+    eventData = create_event_data(openhab.events.ItemStateEventType, testitem.name, create_event_payload("Percent", str(sending_state)))
+    myopenhab._parse_event(eventData)
+
+    testutil.doassert(1, state_correct_count)
+    testutil.doassert(0, state_changed_correct_count)
+    testutil.doassert(0, command_correct_count)
+
+
+
+    expected_old_state = expected_state
+    expected_new_state = expected_state = sending_state = 12.12
+    eventData = create_event_data(openhab.events.ItemStateChangedEventType, testitem.name, create_event_payload("Percent", str(sending_state), oldValue=expected_old_state))
+    myopenhab._parse_event(eventData)
+    testutil.doassert(1, state_correct_count)
+    testutil.doassert(1, state_changed_correct_count)
+    testutil.doassert(0, command_correct_count)
+
+
+
+
+
+    expected_command = sending_command = 44.44
+
+
+    eventData = create_event_data(openhab.events.ItemCommandEventType, testitem.name, create_event_payload("Percent", str(sending_command)))
+    myopenhab._parse_event(eventData)
+    testutil.doassert(1, state_correct_count)
+    testutil.doassert(1, state_changed_correct_count)
+    testutil.doassert(1, command_correct_count)
+
+    log.info("################## starting tests  with real item on openhab")
+
+
+    sending_state = sending_command = expected_command = 66.77
+    expected_new_state = expected_state = sending_command
+    expected_old_state = None
+    testitem.command(sending_command)
+
+    time.sleep(0.5)
+    testutil.doassert(2, state_correct_count)
+    testutil.doassert(2, state_changed_correct_count)
+    testutil.doassert(2, command_correct_count)
+
+    expected_old_state = sending_state
+    sending_state = 99.5
+    expected_new_state = expected_state = sending_state
+
+    testitem.state =sending_state
+
+    time.sleep(0.5)
+    testutil.doassert(3, state_correct_count)
+    testutil.doassert(3, state_changed_correct_count)
+    testutil.doassert(2, command_correct_count)
+
+
+
+    expected_old_state = sending_state
+    expected_state= sending_state = openhab.types.OnOffType.OFF
+    expected_new_state = 0
+    testitem.state = sending_state
+
+    time.sleep(0.5)
+    testutil.doassert(4, state_correct_count)
+    testutil.doassert(4, state_changed_correct_count)
+    testutil.doassert(2, command_correct_count)
+
+
+
+    expected_old_state = 0
+    expected_state= sending_state = openhab.types.OnOffType.ON
+    expected_new_state = 100
+    testitem.state = sending_state
+
+    time.sleep(0.5)
+    testutil.doassert(5, state_correct_count)
+    testutil.doassert(5, state_changed_correct_count)
+    testutil.doassert(2, command_correct_count)
+
+
+
+    expected_old_state = 100
+    expected_command = sending_command = expected_state = sending_state = openhab.types.IncreaseDecreaseType.DECREASE
+    expected_new_state = 99
+    testitem.command(sending_command)
+
+    time.sleep(0.5)
+    testutil.doassert(5, state_correct_count) # openhab.types.IncreaseDecreaseType.DECREASE is not sent as state
+    testutil.doassert(5, state_changed_correct_count) # openhab does not automatically increase the value
+    testutil.doassert(3, command_correct_count)
+
+    expected_old_state = 99
+    expected_command = sending_command = expected_state = sending_state = openhab.types.IncreaseDecreaseType.DECREASE
+    expected_new_state = 98
+    testitem.command(sending_command)
+
+    time.sleep(0.5)
+    testutil.doassert(5, state_correct_count) # openhab.types.IncreaseDecreaseType.DECREASE is not sent as state
+    testutil.doassert(5, state_changed_correct_count) # openhab does not automatically increase the value
+    testutil.doassert(4, command_correct_count)
+
+
+  finally:
+    pass
+    testitem.delete()
+
+def test_color_item():
+  global expected_state
+  global state_correct_count
+
+  global expected_command
+  global command_correct_count
+
+  global expected_new_state
+  global expected_old_state
+  global state_changed_correct_count
+
+  global do_breakpoint
+
+  state_correct_count = 0
+  command_correct_count = 0
+  state_changed_correct_count = 0
+
+  try:
+    testitem: openhab.items.ColorItem = myItemfactory.create_or_update_item(name="test_eventSubscription_coloritem_A{}".format(namesuffix), data_type=openhab.items.ColorItem)
+    testitem.add_event_listener(openhab.events.ItemStateEventType, on_item_state, also_get_my_echos_from_openhab=True)
+    testitem.add_event_listener(openhab.events.ItemCommandEventType, on_item_command, also_get_my_echos_from_openhab=True)
+    testitem.add_event_listener(openhab.events.ItemStateChangedEventType, on_item_statechange, also_get_my_echos_from_openhab=True)
+
+    expected_new_state = expected_state = sending_state = 45.67
+    eventData = create_event_data(openhab.events.ItemStateEventType, testitem.name, create_event_payload("Percent", str(sending_state)))
+    myopenhab._parse_event(eventData)
+
+    testutil.doassert(1, state_correct_count)
+    testutil.doassert(0, state_changed_correct_count)
+    testutil.doassert(0, command_correct_count)
+
+    sending_state = "1,2,3"
+    expected_new_state = expected_state = 1,2,3
+    eventData = create_event_data(openhab.events.ItemStateEventType, testitem.name, create_event_payload("HSB", str(sending_state)))
+    myopenhab._parse_event(eventData)
+
+    testutil.doassert(2, state_correct_count)
+    testutil.doassert(0, state_changed_correct_count)
+    testutil.doassert(0, command_correct_count)
+
+
+
+    expected_old_state = 1,2,3
+    sending_old_state = "1,2,3"
+    expected_new_state = expected_state = 4,5,6
+    sending_state = "4,5,6"
+
+    eventData = create_event_data(openhab.events.ItemStateChangedEventType, testitem.name, create_event_payload("HSB", str(sending_state), oldType="HSB",oldValue=sending_old_state))
+    myopenhab._parse_event(eventData)
+    testutil.doassert(2, state_correct_count)
+    testutil.doassert(1, state_changed_correct_count)
+    testutil.doassert(0, command_correct_count)
+
+
+    log.info("################## starting tests  with real item on openhab")
+    expected_new_state = expected_old_state = None
+    expected_state = expected_command = sending_command =  (1,2,3)
+
+    testitem.command(sending_command)
+
+    time.sleep(0.5)
+    testutil.doassert(3, state_correct_count)
+    testutil.doassert(2, state_changed_correct_count)
+    testutil.doassert(1, command_correct_count)
+
+
+    sending_state = sending_command = expected_command = 66.77
+    expected_new_state = 1,2,66.77
+    expected_state = sending_state
+    expected_old_state = 1,2,3
+    testitem.command(sending_command)
+
+    time.sleep(0.5)
+    testutil.doassert(4, state_correct_count)
+    testutil.doassert(3, state_changed_correct_count)
+    testutil.doassert(2, command_correct_count)
+
+
+
+    expected_old_state = expected_new_state
+    expected_state = sending_state = 99.5
+    expected_new_state = 1,2,99.5
+
+    testitem.state =sending_state
+
+    time.sleep(0.5)
+    testutil.doassert(5, state_correct_count)
+    testutil.doassert(4, state_changed_correct_count)
+    testutil.doassert(2, command_correct_count)
+
+
+    expected_old_state = expected_new_state
+    expected_command = sending_command = openhab.types.IncreaseDecreaseType.DECREASE
+
+    testitem.command(sending_command)
+
+    time.sleep(0.5)
+    testutil.doassert(5, state_correct_count) # openhab.types.IncreaseDecreaseType.DECREASE is not sent as state
+    testutil.doassert(4, state_changed_correct_count) # openhab does not automatically increase the value
+    testutil.doassert(3, command_correct_count)
+
+    expected_old_state = expected_new_state
+    expected_state =  openhab.types.OnOffType.OFF
+    expected_new_state = 1,2,0
+
+
+    expected_command = sending_command = openhab.types.OnOffType.OFF
+
+    testitem.command(sending_command)
+
+    time.sleep(0.5)
+    testutil.doassert(6, state_correct_count)  # openhab.types.IncreaseDecreaseType.DECREASE is not sent as state
+    testutil.doassert(5, state_changed_correct_count)  # openhab does not automatically increase the value
+    testutil.doassert(4, command_correct_count)
+
+  finally:
+    pass
+    testitem.delete()
+
+
+def test_rollershutter_item():
+  global expected_state
+  global state_correct_count
+
+  global expected_command
+  global command_correct_count
+
+  global expected_new_state
+  global expected_old_state
+  global state_changed_correct_count
+
+  global do_breakpoint
+
+  state_correct_count = 0
+  command_correct_count = 0
+  state_changed_correct_count = 0
+
+  try:
+    testitem: openhab.items.RollershutterItem = myItemfactory.create_or_update_item(name="test_eventSubscription_rollershutteritem_A{}".format(namesuffix), data_type=openhab.items.RollershutterItem)
+    testitem.add_event_listener(openhab.events.ItemStateEventType, on_item_state, also_get_my_echos_from_openhab=True)
+    testitem.add_event_listener(openhab.events.ItemCommandEventType, on_item_command, also_get_my_echos_from_openhab=True)
+    testitem.add_event_listener(openhab.events.ItemStateChangedEventType, on_item_statechange, also_get_my_echos_from_openhab=True)
+
+    expected_new_state = expected_state = sending_state = 45.67
+    eventData = create_event_data(openhab.events.ItemStateEventType, testitem.name, create_event_payload("Percent", str(sending_state)))
+    myopenhab._parse_event(eventData)
+
+    testutil.doassert(1, state_correct_count)
+    testutil.doassert(0, state_changed_correct_count)
+    testutil.doassert(0, command_correct_count)
+
+    sending_state = openhab.types.UpDownType.UP
+    expected_state = sending_state
+    eventData = create_event_data(openhab.events.ItemStateEventType, testitem.name, create_event_payload("UpDown", str(sending_state)))
+    myopenhab._parse_event(eventData)
+
+    testutil.doassert(2, state_correct_count)
+    testutil.doassert(0, state_changed_correct_count)
+    testutil.doassert(0, command_correct_count)
+
+
+    log.info("################## starting tests  with real item on openhab")
+    expected_new_state = expected_old_state = None
+    expected_state = expected_command = sending_command =  55.66
+
+    testitem.command(sending_command)
+
+    time.sleep(0.5)
+    testutil.doassert(3, state_correct_count)
+    testutil.doassert(1, state_changed_correct_count)
+    testutil.doassert(1, command_correct_count)
+
+
+    sending_state = sending_command = expected_command = 66.77
+    expected_new_state = 66.77
+    expected_state = sending_state
+    expected_old_state = 55.66
+    testitem.command(sending_command)
+
+    time.sleep(0.5)
+    testutil.doassert(4, state_correct_count)
+    testutil.doassert(2, state_changed_correct_count)
+    testutil.doassert(2, command_correct_count)
+
+
+    log.info("xx")
+    expected_old_state = expected_new_state
+    expected_state = expected_command = sending_command = openhab.types.UpDownType.UP
+    expected_new_state = 0
+    testitem.command(sending_command)
+
+    time.sleep(0.5)
+    testutil.doassert(5, state_correct_count) # openhab.types.IncreaseDecreaseType.DECREASE is not sent as state
+    testutil.doassert(3, state_changed_correct_count) # openhab does not automatically increase the value
+    testutil.doassert(3, command_correct_count)
+
+    expected_old_state = expected_new_state
+    expected_state =  0
+    expected_new_state = 0
+
+
+    expected_command = sending_command = openhab.types.StopMoveType.STOP
+
+    testitem.command(sending_command)
+
+    time.sleep(0.5)
+    testutil.doassert(5, state_correct_count)  # openhab.types.IncreaseDecreaseType.DECREASE is not sent as state
+    testutil.doassert(3, state_changed_correct_count)  # openhab does not automatically increase the value
+    testutil.doassert(4, command_correct_count)
+
+  finally:
+    pass
+    testitem.delete()
+
+
+test_number_item()
+test_string_item()
+test_dateTime_item()
+test_player_item()
+test_switch_item()
+test_contact_item()
+test_dimmer_item()
+test_rollershutter_item()
+
+
+keep_going = True
+log.info("###################################### tests finished successfully")
+while keep_going:
+    # waiting for events from openhab
+    time.sleep(10)
+
+

@@ -35,6 +35,7 @@ from requests.auth import HTTPBasicAuth
 
 import openhab.items
 import openhab.events
+import openhab.types
 
 __author__ = 'Georges Toth <georges@trypill.org>'
 __license__ = 'AGPLv3+'
@@ -113,14 +114,8 @@ class OpenHAB:
             Args:
                   event:openhab.events.ItemEvent holding the event data
         """
-    if event.item_name in self.registered_items:
-      item = self.registered_items[event.item_name]
-      if item is None:
-        self.logger.warning("item '{}' was removed in all scopes. Ignoring the events coming in for it.".format(event.item_name))
-      else:
-        item.process_external_event(event)
-    else:
-      self.logger.debug("item '{}' not registered. ignoring the arrived event.".format(event.item_name))
+
+
 
   def _parse_event(self, event_data: typing.Dict) -> None:
     """method to parse a event from openhab.
@@ -136,61 +131,85 @@ class OpenHAB:
 
       if event_reason in ["ItemCommandEvent", "ItemStateEvent", "ItemStateChangedEvent"]:
         item_name = event_data["topic"].split("/")[-2]
-        event = None
-        payload_data = json.loads(event_data["payload"])
-        remote_datatype = payload_data["type"]
-        new_value = payload_data["value"]
-        log.debug("####### new Event arrived:")
-        log.debug("item name:{}".format(item_name))
-        log.debug("Event-type:{}".format(event_reason))
-        log.debug("payloadData:{}".format(event_data["payload"]))
+        event_data = json.loads(event_data["payload"])
 
-        if event_reason == "ItemStateEvent":
-          event = openhab.events.ItemStateEvent(item_name=item_name,
-                                                source=openhab.events.EventSourceOpenhab,
-                                                remote_datatype=remote_datatype,
-                                                new_value_raw=new_value,
-                                                unit_of_measure="",
-                                                new_value="",
-                                                as_update=False)
-        elif event_reason == "ItemCommandEvent":
-          event = openhab.events.ItemCommandEvent(item_name=item_name,
-                                                  source=openhab.events.EventSourceOpenhab,
-                                                  remote_datatype=remote_datatype,
-                                                  new_value_raw=new_value,
-                                                  unit_of_measure="",
-                                                  new_value="")
+        raw_event=openhab.events.RawItemEvent(item_name=item_name,event_type=event_reason,content=event_data)
+        self._inform_event_listeners(raw_event)
 
-        elif event_reason in ["ItemStateChangedEvent"]:
-          old_remote_datatype = payload_data["oldType"]
-          old_value = payload_data["oldValue"]
-          event = openhab.events.ItemStateChangedEvent(item_name=item_name,
-                                                       source=openhab.events.EventSourceOpenhab,
-                                                       remote_datatype=remote_datatype,
-                                                       new_value_raw=new_value,
-                                                       new_value="",
-                                                       unit_of_measure="",
-                                                       old_remote_datatype=old_remote_datatype,
-                                                       old_value_raw=old_value,
-                                                       old_value="",
-                                                       old_unit_of_measure="",
-                                                       as_update=False)
-          log.debug("received ItemStateChanged for '{itemname}'[{olddatatype}->{datatype}]:{oldState}->{newValue}".format(
-            itemname=item_name,
-            olddatatype=old_remote_datatype,
-            datatype=remote_datatype,
-            oldState=old_value,
-            newValue=new_value))
-
+        if item_name in self.registered_items:
+          item = self.registered_items[item_name]
+          if item is None:
+            self.logger.warning("item '{}' was removed in all scopes. Ignoring the events coming in for it.".format(item_name))
+          else:
+            item.process_external_event(raw_event)
         else:
-          log.debug("received command for '{itemname}'[{datatype}]:{newValue}".format(itemname=item_name, datatype=remote_datatype, newValue=new_value))
+          self.logger.debug("item '{}' not registered. ignoring the arrived event.".format(item_name))
 
-        self._parse_item(event)
-        self._inform_event_listeners(event)
+
+
+        # event = None
+        # payload_data = json.loads(event_data["payload"])
+        # remote_datatype = payload_data["type"]
+        # new_value = payload_data["value"]
+        # log.debug("####### new Event arrived:")
+        # log.debug("item name:{}".format(item_name))
+        # log.debug("Event-type:{}".format(event_reason))
+        # log.debug("payloadData:{}".format(event_data["payload"]))
+        #
+        # if event_reason == "ItemStateEvent":
+        #   event = openhab.events.ItemStateEvent(item_name=item_name,
+        #                                         source=openhab.events.EventSourceOpenhab,
+        #                                         remote_datatype=remote_datatype,
+        #                                         new_value_raw=new_value,
+        #                                         unit_of_measure="",
+        #                                         new_value="",
+        #                                         as_update=False,
+        #                                         is_value=None,
+        #                                         command=None)
+        # elif event_reason == "ItemCommandEvent":
+        #   event = openhab.events.ItemCommandEvent(item_name=item_name,
+        #                                           source=openhab.events.EventSourceOpenhab,
+        #                                           remote_datatype=remote_datatype,
+        #                                           new_value_raw=new_value,
+        #                                           unit_of_measure="",
+        #                                           new_value="",
+        #                                           is_value = None,
+        #                                           command = None
+        #   )
+        #
+        # elif event_reason in ["ItemStateChangedEvent"]:
+        #   old_remote_datatype = payload_data["oldType"]
+        #   old_value = payload_data["oldValue"]
+        #   event = openhab.events.ItemStateChangedEvent(item_name=item_name,
+        #                                                source=openhab.events.EventSourceOpenhab,
+        #                                                remote_datatype=remote_datatype,
+        #                                                new_value_raw=new_value,
+        #                                                new_value="",
+        #                                                unit_of_measure="",
+        #                                                old_remote_datatype=old_remote_datatype,
+        #                                                old_value_raw=old_value,
+        #                                                old_value="",
+        #                                                old_unit_of_measure="",
+        #                                                as_update=False,
+        #                                                is_value=None,
+        #                                                command=None
+        #                                                )
+        #   log.debug("received ItemStateChanged for '{itemname}'[{olddatatype}->{datatype}]:{oldState}->{newValue}".format(
+        #     itemname=item_name,
+        #     olddatatype=old_remote_datatype,
+        #     datatype=remote_datatype,
+        #     oldState=old_value,
+        #     newValue=new_value))
+        #
+        # else:
+        #   log.debug("received command for '{itemname}'[{datatype}]:{newValue}".format(itemname=item_name, datatype=remote_datatype, newValue=new_value))
+
+
+
     else:
       log.debug("received unknown Event-data_type in Openhab Event stream: {}".format(event_data))
 
-  def _inform_event_listeners(self, event: openhab.events.ItemEvent):
+  def _inform_event_listeners(self, event: openhab.events.RawItemEvent):
     """internal method to send itemevents to listeners.
           Args:
                 event:openhab.events.ItemEvent to be sent to listeners
@@ -201,14 +220,14 @@ class OpenHAB:
       except Exception as e:
         self.logger.error("error executing Eventlistener for event:{}.".format(event.item_name), e)
 
-  def add_event_listener(self, listener: typing.Callable[[openhab.events.ItemEvent], None]):
+  def add_event_listener(self, listener: typing.Callable[[openhab.events.RawItemEvent], None]):
     """method to register a callback function to get informed about all Item-Events received from openhab.
           Args:
               listener:typing.Callable[[openhab.events.ItemEvent] a method with one parameter of data_type openhab.events.ItemEvent which will be called for every event
         """
     self.eventListeners.append(listener)
 
-  def remove_event_listener(self, listener: typing.Optional[typing.Callable[[openhab.events.ItemEvent], None]] = None):
+  def remove_event_listener(self, listener: typing.Optional[typing.Callable[[openhab.events.RawItemEvent], None]] = None):
     """method to unregister a callback function to stop getting informed about all Item-Events received from openhab.
           Args:
               listener:typing.Callable[[openhab.events.ItemEvent] the method to be removed.
@@ -393,6 +412,9 @@ class OpenHAB:
     _type = json_data['type']
     if _type == 'Group' and 'groupType' in json_data:
       _type = json_data["groupType"]
+
+    if _type == 'String':
+      return openhab.items.StringItem(self, json_data)
 
     if _type == 'Switch':
       return openhab.items.SwitchItem(self, json_data)

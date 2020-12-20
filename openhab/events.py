@@ -22,18 +22,32 @@
 
 import typing
 from dataclasses import dataclass
+import openhab.types
 
 
 EventType = typing.NewType('EventType', str)
+
+RawItemEventType: EventType = EventType("RawItem")
+
 ItemEventType: EventType = EventType("Item")
-ItemStateEventType: EventType = EventType("ItemState")
-ItemCommandEventType: EventType = EventType("ItemCommand")
-ItemStateChangedEventType: EventType = EventType("ItemStateChanged")
+ItemStateEventType: EventType = EventType("ItemStateEvent")
+ItemCommandEventType: EventType = EventType("ItemCommandEvent")
+ItemStateChangedEventType: EventType = EventType("ItemStateChangedEvent")
 
 
 EventSource = typing.NewType('EventSource', str)
 EventSourceInternal: EventSource = EventSource("Internal")
 EventSourceOpenhab: EventSource = EventSource("Openhab")
+
+@dataclass
+class RawItemEvent(object):
+
+  item_name: str
+  source = EventSourceOpenhab
+  event_type: EventType
+  content: typing.Dict
+
+
 
 
 @dataclass
@@ -42,17 +56,18 @@ class ItemEvent(object):
     type = ItemEventType
     item_name: str
     source: EventSource
-    remote_datatype: str
-    new_value: typing.Any
-    new_value_raw: typing.Any
+    value_datatype: typing.Type[openhab.types.CommandType]
+    value: typing.Any
+    value_raw: typing.Any
     unit_of_measure: str
+    is_my_own_echo:bool
 
 
 @dataclass
 class ItemStateEvent(ItemEvent):
     """a Event representing a state event on a Item"""
     type = ItemStateEventType
-    as_update: bool
+
 
 
 @dataclass
@@ -61,11 +76,13 @@ class ItemCommandEvent(ItemEvent):
     type = ItemCommandEventType
 
 
+
+
 @dataclass
 class ItemStateChangedEvent(ItemStateEvent):
     """a Event representing a state change event on a Item"""
     type = ItemStateChangedEventType
-    old_remote_datatype: str
+    old_value_datatype: typing.Type[openhab.types.CommandType]
     old_value_raw: str
     old_value: typing.Any
     old_unit_of_measure: str
