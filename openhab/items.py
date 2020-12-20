@@ -60,7 +60,7 @@ class ItemFactory:
                             group_type: typing.Optional[str] = None,
                             function_name: typing.Optional[str] = None,
                             function_params: typing.Optional[typing.List[str]] = None
-                            ) -> Item:
+                            ) -> typing.Type[Item]:
     """creates a new item in openhab if there is no item with name 'name' yet.
     if there is an item with 'name' already in openhab, the item gets updated with the infos provided. be aware that not provided fields will be deleted in openhab.
     consider to get the existing item via 'getItem' and then read out existing fields to populate the parameters here.
@@ -180,7 +180,7 @@ class ItemFactory:
     logging.getLogger().debug("about to create item with PUT request:{}".format(json_body))
     self.openHABClient.req_json_put('/items/{}'.format(name), json_data=json_body)
 
-  def get_item(self, itemname):
+  def get_item(self, itemname) -> typing.Type[Item]:
     return self.openHABClient.get_item(itemname)
 
 
@@ -188,6 +188,11 @@ class Item:
   """Base item class."""
 
   types = []  # data_type: typing.List[typing.Type[openhab.types.CommandType]]
+  state_types = []
+  command_event_types = []
+  state_event_types = []
+  state_changed_event_types = []
+
   TYPENAME = "unknown"
 
   def __init__(self, openhab_conn: 'openhab.client.OpenHAB', json_data: dict, auto_update: typing.Optional[bool] = True) -> None:
@@ -201,6 +206,7 @@ class Item:
     self.openhab = openhab_conn
     self.autoUpdate = auto_update
     self.type_ = None
+
     self.quantityType = None
     self.editable = None
     self.label = ""
@@ -218,8 +224,10 @@ class Item:
     self.logger = logging.getLogger(__name__)
 
     self.init_from_json(json_data)
-    self.lastCommandSent = datetime.fromtimestamp(0)
-    self.lastUpdateSent = datetime.fromtimestamp(0)
+    self.last_command_sent_time = datetime.fromtimestamp(0)
+    self.last_command_sent = ""
+
+
 
     self.openhab.register_item(self)
     self.event_listeners: typing.Dict[typing.Callable[[openhab.items.Item, openhab.events.ItemEvent], None], Item.EventListener] = {}
@@ -237,15 +245,18 @@ class Item:
       if 'groupType' in json_data:
         self.type_ = json_data['groupType']
 
+
       # init members
       for i in json_data['members']:
         self.members[i['name']] = self.openhab.json_to_item(i)
 
     else:
       self.type_ = json_data['type']
+
       parts = self.type_.split(":")
       if len(parts) == 2:
         self.quantityType = parts[1]
+
     if "editable" in json_data:
       self.editable = json_data['editable']
     if "label" in json_data:
@@ -257,7 +268,16 @@ class Item:
     if "groupNames" in json_data:
       self.groupNames = json_data['groupNames']
 
-    self.__set_state(json_data['state'])
+    #self.__set_state(json_data['state'])
+    self._raw_state = json_data['state']
+
+    if self.is_undefined(self._raw_state):
+      self._state = None
+    else:
+      self._state, self._unitOfMeasure = self._parse_rest(self._raw_state)
+
+
+
 
   @property
   def state(self, fetch_from_openhab=False) -> typing.Any:
@@ -309,6 +329,9 @@ class Item:
     else:
       raise ValueError()
 
+
+
+
   def _parse_rest(self, value: str) -> typing.Tuple[str, str]:
     """Parse a REST result into a native object."""
     return value, ""
@@ -325,20 +348,24 @@ class Item:
 
     return _value
 
-  def _is_my_own_change(self, event):
+  def _is_my_own_echo(self, event:openhab.events.ItemEvent):
     """find out if the incoming event is actually just a echo of my previous command or change"""
     now = datetime.now()
-    self.logger.debug("_isMyOwnChange:event.source:{}, event.data_type{}, self._state:{}, event.new_value:{},self.lastCommandSent:{}, self.lastUpdateSent:{} , now:{}".format(
-      event.source, event.type, self._state, event.new_value, self.lastCommandSent, self.lastUpdateSent, now))
-    if event.source == openhab.events.EventSourceOpenhab:
-      if event.type in [openhab.events.ItemCommandEventType, openhab.events.ItemStateChangedEventType, openhab.events.ItemStateEventType]:
-        if self._state == event.new_value:
-          if max(self.lastCommandSent, self.lastUpdateSent) + timedelta(milliseconds=self.openhab.maxEchoToOpenhabMS) > now:
-            # this is the echo of the command we just sent to openHAB.
-            return True
-      return False
-    else:
+    self.logger.debug("_isMyOwnChange:event.source:{}, event.data_type{}, self._state:{}, event.new_value:{},self.last_command_sent_time:{}, now:{}".format(
+      event.source, event.type, self._state, event.value, self.last_command_sent_time, now))
+    if event.source != openhab.events.EventSourceOpenhab:
       return True
+    if self.last_command_sent_time + timedelta(milliseconds=self.openhab.maxEchoToOpenhabMS) > now:
+      if event.type == openhab.events.ItemCommandEventType:
+        if self.last_command_sent == event.value:
+          # this is the echo of the command we just sent to openHAB.
+          return True
+      elif event.type in [openhab.events.ItemStateChangedEventType, openhab.events.ItemStateEventType]:
+        if self._state == event.value:
+          # this is the echo of the command we just sent to openHAB.
+          return True
+    return False
+
 
   def delete(self):
     """deletes the item from openhab """
@@ -346,34 +373,133 @@ class Item:
     self._state = None
     self.remove_all_event_listeners()
 
-  def process_external_event(self, event: openhab.events.ItemEvent):
+
+  def get_value_unitofmeasure(self, parsed_value:str):
+    if isinstance(parsed_value,tuple):
+      value_result = parsed_value[0]
+      uom = parsed_value[1]
+      return value_result,uom
+    else:
+      return parsed_value, ""
+
+  def digest_external_command_event(self, command_type_class:typing.Type[openhab.types.CommandType], command:str)->openhab.events.ItemCommandEvent:
+    parsed_value = command_type_class.parse(command)
+    value_result,uom = self.get_value_unitofmeasure(parsed_value)
+    item_command_event = openhab.events.ItemCommandEvent(item_name=self.name, source=openhab.events.EventSourceOpenhab, value_datatype=command_type_class, value=value_result, unit_of_measure=uom, value_raw=command, is_my_own_echo=False)
+    item_command_event.is_my_own_echo = self._is_my_own_echo(item_command_event)
+    if command_type_class in self.state_types:
+      if not item_command_event.is_my_own_echo:
+        self.__set_state(value_result)
+        self._unitOfMeasure = uom
+    return item_command_event
+
+
+  def digest_external_state_event(self, state_type_class:typing.Type[openhab.types.CommandType], value:str)->openhab.events.ItemStateEvent:
+    parsed_value = state_type_class.parse(value)
+    value_result,uom = self.get_value_unitofmeasure(parsed_value)
+    item_state_event = openhab.events.ItemStateEvent(item_name=self.name, source=openhab.events.EventSourceOpenhab, value_datatype=state_type_class, value=value_result, unit_of_measure=uom, value_raw=value, is_my_own_echo=False)
+    item_state_event.is_my_own_echo = self._is_my_own_echo(item_state_event)
+    if item_state_event in self.state_types:
+      if not item_state_event.is_my_own_echo:
+        self.__set_state(value_result)
+        self._unitOfMeasure = uom
+    return item_state_event
+
+
+
+
+  def digest_external_state_changed_event(self, state_type_class:typing.Type[openhab.types.CommandType], value:str, old_state_type_class:typing.Type[openhab.types.CommandType], old_value:str)->openhab.events.ItemStateChangedEvent:
+    parsed_value = state_type_class.parse(value)
+    value_result,uom = self.get_value_unitofmeasure(parsed_value)
+
+    parsed_old_value=old_value
+    if old_state_type_class is not None:
+      parsed_old_value = old_state_type_class.parse(old_value)
+      old_value_result, old_uom = self.get_value_unitofmeasure(parsed_old_value)
+
+
+
+
+    item_state_changed_event = openhab.events.ItemStateChangedEvent(item_name=self.name,
+                                                                    source=openhab.events.EventSourceOpenhab,
+                                                                    value_datatype=state_type_class,
+                                                                    value=value_result,
+                                                                    unit_of_measure=uom,
+                                                                    value_raw=value,
+                                                                    old_value_datatype=old_state_type_class,
+                                                                    old_value=old_value_result,
+                                                                    old_unit_of_measure=old_uom,
+                                                                    old_value_raw=old_value,
+                                                                    is_my_own_echo=False)
+
+    item_state_changed_event.is_my_own_echo = self._is_my_own_echo(item_state_changed_event)
+    if item_state_changed_event in self.state_types:
+      if not item_state_changed_event.is_my_own_echo:
+        self._state=value_result
+    return item_state_changed_event
+
+
+  def _parse_external_command_event(self, raw_Event: openhab.events.RawItemEvent) -> openhab.events.ItemCommandEvent:
+    command_type = raw_Event.content["type"]
+    command_type_class = openhab.types.CommandType.getTypeFor(command_type)
+    # if self.typeclass is None:
+    #   self.typeclass = command_type_class
+    command=raw_Event.content["value"]
+    if command_type_class in self.command_event_types:
+      item_command_event=self.digest_external_command_event(command_type_class,command)
+      return item_command_event
+    raise Exception("unknown command event type")
+
+  def _parse_external_state_event(self, raw_Event: openhab.events.RawItemEvent) -> openhab.events.ItemStateEvent:
+    state_type = raw_Event.content["type"]
+    state_type_class = openhab.types.CommandType.getTypeFor(state_type)
+    # if self.typeclass is None:
+    #   self.typeclass = state_type_class
+
+    value = raw_Event.content["value"]
+    if state_type_class in self.state_event_types:
+      item_state_event = self.digest_external_state_event(state_type_class, value)
+      return item_state_event
+    raise Exception("unknown state event type")
+
+  def _parse_external_state_changed_event(self, raw_Event: openhab.events.RawItemEvent) -> openhab.events.ItemStateEvent:
+    state_changed_type = raw_Event.content["type"]
+    state_changed_type_class = openhab.types.CommandType.getTypeFor(state_changed_type)
+    state_changed_old_type = raw_Event.content["oldType"]
+    state_changed_old_type_class = openhab.types.CommandType.getTypeFor(state_changed_old_type)
+    # if self.typeclass is None:
+    #   self.typeclass = state_changed_type_class
+    value = raw_Event.content["value"]
+    old_value = raw_Event.content["oldValue"]
+    if state_changed_type_class in self.state_changed_event_types:
+      item_state_changed_event = self.digest_external_state_changed_event(state_type_class=state_changed_type_class, value=value, old_state_type_class=state_changed_old_type_class, old_value=old_value)
+      return item_state_changed_event
+    raise Exception("unknown statechanged event type:{}".format(state_changed_type_class))
+
+
+
+
+
+  def process_external_event(self, raw_Event: openhab.events.RawItemEvent):
     if not self.autoUpdate:
       return
     self.logger.info("processing external event")
-    new_value, uom = self._parse_rest(event.new_value_raw)
-    event.new_value = new_value
-    event.unit_of_measure = uom
-    if event.type == openhab.events.ItemStateChangedEventType:
-      try:
-        event: openhab.events.ItemStateChangedEvent
-        old_value, ouom = self._parse_rest(event.old_value_raw)
-        event.old_value = old_value
-        event.old_unit_of_measure = ouom
-      except:
-        event.old_value = None
-        event.old_unit_of_measure = None
-    is_my_own_change = self._is_my_own_change(event)
-    self.logger.info("external event:{}".format(event))
-    if not is_my_own_change:
-      self.__set_state(value=event.new_value_raw)
-      event.new_value = self._state
+
+    if raw_Event.event_type == openhab.events.ItemCommandEvent.type:
+      event=self._parse_external_command_event(raw_Event)
+    elif raw_Event.event_type == openhab.events.ItemStateChangedEvent.type:
+      event=self._parse_external_state_changed_event(raw_Event)
+    elif raw_Event.event_type == openhab.events.ItemStateEvent.type:
+      event=self._parse_external_state_event(raw_Event)
+
+
     for aListener in self.event_listeners.values():
       if event.type in aListener.listeningTypes:
-        if not is_my_own_change or (is_my_own_change and aListener.alsoGetMyEchosFromOpenHAB):
+        if not event.is_my_own_echo or aListener.alsoGetMyEchosFromOpenHAB:
           try:
             aListener.callbackfunction(self, event)
           except Exception as e:
-            self.logger.error("error executing Eventlistener for item:{}.".format(event.item_name), e)
+            self.logger.exception("error executing Eventlistener for item:{}.".format(event.item_name))
 
   def _process_internal_event(self, event: openhab.events.ItemEvent):
     self.logger.info("processing internal event")
@@ -385,7 +511,8 @@ class Item:
           try:
             aListener.callbackfunction(self, event)
           except Exception as e:
-              self.logger.error("error executing Eventlistener for item:{}.".format(event.item_name), e)
+            self.logger.exception("error executing Eventlistener for item:{}.".format(event.item_name))
+
 
   class EventListener(object):
     """EventListener Objects hold data about a registered event listener"""
@@ -467,7 +594,7 @@ class Item:
       self.event_listeners[listener] = event_listener
 
   def remove_all_event_listeners(self):
-    self.event_listeners = []
+    self.event_listeners = {}
 
   def remove_event_listener(self, types: typing.Set[openhab.events.EventType], listener: typing.Callable[[openhab.items.Item, openhab.events.ItemEvent], None]):
     """removes a previously registered Listener interested in changes of items happening in openhab
@@ -484,14 +611,20 @@ class Item:
       if not event_listener.listeningTypes:
         self.event_listeners.pop(listener)
 
+  def is_undefined(self, value:str) -> bool:
+    for aStateType in self.state_types:
+      if not aStateType.is_undefined(self._raw_state):
+        return False
+    return True
+
+
   def __set_state(self, value: str) -> None:
     """Private method for setting the internal state."""
-    self._raw_state = value
-
-    if value in ('UNDEF', 'NULL'):
+    if self.is_undefined(value):
       self._state = None
     else:
-      self._state, self._unitOfMeasure = self._parse_rest(value)
+      self._state = value
+
 
   def __str__(self) -> str:
     """String representation."""
@@ -505,7 +638,8 @@ class Item:
                       on the item data_type and is checked accordingly.
     """
     # noinspection PyTypeChecker
-    self.lastCommandSent = datetime.now()
+    self.last_command_sent_time = datetime.now()
+    self.last_command_sent=value
     self.openhab.req_put('/items/{}/state'.format(self.name), data=value)
 
   def update(self, value: typing.Any) -> None:
@@ -525,23 +659,26 @@ class Item:
     if oldstate == self._state:
       event = openhab.events.ItemStateEvent(item_name=self.name,
                                             source=openhab.events.EventSourceInternal,
-                                            remote_datatype=self.type_,
-                                            new_value=self._state,
-                                            new_value_raw=None,
+                                            value_datatype=self.type_,
+                                            value=self._state,
+                                            value_raw=None,
                                             unit_of_measure=self._unitOfMeasure,
-                                            as_update=True)
+                                            is_my_own_echo=False
+                                            )
     else:
+
+
       event = openhab.events.ItemStateChangedEvent(item_name=self.name,
                                                    source=openhab.events.EventSourceInternal,
-                                                   remote_datatype=self.type_,
-                                                   new_value=self._state,
-                                                   new_value_raw=None,
+                                                   value_datatype=self.type_,
+                                                   value=self._state,
+                                                   value_raw=None,
                                                    unit_of_measure=self._unitOfMeasure,
-                                                   old_remote_datatype=self.type_,
+                                                   old_value_datatype=self.type_,
                                                    old_value=oldstate,
                                                    old_value_raw="",
                                                    old_unit_of_measure="",
-                                                   as_update=True,
+                                                   is_my_own_echo=False
                                                    )
     self._process_internal_event(event)
 
@@ -556,15 +693,24 @@ class Item:
 
     self._validate_value(value)
 
+
+
     v = self._rest_format(value)
     self._state = value
-    self.lastCommandSent = datetime.now()
+    self.last_command_sent_time = datetime.now()
     self.openhab.req_post('/items/{}'.format(self.name), data=v)
 
     unit_of_measure = ""
     if hasattr(self, "_unitOfMeasure"):
       unit_of_measure = self._unitOfMeasure
-    event = openhab.events.ItemCommandEvent(item_name=self.name, source=openhab.events.EventSourceInternal, remote_datatype=self.type_, new_value=value, new_value_raw=None, unit_of_measure=unit_of_measure)
+    event = openhab.events.ItemCommandEvent(item_name=self.name,
+                                            source=openhab.events.EventSourceInternal,
+                                            value_datatype=self.type_,
+                                            value=value,
+                                            value_raw=None,
+                                            unit_of_measure=unit_of_measure,
+                                            is_my_own_echo=True
+                                            )
     self._process_internal_event(event)
 
   def update_state_null(self) -> None:
@@ -602,10 +748,27 @@ class Item:
     return False
 
 
+class StringItem(Item):
+  """DateTime item data_type."""
+
+  types = [openhab.types.StringType]
+  state_types = types
+  command_event_types = types
+  state_event_types = types
+  state_changed_event_types = types
+
+  TYPENAME = "String"
+
+
 class DateTimeItem(Item):
   """DateTime item data_type."""
 
   types = [openhab.types.DateTimeType]
+  state_types = types
+  command_event_types = types
+  state_event_types = types
+  state_changed_event_types = types
+
   TYPENAME = "DateTime"
 
   def __gt__(self, other: datetime.datetime) -> bool:
@@ -666,51 +829,73 @@ class PlayerItem(Item):
   """PlayerItem item data_type."""
   TYPENAME = "Player"
 
-  types = [openhab.types.PlayerType]
+  types = [openhab.types.PlayPauseType, openhab.types.NextPrevious, openhab.types.RewindFastforward]
+  state_types = [openhab.types.PlayPauseType, openhab.types.RewindFastforward]
+  command_event_types = [openhab.types.PlayPauseType, openhab.types.NextPrevious, openhab.types.RewindFastforward]
+  state_event_types = [openhab.types.PlayPauseType, openhab.types.RewindFastforward]
+  state_changed_event_types = [openhab.types.PlayPauseType, openhab.types.RewindFastforward]
 
   def play(self) -> None:
-    """Set the state of the player to PLAY."""
-    self.command('PLAY')
+    """send the command PLAY."""
+    self.command(openhab.types.PlayPauseType.PLAY)
 
   def pause(self) -> None:
-    """Set the state of the player to PAUSE."""
-    self.command('PAUSE')
+    """send the command PAUSE."""
+    self.command(openhab.types.PlayPauseType.PAUSE)
 
   def next(self) -> None:
-    """Set the state of the player to NEXT."""
-    self.command('NEXT')
+    """send the command NEXT."""
+    self.command(openhab.types.NextPrevious.NEXT)
 
   def previous(self) -> None:
-    """Set the state of the player to PREVIOUS."""
-    self.command('PREVIOUS')
+    """send the command PREVIOUS."""
+    self.command(openhab.types.NextPrevious.PREVIOUS)
 
+  def fastforward(self) -> None:
+    """send the command FASTFORWARD"""
+    self.command(openhab.types.RewindFastforward.FASTFORWARD)
+
+  def rewind(self) -> None:
+    """send the command REWIND."""
+    self.command(openhab.types.RewindFastforward.REWIND)
 
 class SwitchItem(Item):
   """SwitchItem item data_type."""
   types = [openhab.types.OnOffType]
+  state_types = types
+  command_event_types = types
+  state_event_types = types
+  state_changed_event_types = types
   TYPENAME = "Switch"
 
   def on(self) -> None:
     """Set the state of the switch to ON."""
-    self.command('ON')
+    self.command(openhab.types.OnOffType.ON)
 
   def off(self) -> None:
     """Set the state of the switch to OFF."""
-    self.command('OFF')
+    self.command(openhab.types.OnOffType.OFF)
 
   def toggle(self) -> None:
     """Toggle the state of the switch to OFF to ON and vice versa."""
-    if self.state == 'ON':
+    if self.state == openhab.types.OnOffType.ON:
       self.off()
-    else:
+    elif self.state == openhab.types.OnOffType.OFF:
       self.on()
+
+
 
 
 class NumberItem(Item):
   """NumberItem item data_type."""
 
   types = [openhab.types.DecimalType]
+  state_types = types
+  command_event_types = types
+  state_event_types = types
+  state_changed_event_types = types
   TYPENAME = "Number"
+
 
   def _parse_rest(self, value: str) -> typing.Tuple[float, str]:
     """Parse a REST result into a native object.
@@ -723,7 +908,7 @@ class NumberItem(Item):
       str: The unit Of Measure or empty string
     """
     if value in ('UNDEF', 'NULL'):
-      return value, ""
+      return None, ""
     # m = re.match(r'''^(-?[0-9.]+)''', value)
     try:
       m = re.match("(-?[0-9.]+)\s?(.*)?$", value)
@@ -756,6 +941,10 @@ class ContactItem(Item):
   """Contact item data_type."""
 
   types = [openhab.types.OpenCloseType]
+  state_types = types
+  command_event_types = types
+  state_event_types = types
+  state_changed_event_types = types
   TYPENAME = "Contact"
 
   def command(self, *args, **kwargs) -> None:
@@ -767,20 +956,24 @@ class ContactItem(Item):
 
   def open(self) -> None:
     """Set the state of the contact item to OPEN."""
-    self.state = 'OPEN'
+    self.state = openhab.types.OpenCloseType.OPEN
 
   def closed(self) -> None:
     """Set the state of the contact item to CLOSED."""
-    self.state = 'CLOSED'
+    self.state = openhab.types.OpenCloseType.CLOSED
 
 
 class DimmerItem(Item):
   """DimmerItem item data_type."""
 
   types = [openhab.types.OnOffType, openhab.types.PercentType, openhab.types.IncreaseDecreaseType]
+  state_types = [openhab.types.PercentType]
+  command_event_types = [openhab.types.OnOffType, openhab.types.PercentType, openhab.types.IncreaseDecreaseType]
+  state_event_types = [openhab.types.OnOffType, openhab.types.PercentType]
+  state_changed_event_types = [openhab.types.PercentType]
   TYPENAME = "Dimmer"
 
-  def _parse_rest(self, value: str) -> typing.Tuple[int, str]:
+  def _parse_rest(self, value: str) -> typing.Tuple[float, str]:
     """Parse a REST result into a native object.
 
     Args:
@@ -789,7 +982,7 @@ class DimmerItem(Item):
     Returns:
       int: The int object as converted from the string parameter.
     """
-    return int(float(value)), ""
+    return float(value), ""
 
   def _rest_format(self, value: typing.Union[str, int]) -> str:
     """Format a value before submitting to OpenHAB.
@@ -807,27 +1000,31 @@ class DimmerItem(Item):
 
   def on(self) -> None:
     """Set the state of the dimmer to ON."""
-    self.command('ON')
+    self.command(openhab.types.OnOffType.ON)
 
   def off(self) -> None:
     """Set the state of the dimmer to OFF."""
-    self.command('OFF')
+    self.command(openhab.types.OnOffType.OFF)
 
   def increase(self) -> None:
     """Increase the state of the dimmer."""
-    self.command('INCREASE')
+    self.command(openhab.types.IncreaseDecreaseType.INCREASE)
 
   def decrease(self) -> None:
     """Decrease the state of the dimmer."""
-    self.command('DECREASE')
+    self.command(openhab.types.IncreaseDecreaseType.DECREASE)
 
 
-class ColorItem(Item):
+class ColorItem(DimmerItem):
   """ColorItem item data_type."""
 
-  types = [openhab.types.OnOffType, openhab.types.PercentType, openhab.types.IncreaseDecreaseType,
-           openhab.types.ColorType]
+  types = [openhab.types.OnOffType, openhab.types.PercentType, openhab.types.IncreaseDecreaseType, openhab.types.ColorType]
+  state_types = [openhab.types.ColorType]
+  command_event_types = [openhab.types.OnOffType, openhab.types.PercentType, openhab.types.IncreaseDecreaseType, openhab.types.ColorType]
+  state_event_types = [openhab.types.OnOffType, openhab.types.PercentType, openhab.types.ColorType]
+  state_changed_event_types = [openhab.types.ColorType]
   TYPENAME = "Color"
+
 
   def _parse_rest(self, value: str) -> typing.Tuple[str, str]:
     """Parse a REST result into a native object.
@@ -838,7 +1035,8 @@ class ColorItem(Item):
     Returns:
       str: The str object as converted from the string parameter.
     """
-    return str(value), ""
+    result = openhab.types.ColorType.parse(value)
+    return result, ""
 
   def _rest_format(self, value: typing.Union[str, int]) -> str:
     """Format a value before submitting to openHAB.
@@ -849,32 +1047,29 @@ class ColorItem(Item):
     Returns:
       str: The string as possibly converted from the parameter.
     """
+    if isinstance(value,tuple):
+      if len(value) == 3:
+        return "{},{},{}".format(value[0],value[1],value[2])
     if not isinstance(value, str):
       return str(value)
 
     return value
 
-  def on(self) -> None:
-    """Set the state of the color to ON."""
-    self.command('ON')
-
-  def off(self) -> None:
-    """Set the state of the color to OFF."""
-    self.command('OFF')
-
-  def increase(self) -> None:
-    """Increase the state of the color."""
-    self.command('INCREASE')
-
-  def decrease(self) -> None:
-    """Decrease the state of the color."""
-    self.command('DECREASE')
+  def get_value_unitofmeasure(self, parsed_value:str):
+    return parsed_value, ""
 
 
 class RollershutterItem(Item):
   """RollershutterItem item data_type."""
 
-  types = [openhab.types.UpDownType, openhab.types.PercentType, openhab.types.StopType]
+  types = [openhab.types.UpDownType, openhab.types.PercentType, openhab.types.StopMoveType]
+  state_types = [openhab.types.PercentType]
+  command_event_types = [openhab.types.UpDownType, openhab.types.StopMoveType, openhab.types.PercentType]
+  state_event_types = [openhab.types.UpDownType, openhab.types.PercentType]
+  state_changed_event_types = [openhab.types.PercentType]
+
+
+
   TYPENAME = "Rollershutter"
 
   def _parse_rest(self, value: str) -> typing.Tuple[int, str]:
@@ -904,12 +1099,12 @@ class RollershutterItem(Item):
 
   def up(self) -> None:
     """Set the state of the dimmer to ON."""
-    self.command('UP')
+    self.command(openhab.types.UpDownType.UP)
 
   def down(self) -> None:
     """Set the state of the dimmer to OFF."""
-    self.command('DOWN')
+    self.command(openhab.types.UpDownType.DOWN)
 
   def stop(self) -> None:
     """Set the state of the dimmer to OFF."""
-    self.command('STOP')
+    self.command(openhab.types.StopMoveType.STOP)
