@@ -24,12 +24,14 @@ import re
 import typing
 import warnings
 
-from sseclient import SSEClient
+
+from aiohttp_sse_client import client as sse_client
+import asyncio
 import threading
 import requests
 import weakref
 import json
-import time
+
 from requests.auth import HTTPBasicAuth
 
 
@@ -84,13 +86,14 @@ class OpenHAB:
     self.maxEchoToOpenhabMS = max_echo_to_openhab_ms
 
     self.logger = logging.getLogger(__name__)
+    self.sseDaemon = None
     self.__keep_event_daemon_running__ = False
+    self.__wait_while_looping = threading.Event()
     self.eventListeners: typing.List[typing.Callable] = []
     if self.autoUpdate:
       self.__installSSEClient__()
 
-  @staticmethod
-  def _check_req_return(req: requests.Response) -> None:
+  def _check_req_return(self, req: requests.Response) -> None:
     """Internal method for checking the return value of a REST HTTP request.
 
     Args:
@@ -104,6 +107,8 @@ class OpenHAB:
                   REST request.
     """
     if not 200 <= req.status_code < 300:
+      self.logger.error("HTTP error: {} caused by request '{}' with content '{}' ".format(req.status_code, req.url, req.content))
+
       req.raise_for_status()
 
   def _parse_item(self, event: openhab.events.ItemEvent) -> None:
@@ -114,8 +119,6 @@ class OpenHAB:
             Args:
                   event:openhab.events.ItemEvent holding the event data
         """
-
-
 
   def _parse_event(self, event_data: typing.Dict) -> None:
     """method to parse a event from openhab.
@@ -133,7 +136,7 @@ class OpenHAB:
         item_name = event_data["topic"].split("/")[-2]
         event_data = json.loads(event_data["payload"])
 
-        raw_event=openhab.events.RawItemEvent(item_name=item_name,event_type=event_reason,content=event_data)
+        raw_event = openhab.events.RawItemEvent(item_name=item_name, event_type=event_reason, content=event_data)
         self._inform_event_listeners(raw_event)
 
         if item_name in self.registered_items:
@@ -141,70 +144,9 @@ class OpenHAB:
           if item is None:
             self.logger.warning("item '{}' was removed in all scopes. Ignoring the events coming in for it.".format(item_name))
           else:
-            item.process_external_event(raw_event)
+            item._process_external_event(raw_event)
         else:
           self.logger.debug("item '{}' not registered. ignoring the arrived event.".format(item_name))
-
-
-
-        # event = None
-        # payload_data = json.loads(event_data["payload"])
-        # remote_datatype = payload_data["type"]
-        # new_value = payload_data["value"]
-        # log.debug("####### new Event arrived:")
-        # log.debug("item name:{}".format(item_name))
-        # log.debug("Event-type:{}".format(event_reason))
-        # log.debug("payloadData:{}".format(event_data["payload"]))
-        #
-        # if event_reason == "ItemStateEvent":
-        #   event = openhab.events.ItemStateEvent(item_name=item_name,
-        #                                         source=openhab.events.EventSourceOpenhab,
-        #                                         remote_datatype=remote_datatype,
-        #                                         new_value_raw=new_value,
-        #                                         unit_of_measure="",
-        #                                         new_value="",
-        #                                         as_update=False,
-        #                                         is_value=None,
-        #                                         command=None)
-        # elif event_reason == "ItemCommandEvent":
-        #   event = openhab.events.ItemCommandEvent(item_name=item_name,
-        #                                           source=openhab.events.EventSourceOpenhab,
-        #                                           remote_datatype=remote_datatype,
-        #                                           new_value_raw=new_value,
-        #                                           unit_of_measure="",
-        #                                           new_value="",
-        #                                           is_value = None,
-        #                                           command = None
-        #   )
-        #
-        # elif event_reason in ["ItemStateChangedEvent"]:
-        #   old_remote_datatype = payload_data["oldType"]
-        #   old_value = payload_data["oldValue"]
-        #   event = openhab.events.ItemStateChangedEvent(item_name=item_name,
-        #                                                source=openhab.events.EventSourceOpenhab,
-        #                                                remote_datatype=remote_datatype,
-        #                                                new_value_raw=new_value,
-        #                                                new_value="",
-        #                                                unit_of_measure="",
-        #                                                old_remote_datatype=old_remote_datatype,
-        #                                                old_value_raw=old_value,
-        #                                                old_value="",
-        #                                                old_unit_of_measure="",
-        #                                                as_update=False,
-        #                                                is_value=None,
-        #                                                command=None
-        #                                                )
-        #   log.debug("received ItemStateChanged for '{itemname}'[{olddatatype}->{datatype}]:{oldState}->{newValue}".format(
-        #     itemname=item_name,
-        #     olddatatype=old_remote_datatype,
-        #     datatype=remote_datatype,
-        #     oldState=old_value,
-        #     newValue=new_value))
-        #
-        # else:
-        #   log.debug("received command for '{itemname}'[{datatype}]:{newValue}".format(itemname=item_name, datatype=remote_datatype, newValue=new_value))
-
-
 
     else:
       log.debug("received unknown Event-data_type in Openhab Event stream: {}".format(event_data))
@@ -237,29 +179,35 @@ class OpenHAB:
     elif listener in self.eventListeners:
       self.eventListeners.remove(listener)
 
-  def _sse_daemon_thread(self):
-    """internal method to receive events from openhab.
-    This method blocks and therefore should be started as separate thread.
-    """
-    self.logger.info("starting Openhab - Event Daemon")
-    next_waittime = initial_waittime = 0.1
+  def sse_client_handler(self):
+    """the actual handler to receive Events from openhab
+            """
+    self.logger.info("about to connect to Openhab Events-Stream.")
+
+    async def run_loop():
+      async with sse_client.EventSource(self.events_url) as event_source:
+        try:
+          self.logger.info("starting Openhab - Event Daemon")
+          async for event in event_source:
+            if not self.__keep_event_daemon_running__:
+              self.sseDaemon = None
+              return
+            event_data = json.loads(event.data)
+            self._parse_event(event_data)
+
+        except ConnectionError as exception:
+          self.logger.error("connection error")
+          self.logger.exception(exception)
     while self.__keep_event_daemon_running__:
+      # keep restarting the handler after timeouts or connection issues
       try:
-        self.logger.info("about to connect to Openhab Events-Stream.")
-
-        messages = SSEClient(self.events_url)
-
-        next_waittime = initial_waittime
-        for event in messages:
-          event_data = json.loads(event.data)
-          self._parse_event(event_data)
-          if not self.__keep_event_daemon_running__:
-            return
-
+        asyncio.run(run_loop())
+      except asyncio.TimeoutError:
+        self.logger.info("reconnecting after timeout")
       except Exception as e:
-        self.logger.warning("Lost connection to Openhab Events-Stream.", e)
-        time.sleep(next_waittime)  # sleep a bit and then retry
-        next_waittime = min(10, next_waittime+0.5)  # increase waittime over time up to 10 seconds
+        self.logger.exception(e)
+
+    self.sseDaemon = None
 
   def get_registered_items(self) -> weakref.WeakValueDictionary:
     """get a Dict of weak references to registered items.
@@ -278,13 +226,43 @@ class OpenHAB:
       if item.name not in self.registered_items:
         self.registered_items[item.name] = item
 
+  def stop_receiving_events(self):
+    """stop to receive events from openhab.
+        """
+    self.__keep_event_daemon_running__ = False
+
+  def start_receiving_events(self):
+    """start to receive events from openhab.
+        """
+    if not self.__keep_event_daemon_running__:
+      if self.sseDaemon is not None:
+        if self.sseDaemon.is_alive():
+          # we are running already and did not stop yet.
+          # so we simply keep running
+          self.__keep_event_daemon_running__ = True
+          return
+    self.__installSSEClient__()
+
   def __installSSEClient__(self) -> None:
     """ installs an event Stream to receive all Item events"""
 
-    # now start readerThread
     self.__keep_event_daemon_running__ = True
-    self.sseDaemon = threading.Thread(target=self._sse_daemon_thread, args=(), daemon=True)
+    self.keep_running = True
+    self.sseDaemon = threading.Thread(target=self.sse_client_handler, args=(), daemon=True)
+
+    self.logger.info("about to connect to Openhab Events-Stream.")
     self.sseDaemon.start()
+
+  def stop_looping(self):
+    """ method to reactivate the thread which went into the loop_for_events loop.
+        """
+    self.__wait_while_looping.set()
+
+  def loop_for_events(self):
+    """ method to keep waiting for events from openhab
+            you can use this method after your program finished initialization and all other work and now wants to keep waiting for events.
+    """
+    self.__wait_while_looping.wait()
 
   def req_get(self, uri_path: str) -> typing.Any:
     """Helper method for initiating a HTTP GET request.
@@ -375,7 +353,7 @@ class OpenHAB:
     Returns:
       dict: Returns a dict with item names as key and item class instances as value.
     """
-    items = {}  # data_type: dict
+    items = {}  # type: dict
     res = self.req_get('/items/')
 
     for i in res:

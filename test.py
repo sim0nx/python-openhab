@@ -21,18 +21,19 @@
 
 import datetime
 import openhab
+import openhab.items
 
-#base_url = 'http://localhost:8080/rest'
-base_url = 'http://10.10.20.81:8080/rest'
-openhab = openhab.OpenHAB(base_url)
+base_url = 'http://localhost:8080/rest'
+
+oh = openhab.OpenHAB(base_url)
 
 # fetch all items
-items = openhab.fetch_all_items()
+items = oh.fetch_all_items()
 
 # fetch other items, show how to toggle a switch
 sunset = items.get('Sunset')
 sunrise = items.get('Sunrise')
-knx_day_night = items.get('KNX_day_night')
+knx_day_night: openhab.items.SwitchItem = items.get('KNX_day_night')
 
 now = datetime.datetime.now(datetime.timezone.utc)
 

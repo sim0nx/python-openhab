@@ -35,7 +35,7 @@ Requirements
   - python >= 3.5
   - python :: dateutil
   - python :: requests
-  - python :: sseclient
+  - python :: aiohttp_sse_client
   - openHAB version 2
 
 Installation
@@ -106,9 +106,11 @@ Example usage of the library:
         log.info("########################### COMMAND of {} to {} (itemsvalue:{}) from OPENHAB".format(event.itemname, event.newValueRaw, item.state))
         if event.source == openhab.events.EventSourceOpenhab:
             log.info("this change came from openhab")
-    # install listener for evetns
+
+    # install listener for events to receive all events (from internal and openhab)
     testroom1_LampOnOff.add_event_listener(listening_types=openhab.events.ItemCommandEventType, listener=onLight_switchCommand, only_if_eventsource_is_openhab=False)
-    # switch you will receive update also for your changes in the code. (see
+
+    # if you switch the item yourself you will also get update / state / command events. (with  event.source == openhab.events.EventSourceInternal)
     testroom1_LampOnOff.off()
 
     #Events stop to be delivered
@@ -121,24 +123,29 @@ Example usage of the library:
     #create the item
     testDimmer = itemFactory.create_or_update_item(name="the_testDimmer", data_type=openhab.items.DimmerItem)
     #use item
-    testDimmer.state=95
+    testDimmer.state = 95
+    testDimmer.off()
+    testDimmer.command("ON")
+    #or better:
+    testDimmer.command(openhab.types.OnOffType.OFF)
 
 
 
-    # you can set change many item attributes:
-    nameprefix="testcase_1_"
-    itemname = "{}CreateItemTest".format(nameprefix)
+
+    # you can set or change many item attributes:
+
+    itemname = "CreateItemTest"
     item_quantity_type = "Angle"  # "Length",Temperature,,Pressure,Speed,Intensity,Dimensionless,Angle
     itemtype = "Number"
 
     labeltext = "das ist eine testzahl:"
     itemlabel = "[{labeltext}%.1f °]".format(labeltext=labeltext)
-    itemcategory = "{}TestCategory".format(nameprefix)
-    itemtags: List[str] = ["{}testtag1".format(nameprefix), "{}testtag2".format(nameprefix)]
-    itemgroup_names: List[str] = ["{}testgroup1".format(nameprefix), "{}testgroup2".format(nameprefix)]
-    grouptype = "{}testgrouptype".format(nameprefix)
-    functionname = "{}testfunctionname".format(nameprefix)
-    functionparams: List[str] = ["{}testfunctionnameParam1".format(nameprefix), "{}testfunctionnameParam2".format(nameprefix), "{}testfunctionnameParam3".format(nameprefix)]
+    itemcategory = "TestCategory"
+    itemtags: List[str] = ["testtag1", "testtag2"]
+    itemgroup_names: List[str] = ["testgroup1", "testgroup2"]
+    grouptype = "testgrouptype"
+    functionname = "testfunctionname"
+    functionparams: List[str] = ["testfunctionnameParam1", "testfunctionnameParam2", "testfunctionnameParam3"]
 
     x2 = item_factory.create_or_update_item(name=itemname,
                                             data_type=itemtype,
