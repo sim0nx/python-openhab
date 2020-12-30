@@ -76,6 +76,7 @@ class OpenHAB:
     self.session = requests.Session()
     self.session.headers['accept'] = 'application/json'
     self.registered_items = weakref.WeakValueDictionary()
+    self.http_buffersize = 4*1024*1024
 
     if http_auth is not None:
       self.session.auth = http_auth
@@ -185,7 +186,7 @@ class OpenHAB:
     self.logger.info("about to connect to Openhab Events-Stream.")
 
     async def run_loop():
-      async with sse_client.EventSource(self.events_url) as event_source:
+      async with sse_client.EventSource(self.events_url,read_bufsize=self.http_buffersize) as event_source:
         try:
           self.logger.info("starting Openhab - Event Daemon")
           async for event in event_source:
