@@ -39,6 +39,7 @@ EventSource = typing.NewType('EventSource', str)
 EventSourceInternal: EventSource = EventSource("Internal")
 EventSourceOpenhab: EventSource = EventSource("Openhab")
 
+
 @dataclass
 class RawItemEvent(object):
 
@@ -46,8 +47,6 @@ class RawItemEvent(object):
   source = EventSourceOpenhab
   event_type: EventType
   content: typing.Dict
-
-
 
 
 @dataclass
@@ -60,7 +59,8 @@ class ItemEvent(object):
     value: typing.Any
     value_raw: typing.Any
     unit_of_measure: str
-    is_my_own_echo:bool
+    is_my_own_echo: bool
+    is_non_value_command: bool  # these are events that will not be rpresented as state or statechanged values. E.g. Rollershutters UP or Players NEXT.
 
 
 @dataclass
@@ -69,13 +69,10 @@ class ItemStateEvent(ItemEvent):
     type = ItemStateEventType
 
 
-
 @dataclass
 class ItemCommandEvent(ItemEvent):
     """a Event representing a command event on a Item"""
     type = ItemCommandEventType
-
-
 
 
 @dataclass

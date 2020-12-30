@@ -21,14 +21,11 @@
 
 from __future__ import annotations
 from typing import TYPE_CHECKING, List, Set, Dict, Tuple, Union, Any, Optional, NewType, Callable
-
-
 import openhab
 import openhab.events
-import time
 import openhab.items as items
+import openhab.types
 import logging
-import json
 import random
 import tests.testutil as testutil
 from datetime import datetime
@@ -41,7 +38,7 @@ log.warning("www")
 log.info("iii")
 log.debug("ddddd")
 
-base_url = 'http://10.10.20.81:8080/rest'
+base_url = 'http://localhost:8080/rest'
 
 
 def test_create_and_delete_items(myopenhab: openhab.OpenHAB, nameprefix):
@@ -196,9 +193,6 @@ def test_StringItem(item_factory, nameprefix):
     testutil.doassert("test string value 1", x2.state, "itemstate")
     x2.state = "test string value 2"
     testutil.doassert("test string value 2", x2.state, "itemstate")
-
-
-
     return x2
 
 
@@ -262,11 +256,11 @@ def test_ColorItem(item_factory, nameprefix):
     x2.on()
     testutil.doassert(itemname, x2.name, "item_name")
     testutil.doassert("ON", x2.state, "itemstate")
-    new_value = 51,52,53
+    new_value = 51, 52, 53
     x2.state = new_value
 
     log.info("itemsate:{}".format(x2.state))
-    testutil.doassert((51,52,53), x2.state, "itemstate")
+    testutil.doassert((51, 52, 53), x2.state, "itemstate")
     return x2
 
 
@@ -300,6 +294,7 @@ def test_SwitchItem(item_factory, nameprefix):
     x2: openhab.items.SwitchItem = item_factory.create_or_update_item(name=itemname, data_type=itemtype)
 
     x2.on()
+
     testutil.doassert(itemname, x2.name, "item_name")
     testutil.doassert("ON", x2.state, "itemstate")
 
@@ -309,7 +304,7 @@ def test_SwitchItem(item_factory, nameprefix):
     x2.toggle()
     testutil.doassert("ON", x2.state, "itemstate")
 
-    new_value = "OFF"
+    new_value = openhab.types.OnOffType.OFF
     x2.state = new_value
 
     log.info("itemsate:{}".format(x2.state))
@@ -338,5 +333,3 @@ random.seed()
 mynameprefix = "x2_{}".format(random.randint(1, 1000))
 
 test_create_and_delete_items(myopenhab, mynameprefix)
-# delete_all_items_starting_with(openhab,"x2_")
-
