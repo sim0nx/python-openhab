@@ -30,7 +30,7 @@ import testutil
 
 from datetime import datetime
 
-log = logging.getLogger()
+log = logging.getLogger(__name__)
 logging.basicConfig(level=10, format="%(levelno)s:%(asctime)s - %(message)s - %(name)s - PID:%(process)d - THREADID:%(thread)d - %(levelname)s - MODULE:%(module)s, -FN:%(filename)s -FUNC:%(funcName)s:%(lineno)d")
 
 log.error("errormessage")
@@ -39,6 +39,7 @@ log.info("infomessage")
 log.debug("debugmessage")
 
 base_url = 'http://localhost:8080/rest'
+base_url = 'http://10.10.20.81:8080/rest'
 
 expected_state = None
 state_correct_count = 0

@@ -22,11 +22,19 @@ This library allows for easily accessing the openHAB REST API.
 A number of features are implemented but not all, this is work in progress.
 
 currently you can
- - retrieve current state of items
- - send updates and commands to items
- - receive commands, updates and changes triggered by openhab
- - create new items and groups
- - delete items and groups
+ items:
+     - retrieve current state of items
+     - send updates and commands to items
+     - receive commands, updates and changes triggered by openhab
+     - create new items and groups
+     - delete items and groups
+
+ audio:
+     - retrieve audiosinks
+     - retrieve voices
+     - say text on audiosink using a voice
+     - retrieve voice interpreter
+     - send commands to voice interpreter
 
 
 Requirements
@@ -157,6 +165,16 @@ Example usage of the library:
                                             group_type=grouptype,
                                             function_name=functionname,
                                             function_params=functionparams)
+
+
+    #you can "say" something on the default audio sink with the default voice
+    dv=openhab.get_audio_defaultvoice()
+    ds=openhab.get_audio_defaultsink()
+    dv.say("this is a test",ds)
+
+    # you can send a textual "voice" command to openhab for interpretation/execution:
+    vi = openhab.get_voicesinterpreter("system")
+    vi.interpret("switch on the_testDimmer")
 
 Note on NULL and UNDEF
 ----------------------
