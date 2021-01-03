@@ -177,18 +177,25 @@ class ItemFactory:
         paramdict["function"] = {"name": function_name, "params": function_params}
 
     json_body = json.dumps(paramdict)
-    logging.getLogger().debug("about to create item with PUT request:{}".format(json_body))
+    logging.getLogger(__name__).debug("about to create item with PUT request:{}".format(json_body))
     self.openHABClient.req_json_put('/items/{}'.format(name), json_data=json_body)
 
-  def get_item(self, itemname) -> Item:
+  def get_item(self, itemname,force_request_to_openhab:typing.Optional[bool]=False) -> Item:
     """get a existing openhab item
           Args:
               itemname (str): unique name of the item
           Returns:
             Item: the Item
     """
-    return self.openHABClient.get_item(itemname)
+    return self.openHABClient.get_item(name=itemname,force_request_to_openhab=force_request_to_openhab)
 
+  def fetch_all_items(self) -> typing.Dict[str, openhab.items.Item]:
+    """Returns all items defined in openHAB.
+
+      Returns:
+        dict: Returns a dict with item names as key and item class instances as value.
+      """
+    return self.openHABClient.fetch_all_items()
 
 class Item:
   """Base item class."""
@@ -384,6 +391,7 @@ class Item:
   def delete(self):
     """deletes the item from openhab """
     self.openhab.req_del('/items/{}'.format(self.name))
+    self.openhab.unregister_item(self.name)
     self._state = None
     self.remove_all_event_listeners()
 
@@ -561,7 +569,7 @@ class Item:
           """
     if not self.autoUpdate:
       return
-    self.logger.info("processing external event")
+    self.logger.debug("processing external event:{}".format(raw_event))
 
     if raw_event.event_type == openhab.events.ItemCommandEvent.type:
       event = self._parse_external_command_event(raw_event)
@@ -586,7 +594,7 @@ class Item:
                   event (openhab.events.ItemEvent): the internal event
 
              """
-    self.logger.info("processing internal event")
+    self.logger.debug("processing internal event:{}".format(event))
     for aListener in self.event_listeners.values():
       if event.type in aListener.listeningTypes:
         if aListener.onlyIfEventsourceIsOpenhab:

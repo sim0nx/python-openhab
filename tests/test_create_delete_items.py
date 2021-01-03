@@ -30,7 +30,7 @@ import random
 import tests.testutil as testutil
 from datetime import datetime
 
-log = logging.getLogger()
+log = logging.getLogger(__name__)
 logging.basicConfig(level=10, format="%(levelno)s:%(asctime)s - %(message)s - %(name)s - PID:%(process)d - THREADID:%(thread)d - %(levelname)s - MODULE:%(module)s, -FN:%(filename)s -FUNC:%(funcName)s:%(lineno)d")
 
 log.error("xx")
@@ -38,7 +38,8 @@ log.warning("www")
 log.info("iii")
 log.debug("ddddd")
 
-base_url = 'http://localhost:8080/rest'
+base_url = 'http://10.10.20.81:8080/rest'
+#base_url = 'http://localhost:8080/rest'
 
 
 def test_create_and_delete_items(myopenhab: openhab.OpenHAB, nameprefix):
@@ -86,6 +87,8 @@ def test_create_and_delete_items(myopenhab: openhab.OpenHAB, nameprefix):
         log.info("the new Player:{}".format(a_player_item))
 
         log.info("creation tests worked")
+
+
     finally:
         if a_group_item is not None:
           a_group_item.delete()
@@ -326,6 +329,22 @@ def test_PlayerItem(item_factory, nameprefix):
     testutil.doassert("PAUSE", x2.state, "itemstate")
     return x2
 
+def test_register_all_items(item_factory:openhab.items.ItemFactory ,myopenhab:openhab.OpenHAB):
+
+    itemname = "CreateSwitchItemTest_register_all_items"
+    itemtype = openhab.items.SwitchItem
+    x2: openhab.items.SwitchItem = item_factory.create_or_update_item(name=itemname, data_type=itemtype)
+    try:
+      myopenhab.register_all_items()
+      for aItem in myopenhab.all_items.items():
+        log.info("found item:{}".format(aItem))
+      item_factory.get_item(itemname)
+
+
+    finally:
+      x2.delete()
+
+
 
 myopenhab = openhab.OpenHAB(base_url, auto_update=False)
 keeprunning = True
@@ -333,3 +352,5 @@ random.seed()
 mynameprefix = "x2_{}".format(random.randint(1, 1000))
 
 test_create_and_delete_items(myopenhab, mynameprefix)
+my_item_factory = openhab.items.ItemFactory(myopenhab)
+test_register_all_items(item_factory=my_item_factory, myopenhab=myopenhab)

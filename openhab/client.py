@@ -32,12 +32,14 @@ import requests
 import weakref
 import json
 
+
 from requests.auth import HTTPBasicAuth
 
 
 import openhab.items
 import openhab.events
 import openhab.types
+import openhab.audio
 
 __author__ = 'Georges Toth <georges@trypill.org>'
 __license__ = 'AGPLv3+'
@@ -76,6 +78,7 @@ class OpenHAB:
     self.session = requests.Session()
     self.session.headers['accept'] = 'application/json'
     self.registered_items = weakref.WeakValueDictionary()
+    self.all_items:typing.Dict[str,openhab.items.Item] = {}
     self.http_buffersize = 4*1024*1024
 
     if http_auth is not None:
@@ -129,7 +132,7 @@ class OpenHAB:
         Args:
               event_data send by openhab in a Dict
     """
-    log = logging.getLogger()
+    log = logging.getLogger(__name__)
     if "type" in event_data:
       event_reason = event_data["type"]
 
@@ -186,7 +189,7 @@ class OpenHAB:
     self.logger.info("about to connect to Openhab Events-Stream.")
 
     async def run_loop():
-      async with sse_client.EventSource(self.events_url,read_bufsize=self.http_buffersize) as event_source:
+      async with sse_client.EventSource(self.events_url, read_bufsize=self.http_buffersize) as event_source:
         try:
           self.logger.info("starting Openhab - Event Daemon")
           async for event in event_source:
@@ -217,15 +220,29 @@ class OpenHAB:
         """
     return self.registered_items
 
+  def register_all_items(self) -> None:
+    """fetches all items from openhab and caches them in all_items.
+      subsequent calls to get_item will use this cache.
+      subsequent calls to register_all_items will rebuld the chache
+    """
+    self.all_items = self.fetch_all_items()
+    for item in self.all_items.values():
+      self.register_item(item)
+
   def register_item(self, item: openhab.items.Item) -> None:
-    """method to register an instantiated item. registered items can receive commands an updated from openhab.
+    """method to register an instantiated item. registered items can receive commands and updates from openhab.
     Usually you don´t need to register as Items register themself.
         Args:
           an Item object
     """
     if item is not None and item.name is not None:
       if item.name not in self.registered_items:
+        self.logger.debug("registered item:{}".format(item.name))
         self.registered_items[item.name] = item
+
+  def unregister_item(self,name):
+    if name in self.all_items:
+      self.all_items.pop(name)
 
   def stop_receiving_events(self):
     """stop to receive events from openhab.
@@ -363,7 +380,7 @@ class OpenHAB:
 
     return items
 
-  def get_item(self, name: str) -> openhab.items.Item:
+  def get_item(self, name: str, force_request_to_openhab:typing.Optional[bool]=False) -> openhab.items.Item:
     """Returns an item with its state and data_type as fetched from openHAB.
 
     Args:
@@ -372,8 +389,11 @@ class OpenHAB:
     Returns:
       Item: A corresponding Item class instance with the state of the requested item.
     """
-    json_data = self.get_item_raw(name)
+    if name in self.all_items and not force_request_to_openhab:
+      return self.all_items[name]
 
+
+    json_data = self.get_item_raw(name)
     return self.json_to_item(json_data)
 
   def json_to_item(self, json_data: dict) -> openhab.items.Item:
@@ -437,6 +457,106 @@ class OpenHAB:
       dict: A JSON decoded dict.
     """
     return self.req_get('/items/{}'.format(name))
+
+  # audio
+  def get_audio_defaultsink(self) -> openhab.audio.Audiosink:
+    """returns openhabs default audio sink
+
+
+        Returns:
+          openhab.audio.Audiosink: the audio sink
+    """
+    defaultsink = self._get_audio_defaultsink_raw()
+    return openhab.audio.Audiosink.json_to_audiosink(defaultsink,self)
+
+  def _get_audio_defaultsink_raw(self) -> typing.Dict:
+    return self.req_get('/audio/defaultsink')
+
+  def get_all_audiosinks(self) -> typing.List[openhab.audio.Audiosink]:
+    """returns openhabs audio sinks
+
+
+            Returns:
+              List[openhab.audio.Audiosink]: a list of audio sinks
+        """
+    result: typing.List[openhab.audio.Audiosink] = []
+    sinks = self._get_all_audiosinks_raw()
+    for sink in sinks:
+      result.append(openhab.audio.Audiosink.json_to_audiosink(sink,self))
+    return result
+
+  def _get_all_audiosinks_raw(self) -> typing.Any:
+    return self.req_get('/audio/sinks')
+
+  # voices
+  def get_audio_defaultvoice(self) -> openhab.audio.Voice:
+    """returns openhabs default voice
+
+
+        Returns:
+          openhab.audio.Voice: the voice
+    """
+    defaultvoice = self._get_audio_defaultvoice_raw()
+    return openhab.audio.Voice.json_to_voice(defaultvoice,self)
+
+  def _get_audio_defaultvoice_raw(self) -> typing.Dict:
+    return self.req_get('/voice/defaultvoice')
+
+  def get_all_voices(self) -> typing.List[openhab.audio.Voice]:
+    """returns openhabs voices
+
+
+            Returns:
+              List[openhab.audio.Voice]: a list of voices
+        """
+    result: typing.List[openhab.audio.Voice] = []
+    voices = self._get_all_voices_raw()
+    for voice in voices:
+      result.append(openhab.audio.Voice.json_to_voice(voice,self))
+    return result
+
+  def _get_all_voices_raw(self) -> typing.Dict:
+    return self.req_get('/voice/voices')
+
+  # voiceinterpreters
+  def get_voicesinterpreter(self, id:str) -> openhab.audio.Voiceinterpreter:
+    """returns a openhab voiceinterpreter
+    Args:
+      id (str): The id of the voiceinterpreter to be fetched.
+    Returns:
+      openhab.audio.Voiceinterpreter: the Voiceinterpreter
+        """
+    voiceinterpreter = self._get_voicesinterpreter_raw(id)
+    return openhab.audio.Voiceinterpreter.json_to_voiceinterpreter(voiceinterpreter,self)
+
+
+  def _get_voicesinterpreter_raw(self, id:str) -> typing.Dict:
+    return self.req_get('/voice/interpreters/{}'.format(id))
+
+  def get_all_voicesinterpreters(self) -> typing.List[openhab.audio.Voiceinterpreter]:
+    """returns openhabs voiceinterpreters
+            Returns:
+              List[openhab.audio.Voiceinterpreter]: a list of voiceinterpreters
+    """
+    result: typing.List[openhab.audio.Voiceinterpreter] = []
+    voiceinterpreters = self._get_all_voiceinterpreters_raw()
+    for voiceinterpreter in voiceinterpreters:
+      result.append(openhab.audio.Voiceinterpreter.json_to_voiceinterpreter(voiceinterpreter,self))
+    return result
+
+  def _get_all_voiceinterpreters_raw(self) -> typing.Dict:
+    return self.req_get('/voice/interpreters')
+
+  def say(self, text: str, audiosinkid: str, voiceid: str):
+    url=self.base_url + "/voice/say/?voiceid={voiceid}&sinkid={sinkid}".format(voiceid=requests.utils.quote(voiceid), sinkid=requests.utils.quote(audiosinkid))
+    r = self.session.post(url, data=text, headers={'Accept': 'application/json'}, timeout=self.timeout)
+    self._check_req_return(r)
+
+  def interpret(self, text: str, voiceinterpreterid: str):
+    url=self.base_url + "/voice/interpreters/{interpreterid}".format(interpreterid=requests.utils.quote(voiceinterpreterid))
+    r = self.session.post(url, data=text, headers={'Accept': 'application/json'}, timeout=self.timeout)
+    self._check_req_return(r)
+
 
 
 # noinspection PyPep8Naming
