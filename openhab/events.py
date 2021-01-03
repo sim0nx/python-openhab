@@ -22,27 +22,25 @@
 
 import typing
 from dataclasses import dataclass
-import openhab.types
 
+import openhab.types
 
 EventType = typing.NewType('EventType', str)
 
-RawItemEventType: EventType = EventType("RawItem")
+RawItemEventType: EventType = EventType('RawItem')
 
-ItemEventType: EventType = EventType("Item")
-ItemStateEventType: EventType = EventType("ItemStateEvent")
-ItemCommandEventType: EventType = EventType("ItemCommandEvent")
-ItemStateChangedEventType: EventType = EventType("ItemStateChangedEvent")
-
+ItemEventType: EventType = EventType('Item')
+ItemStateEventType: EventType = EventType('ItemStateEvent')
+ItemCommandEventType: EventType = EventType('ItemCommandEvent')
+ItemStateChangedEventType: EventType = EventType('ItemStateChangedEvent')
 
 EventSource = typing.NewType('EventSource', str)
-EventSourceInternal: EventSource = EventSource("Internal")
-EventSourceOpenhab: EventSource = EventSource("Openhab")
+EventSourceInternal: EventSource = EventSource('Internal')
+EventSourceOpenhab: EventSource = EventSource('Openhab')
 
 
 @dataclass
-class RawItemEvent(object):
-
+class RawItemEvent:
   item_name: str
   source = EventSourceOpenhab
   event_type: EventType
@@ -50,36 +48,36 @@ class RawItemEvent(object):
 
 
 @dataclass
-class ItemEvent(object):
-    """The base class for all ItemEvents"""
-    type = ItemEventType
-    item_name: str
-    source: EventSource
-    value_datatype: typing.Type[openhab.types.CommandType]
-    value: typing.Any
-    value_raw: typing.Any
-    unit_of_measure: str
-    is_my_own_echo: bool
-    is_non_value_command: bool  # these are events that will not be rpresented as state or statechanged values. E.g. Rollershutters UP or Players NEXT.
+class ItemEvent:
+  """The base class for all ItemEvents"""
+  type = ItemEventType
+  item_name: str
+  source: EventSource
+  value_datatype: typing.Type[openhab.types.CommandType]
+  value: typing.Any
+  value_raw: typing.Any
+  unit_of_measure: str
+  is_my_own_echo: bool
+  is_non_value_command: bool  # these are events that will not be rpresented as state or statechanged values. E.g. Rollershutters UP or Players NEXT.
 
 
 @dataclass
 class ItemStateEvent(ItemEvent):
-    """a Event representing a state event on a Item"""
-    type = ItemStateEventType
+  """a Event representing a state event on a Item"""
+  type = ItemStateEventType
 
 
 @dataclass
 class ItemCommandEvent(ItemEvent):
-    """a Event representing a command event on a Item"""
-    type = ItemCommandEventType
+  """a Event representing a command event on a Item"""
+  type = ItemCommandEventType
 
 
 @dataclass
 class ItemStateChangedEvent(ItemStateEvent):
-    """a Event representing a state change event on a Item"""
-    type = ItemStateChangedEventType
-    old_value_datatype: typing.Type[openhab.types.CommandType]
-    old_value_raw: str
-    old_value: typing.Any
-    old_unit_of_measure: str
+  """a Event representing a state change event on a Item"""
+  type = ItemStateChangedEventType
+  old_value_datatype: typing.Type[openhab.types.CommandType]
+  old_value_raw: str
+  old_value: typing.Any
+  old_unit_of_measure: str

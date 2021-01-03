@@ -20,10 +20,12 @@
 
 # pylint: disable=bad-indentation
 from __future__ import annotations
+
 import abc
 import datetime
 import re
 import typing
+
 import dateutil.parser
 
 __author__ = 'Georges Toth <georges@trypill.org>'
@@ -34,8 +36,7 @@ class CommandType(metaclass=abc.ABCMeta):
   """Base command data_type class."""
 
   TYPENAME = ""
-
-  SUPPORTED_TYPENAMES = []
+  SUPPORTED_TYPENAMES: typing.List[str] = []
   UNDEF = 'UNDEF'
   NULL = 'NULL'
   UNDEFINED_STATES = [UNDEF, NULL]
@@ -51,16 +52,17 @@ class CommandType(metaclass=abc.ABCMeta):
     for a_type in parent_cls.__subclasses__():
       if typename in a_type.SUPPORTED_TYPENAMES:
         return a_type
-      else:
-        # mayba a subclass of a subclass
-        result = a_type.get_type_for(typename, a_type)
-        if result is not None:
-          return result
+
+      # maybe a subclass of a subclass
+      result = a_type.get_type_for(typename, a_type)
+      if result is not None:
+        return result
+
     return None
 
   @classmethod
   @abc.abstractmethod
-  def parse(cls, value: str) -> str:
+  def parse(cls, value: str) -> typing.Optional[str]:
     raise NotImplementedError()
 
   @classmethod
@@ -85,7 +87,7 @@ class UndefType(CommandType):
   SUPPORTED_TYPENAMES = [TYPENAME]
 
   @classmethod
-  def parse(cls, value: str) -> typing.Union[str, None]:
+  def parse(cls, value: str) -> typing.Optional[str]:
     if value in UndefType.UNDEFINED_STATES:
       return None
     return value
@@ -100,7 +102,7 @@ class GroupType(CommandType):
   SUPPORTED_TYPENAMES = [TYPENAME]
 
   @classmethod
-  def parse(cls, value: str) -> typing.Union[str, None]:
+  def parse(cls, value: str) -> typing.Optional[str]:
     if value in GroupType.UNDEFINED_STATES:
       return None
     return value
@@ -117,7 +119,7 @@ class StringType(CommandType):
   SUPPORTED_TYPENAMES = [TYPENAME]
 
   @classmethod
-  def parse(cls, value: str) -> typing.Union[str, None]:
+  def parse(cls, value: str) -> typing.Optional[str]:
     if value in StringType.UNDEFINED_STATES:
       return None
     if not isinstance(value, str):
@@ -148,7 +150,7 @@ class OnOffType(StringType):
   POSSIBLE_VALUES = [ON, OFF]
 
   @classmethod
-  def parse(cls, value: str) -> typing.Union[str, None]:
+  def parse(cls, value: str) -> typing.Optional[str]:
     if value in OnOffType.UNDEFINED_STATES:
       return None
     if value not in OnOffType.POSSIBLE_VALUES:
@@ -180,7 +182,7 @@ class OpenCloseType(StringType):
   POSSIBLE_VALUES = [OPEN, CLOSED]
 
   @classmethod
-  def parse(cls, value: str) -> typing.Union[str, None]:
+  def parse(cls, value: str) -> typing.Optional[str]:
     if value in OpenCloseType.UNDEFINED_STATES:
       return None
     if value not in OpenCloseType.POSSIBLE_VALUES:
@@ -209,7 +211,7 @@ class ColorType(StringType):
   SUPPORTED_TYPENAMES = [TYPENAME]
 
   @classmethod
-  def parse(cls, value: str) -> typing.Union[typing.Tuple[int, int, float], None]:
+  def parse(cls, value: str) -> typing.Optional[typing.Tuple[int, int, float]]:
     if value in ColorType.UNDEFINED_STATES:
       return None
     hs, ss, bs = re.split(',', value)
@@ -257,17 +259,17 @@ class DecimalType(CommandType):
     if value in DecimalType.UNDEFINED_STATES:
       return None
 
-    m = re.match("(-?[0-9.]+)\s?(.*)?$", value)
+    m = re.match(r'(-?[0-9.]+)\s?(.*)?$', value)
     if m:
       value_value = m.group(1)
       value_unit_of_measure = m.group(2)
       try:
         return_value = int(value_value)
-      except:
+      except Exception:
         try:
           return_value = float(value_value)
         except Exception as e:
-          raise ValueError(e)
+          raise ValueError(e) from e
       return return_value, value_unit_of_measure
     raise ValueError()
 
@@ -293,7 +295,7 @@ class PercentType(DecimalType):
   SUPPORTED_TYPENAMES = [TYPENAME]
 
   @classmethod
-  def parse(cls, value: str) -> typing.Union[float, None]:
+  def parse(cls, value: str) -> typing.Optional[float]:
     if value in PercentType.UNDEFINED_STATES:
       return None
     try:
@@ -302,7 +304,7 @@ class PercentType(DecimalType):
         raise ValueError()
       return f
     except Exception as e:
-      raise ValueError(e)
+      raise ValueError(e) from e
 
   @classmethod
   def validate(cls, value: typing.Union[float, int]) -> None:
@@ -334,7 +336,7 @@ class IncreaseDecreaseType(StringType):
   POSSIBLE_VALUES = [INCREASE, DECREASE]
 
   @classmethod
-  def parse(cls, value: str) -> typing.Union[str, None]:
+  def parse(cls, value: str) -> typing.Optional[str]:
     if value in IncreaseDecreaseType.UNDEFINED_STATES:
       return None
     if value not in IncreaseDecreaseType.POSSIBLE_VALUES:
@@ -363,7 +365,7 @@ class DateTimeType(CommandType):
   SUPPORTED_TYPENAMES = [TYPENAME]
 
   @classmethod
-  def parse(cls, value: str) -> typing.Union[datetime, None]:
+  def parse(cls, value: str) -> typing.Optional[datetime.datetime]:
     if value in DateTimeType.UNDEFINED_STATES:
       return None
     return dateutil.parser.parse(value)
@@ -394,7 +396,7 @@ class UpDownType(StringType):
   POSSIBLE_VALUES = [UP, DOWN]
 
   @classmethod
-  def parse(cls, value: str) -> typing.Union[str, None]:
+  def parse(cls, value: str) -> typing.Optional[str]:
     if value in UpDownType.UNDEFINED_STATES:
       return None
     if value not in UpDownType.POSSIBLE_VALUES:
@@ -427,7 +429,7 @@ class StopMoveType(StringType):
   POSSIBLE_VALUES = [STOP]
 
   @classmethod
-  def parse(cls, value: str) -> typing.Union[str, None]:
+  def parse(cls, value: str) -> typing.Optional[str]:
     if value in StopMoveType.UNDEFINED_STATES:
       return None
     if value not in StopMoveType.POSSIBLE_VALUES:
@@ -461,7 +463,7 @@ class PlayPauseType(StringType):
   POSSIBLE_VALUES = [PLAY, PAUSE]
 
   @classmethod
-  def parse(cls, value: str) -> typing.Union[str, None]:
+  def parse(cls, value: str) -> typing.Optional[str]:
     if value in PlayPauseType.UNDEFINED_STATES:
       return None
     if value not in PlayPauseType.POSSIBLE_VALUES:
@@ -495,7 +497,7 @@ class NextPrevious(StringType):
   POSSIBLE_VALUES = [NEXT, PREVIOUS]
 
   @classmethod
-  def parse(cls, value: str) -> typing.Union[str, None]:
+  def parse(cls, value: str) -> typing.Optional[str]:
     if value in NextPrevious.UNDEFINED_STATES:
       return None
     if value not in NextPrevious.POSSIBLE_VALUES:
@@ -529,7 +531,7 @@ class RewindFastforward(StringType):
   POSSIBLE_VALUES = [REWIND, FASTFORWARD]
 
   @classmethod
-  def parse(cls, value: str) -> typing.Union[str, None]:
+  def parse(cls, value: str) -> typing.Optional[str]:
     if value in RewindFastforward.UNDEFINED_STATES:
       return None
     if value not in RewindFastforward.POSSIBLE_VALUES:
