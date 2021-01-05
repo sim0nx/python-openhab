@@ -22,7 +22,6 @@
 from __future__ import annotations
 
 import datetime
-import inspect
 import json
 import logging
 import re
@@ -146,7 +145,7 @@ class ItemFactory:
     """
     paramdict: typing.Dict[str, typing.Union[str, typing.List[str], typing.Dict[str, typing.Union[str, typing.List]]]] = {}
     itemtypename = _type
-    if inspect.isclass(_type):
+    if isinstance(_type, type):
       if issubclass(_type, Item):
         itemtypename = _type.TYPENAME
 
