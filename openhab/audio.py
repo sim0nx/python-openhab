@@ -34,6 +34,7 @@ class Audiosink:
     return new_audiosink
 
   def __init__(self, openhab_client: openhab.OpenHAB, _id: str, label: str) -> None:
+    """Constructor."""
     self.openhab_client = openhab_client
     self.id = _id
     self.label = label
@@ -42,6 +43,7 @@ class Audiosink:
     self.openhab_client.say(text=text, audiosinkid=self.id, voiceid=voice.id)
 
   def __str__(self) -> str:
+    """String representation of this class."""
     return f'id:"{self.id}", label:"{self.label}"'
 
 
@@ -52,6 +54,7 @@ class Voice:
     return new_voice
 
   def __init__(self, openhab_client: openhab.OpenHAB, _id: str, label: str, locale: str) -> None:
+    """Constructor."""
     self.openhab_client = openhab_client
     self.id = _id
     self.label = label
@@ -61,6 +64,7 @@ class Voice:
     audiosink.say(text=text, voice=self)
 
   def __str__(self) -> str:
+    """String representation of this class."""
     return f'id:"{self.id}", label:"{self.label}", locale:"{self.locale}"'
 
 
@@ -76,6 +80,7 @@ class Voiceinterpreter:
     return new_voiceinterpreter
 
   def __init__(self, openhab_client: openhab.OpenHAB, _id: str, label: str, locales: typing.List[str]) -> None:
+    """Constructor."""
     self.openhab_client = openhab_client
     self.id = _id
     self.label = label
@@ -85,4 +90,5 @@ class Voiceinterpreter:
     self.openhab_client.interpret(text=text, voiceinterpreterid=self.id)
 
   def __str__(self) -> str:
+    """String representation of this class."""
     return f'id:"{self.id}", label:"{self.label}", locales:"{self.locales}"'

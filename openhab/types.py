@@ -33,7 +33,7 @@ __license__ = 'AGPLv3+'
 
 
 class CommandType(metaclass=abc.ABCMeta):
-  """Base command data_type class."""
+  """Base command type class."""
 
   TYPENAME = ""
   SUPPORTED_TYPENAMES: typing.List[str] = []
@@ -43,10 +43,15 @@ class CommandType(metaclass=abc.ABCMeta):
 
   @classmethod
   def is_undefined(cls, value: typing.Any) -> bool:
+    """Return true if given value is an undefined value in openHAB (i.e. UNDEF/NULL)."""
     return value in CommandType.UNDEFINED_STATES
 
   @classmethod
-  def get_type_for(cls, typename: str, parent_cls: typing.Optional[typing.Type[CommandType]] = None) -> typing.Union[typing.Type[CommandType], None]:
+  def get_type_for(cls,
+                   typename: str,
+                   parent_cls: typing.Optional[typing.Type[CommandType]] = None
+                   ) -> typing.Union[typing.Type[CommandType], None]:
+    """Get a class type for a given typename."""
     if parent_cls is None:
       parent_cls = CommandType
     for a_type in parent_cls.__subclasses__():
@@ -63,6 +68,7 @@ class CommandType(metaclass=abc.ABCMeta):
   @classmethod
   @abc.abstractmethod
   def parse(cls, value: str) -> typing.Optional[str]:
+    """Parse a given value."""
     raise NotImplementedError()
 
   @classmethod
@@ -83,33 +89,37 @@ class CommandType(metaclass=abc.ABCMeta):
 
 
 class UndefType(CommandType):
+  """Undefined type."""
   TYPENAME = "UnDef"
   SUPPORTED_TYPENAMES = [TYPENAME]
 
   @classmethod
   def parse(cls, value: str) -> typing.Optional[str]:
+    """Parse a given value."""
     if value in UndefType.UNDEFINED_STATES:
       return None
     return value
 
   @classmethod
   def validate(cls, value: str) -> None:
-    pass
+    """Value validation method."""
 
 
 class GroupType(CommandType):
+  """Group type."""
   TYPENAME = "Group"
   SUPPORTED_TYPENAMES = [TYPENAME]
 
   @classmethod
   def parse(cls, value: str) -> typing.Optional[str]:
+    """Parse a given value."""
     if value in GroupType.UNDEFINED_STATES:
       return None
     return value
 
   @classmethod
   def validate(cls, value: str) -> None:
-    pass
+    """Value validation method."""
 
 
 class StringType(CommandType):
@@ -120,6 +130,7 @@ class StringType(CommandType):
 
   @classmethod
   def parse(cls, value: str) -> typing.Optional[str]:
+    """Parse a given value."""
     if value in StringType.UNDEFINED_STATES:
       return None
     if not isinstance(value, str):
@@ -151,6 +162,7 @@ class OnOffType(StringType):
 
   @classmethod
   def parse(cls, value: str) -> typing.Optional[str]:
+    """Parse a given value."""
     if value in OnOffType.UNDEFINED_STATES:
       return None
     if value not in OnOffType.POSSIBLE_VALUES:
@@ -183,6 +195,7 @@ class OpenCloseType(StringType):
 
   @classmethod
   def parse(cls, value: str) -> typing.Optional[str]:
+    """Parse a given value."""
     if value in OpenCloseType.UNDEFINED_STATES:
       return None
     if value not in OpenCloseType.POSSIBLE_VALUES:
@@ -212,6 +225,7 @@ class ColorType(StringType):
 
   @classmethod
   def parse(cls, value: str) -> typing.Optional[typing.Tuple[int, int, float]]:
+    """Parse a given value."""
     if value in ColorType.UNDEFINED_STATES:
       return None
     hs, ss, bs = re.split(',', value)
@@ -256,6 +270,7 @@ class DecimalType(CommandType):
 
   @classmethod
   def parse(cls, value: str) -> typing.Union[None, typing.Tuple[typing.Union[int, float], str]]:
+    """Parse a given value."""
     if value in DecimalType.UNDEFINED_STATES:
       return None
 
@@ -296,6 +311,7 @@ class PercentType(DecimalType):
 
   @classmethod
   def parse(cls, value: str) -> typing.Optional[float]:
+    """Parse a given value."""
     if value in PercentType.UNDEFINED_STATES:
       return None
     try:
@@ -337,6 +353,7 @@ class IncreaseDecreaseType(StringType):
 
   @classmethod
   def parse(cls, value: str) -> typing.Optional[str]:
+    """Parse a given value."""
     if value in IncreaseDecreaseType.UNDEFINED_STATES:
       return None
     if value not in IncreaseDecreaseType.POSSIBLE_VALUES:
@@ -366,6 +383,7 @@ class DateTimeType(CommandType):
 
   @classmethod
   def parse(cls, value: str) -> typing.Optional[datetime.datetime]:
+    """Parse a given value."""
     if value in DateTimeType.UNDEFINED_STATES:
       return None
     return dateutil.parser.parse(value)
@@ -397,6 +415,7 @@ class UpDownType(StringType):
 
   @classmethod
   def parse(cls, value: str) -> typing.Optional[str]:
+    """Parse a given value."""
     if value in UpDownType.UNDEFINED_STATES:
       return None
     if value not in UpDownType.POSSIBLE_VALUES:
@@ -430,6 +449,7 @@ class StopMoveType(StringType):
 
   @classmethod
   def parse(cls, value: str) -> typing.Optional[str]:
+    """Parse a given value."""
     if value in StopMoveType.UNDEFINED_STATES:
       return None
     if value not in StopMoveType.POSSIBLE_VALUES:
@@ -464,6 +484,7 @@ class PlayPauseType(StringType):
 
   @classmethod
   def parse(cls, value: str) -> typing.Optional[str]:
+    """Parse a given value."""
     if value in PlayPauseType.UNDEFINED_STATES:
       return None
     if value not in PlayPauseType.POSSIBLE_VALUES:
@@ -498,6 +519,7 @@ class NextPrevious(StringType):
 
   @classmethod
   def parse(cls, value: str) -> typing.Optional[str]:
+    """Parse a given value."""
     if value in NextPrevious.UNDEFINED_STATES:
       return None
     if value not in NextPrevious.POSSIBLE_VALUES:
@@ -532,6 +554,7 @@ class RewindFastforward(StringType):
 
   @classmethod
   def parse(cls, value: str) -> typing.Optional[str]:
+    """Parse a given value."""
     if value in RewindFastforward.UNDEFINED_STATES:
       return None
     if value not in RewindFastforward.POSSIBLE_VALUES:

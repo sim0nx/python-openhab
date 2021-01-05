@@ -462,7 +462,7 @@ class OpenHAB:
     return self.req_get('/audio/defaultsink')
 
   def get_all_audiosinks(self) -> typing.List[openhab.audio.Audiosink]:
-    """Returns OpenHab audio sinks
+    """Returns OpenHab audio sinks.
 
     Returns:
       List[openhab.audio.Audiosink]: a list of audio sinks
@@ -521,7 +521,7 @@ class OpenHAB:
     return self.req_get('/voice/interpreters/{}'.format(_id))
 
   def get_all_voicesinterpreters(self) -> typing.List[openhab.audio.Voiceinterpreter]:
-    """Returns OpenHab voiceinterpreters
+    """Returns OpenHab voice interpreters.
 
     Returns:
       List[openhab.audio.Voiceinterpreter]: a list of voiceinterpreters

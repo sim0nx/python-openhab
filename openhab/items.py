@@ -32,15 +32,15 @@ import typing
 import dateutil.parser
 
 import openhab.events
-import openhab.types
 import openhab.exceptions
+import openhab.types
 
 __author__ = 'Georges Toth <georges@trypill.org>'
 __license__ = 'AGPLv3+'
 
 
 class ItemFactory:
-  """A factory to get an Item from Openhab, create new or delete existing items in openHAB"""
+  """A factory to get an Item from Openhab, create new or delete existing items in openHAB."""
 
   def __init__(self, openhab_client: openhab.client.OpenHAB):
     """Constructor.
@@ -180,16 +180,18 @@ class ItemFactory:
     self.openHABClient.req_json_put('/items/{}'.format(name), json_data=json_body)
 
   def get_item(self, itemname: str, force_request_to_openhab: typing.Optional[bool] = False) -> Item:
-    """get a existing openHAB item
-          Args:
-              itemname (str): unique name of the item
-          Returns:
-            Item: the Item
+    """Get a existing openHAB item.
+
+    Args:
+        itemname (str): Unique name of the item
+        force_request_to_openhab: Always fetch a fresh copy of the item from openHAB
+    Returns:
+      Item: the Item
     """
     return self.openHABClient.get_item(name=itemname, force_request_to_openhab=force_request_to_openhab)
 
   def fetch_all_items(self) -> typing.Dict[str, openhab.items.Item]:
-    """Returns all items defined in OpenHAB.
+    """Returns all items defined in openHAB.
 
     Returns:
       dict: Returns a dict with item names as key and item class instances as value.
@@ -396,7 +398,8 @@ class Item:
     self._state = None
     self.remove_all_event_listeners()
 
-  def __extract_value_and_unitofmeasure(self, value: str) -> typing.Tuple[str, str]:
+  @staticmethod
+  def __extract_value_and_unitofmeasure(value: str) -> typing.Tuple[str, str]:
     """Private method to extract value and unit of measurement.
 
     Args:
@@ -514,12 +517,13 @@ class Item:
     return item_state_changed_event
 
   def _parse_external_command_event(self, raw_event: openhab.events.RawItemEvent) -> openhab.events.ItemCommandEvent:
-    """Private method to process a command event coming from openHAB
-          Args:
-            raw_event (openhab.events.RawItemEvent): the raw event
-          Returns:
-            openhab.events.ItemCommandEvent : the populated event
-          """
+    """Private method to process a command event coming from openHAB.
+
+    Args:
+      raw_event (openhab.events.RawItemEvent): the raw event
+    Returns:
+      openhab.events.ItemCommandEvent : the populated event
+    """
     command_type = raw_event.content['type']
     command_type_class = openhab.types.CommandType.get_type_for(command_type)
     command = raw_event.content['value']
@@ -529,12 +533,13 @@ class Item:
     raise Exception('unknown command event type')
 
   def _parse_external_state_event(self, raw_event: openhab.events.RawItemEvent) -> openhab.events.ItemStateEvent:
-    """Private method to process a state event coming from openHAB
-          Args:
-               raw_event (openhab.events.RawItemEvent): the raw event
-          Returns:
-            openhab.events.ItemStateEvent : the populated event
-          """
+    """Private method to process a state event coming from openHAB.
+
+    Args:
+         raw_event (openhab.events.RawItemEvent): the raw event
+    Returns:
+      openhab.events.ItemStateEvent : the populated event
+    """
     state_type = raw_event.content['type']
     state_type_class = openhab.types.CommandType.get_type_for(state_type)
     value = raw_event.content['value']
@@ -544,12 +549,13 @@ class Item:
     raise Exception('unknown state event type')
 
   def _parse_external_state_changed_event(self, raw_event: openhab.events.RawItemEvent) -> openhab.events.ItemStateEvent:
-    """Private method to process a state changed event coming from openHAB
-          Args:
-               raw_event (openhab.events.RawItemEvent): the raw event
-          Returns:
-            openhab.events.ItemStateEvent : the populated event
-          """
+    """Private method to process a state changed event coming from openHAB.
+
+    Args:
+         raw_event (openhab.events.RawItemEvent): the raw event
+    Returns:
+      openhab.events.ItemStateEvent : the populated event
+    """
     state_changed_type = raw_event.content['type']
     state_changed_type_class = openhab.types.CommandType.get_type_for(state_changed_type)
     state_changed_old_type = raw_event.content['oldType']
@@ -562,7 +568,7 @@ class Item:
     raise Exception('unknown statechanged event type:{}'.format(state_changed_type_class))
 
   def _process_external_event(self, raw_event: openhab.events.RawItemEvent) -> None:
-    """Private method to process a event coming from openHAB and inform all Listeners about the event
+    """Private method to process a event coming from openHAB and inform all Listeners about the event.
 
     Args:
       raw_event (openhab.events.RawItemEvent): the raw event
@@ -590,7 +596,7 @@ class Item:
             self.logger.exception('error executing Eventlistener for item:{}.'.format(event.item_name), e)
 
   def _process_internal_event(self, event: openhab.events.ItemEvent) -> None:
-    """Private method to process a event coming from local changes and inform all Listeners about the event
+    """Private method to process a event coming from local changes and inform all Listeners about the event.
 
     Args:
       event (openhab.events.ItemEvent): the internal event
@@ -609,8 +615,8 @@ class Item:
   def add_event_listener(self,
                          listening_types: typing.Union[openhab.events.EventType, typing.Set[openhab.events.EventType]],
                          listener: typing.Callable[[openhab.items.Item, openhab.events.ItemEvent], None],
-                         only_if_eventsource_is_openhab: bool=True,
-                         also_get_my_echos_from_openhab: bool=False) -> None:
+                         only_if_eventsource_is_openhab: bool = True,
+                         also_get_my_echos_from_openhab: bool = False) -> None:
     """Add a Listener interested in changes of items happening in openHAB.
 
     Listener is a callable with 2 parameters:
@@ -632,6 +638,7 @@ class Item:
       self.event_listeners[listener] = event_listener
 
   def remove_all_event_listeners(self) -> None:
+    """Remove all event listeners from item."""
     self.event_listeners = {}
 
   def remove_event_listener(self,
@@ -650,6 +657,7 @@ class Item:
         self.event_listeners.pop(listener)
 
   def is_undefined(self, value: str) -> bool:
+    """Check if value is undefined."""
     for aStateType in self.state_types:
       if not aStateType.is_undefined(value):
         return False
@@ -870,27 +878,27 @@ class PlayerItem(Item):
   state_changed_event_types = [openhab.types.PlayPauseType, openhab.types.RewindFastforward]
 
   def play(self) -> None:
-    """send the command PLAY."""
+    """Send the command PLAY."""
     self.command(openhab.types.PlayPauseType.PLAY)
 
   def pause(self) -> None:
-    """send the command PAUSE."""
+    """Send the command PAUSE."""
     self.command(openhab.types.PlayPauseType.PAUSE)
 
   def next(self) -> None:
-    """send the command NEXT."""
+    """Send the command NEXT."""
     self.command(openhab.types.NextPrevious.NEXT)
 
   def previous(self) -> None:
-    """send the command PREVIOUS."""
+    """Send the command PREVIOUS."""
     self.command(openhab.types.NextPrevious.PREVIOUS)
 
   def fastforward(self) -> None:
-    """send the command FASTFORWARD"""
+    """Send the command FASTFORWARD."""
     self.command(openhab.types.RewindFastforward.FASTFORWARD)
 
   def rewind(self) -> None:
-    """send the command REWIND."""
+    """Send the command REWIND."""
     self.command(openhab.types.RewindFastforward.REWIND)
 
 
@@ -1087,7 +1095,8 @@ class ColorItem(DimmerItem):
 
     return value
 
-  def __extract_value_and_unitofmeasure(self, value: str) -> typing.Tuple[str, str]:
+  @staticmethod
+  def __extract_value_and_unitofmeasure(value: str) -> typing.Tuple[str, str]:
     return value, ''
 
 
@@ -1140,16 +1149,24 @@ class RollershutterItem(Item):
 
 
 class EventListener:
-  """EventListener Objects hold data about a registered event listener"""
+  """EventListener Objects hold data about a registered event listener."""
 
-  def __init__(self, listening_types: typing.Set[openhab.events.EventType], listener: typing.Callable[[openhab.items.Item, openhab.events.ItemEvent], None], only_if_eventsource_is_openhab: bool, also_get_my_echos_from_openhab: bool):
-    """Constructor of an EventListener Object
-      Args:
-        listening_types (openhab.events.EventType or set of openhab.events.EventType): the eventTypes the listener is interested in.
-        only_if_eventsource_is_openhab (bool): the listener only wants events that are coming from openHAB.
-        also_get_my_echos_from_openhab (bool): the listener also wants to receive events coming from openHAB that originally were triggered by commands or changes by our item itself.
+  def __init__(self,
+               listening_types: typing.Set[openhab.events.EventType],
+               listener: typing.Callable[[openhab.items.Item, openhab.events.ItemEvent], None],
+               only_if_eventsource_is_openhab: bool,
+               also_get_my_echos_from_openhab: bool) -> None:
+    """Constructor of an EventListener Object.
 
+    Listener is a callable with 2 parameters:
+      - item (openhab.items.Item): the item that received a command, change or update
+      - event (openhab.events.ItemEvent): the item Event holding the actual change
 
+    Args:
+      listening_types (openhab.events.EventType or set of openhab.events.EventType): the eventTypes the listener is interested in.
+      listener (Callable[[openhab.items.Item,openhab.events.ItemEvent],None]): a method with 2 parameters as described above
+      only_if_eventsource_is_openhab (bool): the listener only wants events that are coming from openHAB.
+      also_get_my_echos_from_openhab (bool): the listener also wants to receive events coming from openHAB that originally were triggered by commands or changes by our item itself.
     """
     all_types = {openhab.events.ItemStateEvent.type, openhab.events.ItemCommandEvent.type, openhab.events.ItemStateChangedEvent.type}
     if listening_types is None:
@@ -1166,11 +1183,12 @@ class EventListener:
     self.alsoGetMyEchosFromOpenHAB = also_get_my_echos_from_openhab
 
   def add_types(self, listening_types: typing.Union[openhab.events.EventType, typing.Set[openhab.events.EventType]]) -> None:
-    """add aditional listening types
-            Args:
-              listening_types (openhab.events.EventType or set of openhab.events.EventType): the additional eventTypes the listener is interested in.
+    """Add aditional listening types.
 
-          """
+    Args:
+      listening_types (openhab.events.EventType or set of openhab.events.EventType): the additional eventTypes the listener is interested in.
+
+    """
     if listening_types is None:
       return
 
@@ -1184,11 +1202,11 @@ class EventListener:
     self.listeningTypes.update(listening_types)
 
   def remove_types(self, listening_types: typing.Union[openhab.events.EventType, typing.Set[openhab.events.EventType]]) -> None:
-    """remove listening types
-        Args:
-          listening_types (openhab.events.EventType or set of openhab.events.EventType): the eventTypes the listener is not interested in anymore
+    """Remove listening types.
 
-      """
+    Args:
+      listening_types (openhab.events.EventType or set of openhab.events.EventType): the eventTypes the listener is not interested in anymore
+    """
     if listening_types is None:
       self.listeningTypes.clear()
     elif not hasattr(listening_types, '__iter__'):

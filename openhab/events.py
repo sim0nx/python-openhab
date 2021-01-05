@@ -41,6 +41,7 @@ EventSourceOpenhab: EventSource = EventSource('Openhab')
 
 @dataclass
 class RawItemEvent:
+  """This class represents a raw item event."""
   item_name: str
   source = EventSourceOpenhab
   event_type: EventType
@@ -49,7 +50,7 @@ class RawItemEvent:
 
 @dataclass
 class ItemEvent:
-  """The base class for all ItemEvents"""
+  """The base class for all ItemEvents."""
   type = ItemEventType
   item_name: str
   source: EventSource
@@ -58,24 +59,24 @@ class ItemEvent:
   value_raw: typing.Any
   unit_of_measure: str
   is_my_own_echo: bool
-  is_non_value_command: bool  # these are events that will not be rpresented as state or statechanged values. E.g. Rollershutters UP or Players NEXT.
+  is_non_value_command: bool  # these are events that will not be represented as state or state-changed values. E.g. Rollershutters UP or Players NEXT.
 
 
 @dataclass
 class ItemStateEvent(ItemEvent):
-  """a Event representing a state event on a Item"""
+  """A Event representing a state event on a Item."""
   type = ItemStateEventType
 
 
 @dataclass
 class ItemCommandEvent(ItemEvent):
-  """a Event representing a command event on a Item"""
+  """A Event representing a command event on a Item."""
   type = ItemCommandEventType
 
 
 @dataclass
 class ItemStateChangedEvent(ItemStateEvent):
-  """a Event representing a state change event on a Item"""
+  """A Event representing a state change event on a Item."""
   type = ItemStateChangedEventType
   old_value_datatype: typing.Type[openhab.types.CommandType]
   old_value_raw: str
