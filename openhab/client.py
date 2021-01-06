@@ -37,7 +37,7 @@ from requests.auth import HTTPBasicAuth
 import openhab.audio
 import openhab.events
 import openhab.items
-import openhab.types
+import openhab.ohtypes
 
 __author__ = 'Georges Toth <georges@trypill.org>'
 __license__ = 'AGPLv3+'
@@ -71,7 +71,7 @@ class OpenHAB:
       OpenHAB: openHAB class instance.
     """
     self.base_url = base_url
-    self.events_url = "{}/events?topics=smarthome/items".format(base_url.strip('/'))
+    self.events_url = "{}/events?topics=openhab/items".format(base_url.strip('/'))
     self.autoUpdate = auto_update
     self.session = requests.Session()
     self.session.headers['accept'] = 'application/json'

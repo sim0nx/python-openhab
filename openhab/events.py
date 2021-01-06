@@ -23,7 +23,7 @@
 import typing
 from dataclasses import dataclass
 
-import openhab.types
+import openhab.ohtypes
 
 EventType = typing.NewType('EventType', str)
 
@@ -54,7 +54,7 @@ class ItemEvent:
   type = ItemEventType
   item_name: str
   source: EventSource
-  value_datatype: typing.Type[openhab.types.CommandType]
+  value_datatype: typing.Type[openhab.ohtypes.CommandType]
   value: typing.Any
   value_raw: typing.Any
   unit_of_measure: str
@@ -78,7 +78,7 @@ class ItemCommandEvent(ItemEvent):
 class ItemStateChangedEvent(ItemStateEvent):
   """A Event representing a state change event on a Item."""
   type = ItemStateChangedEventType
-  old_value_datatype: typing.Type[openhab.types.CommandType]
+  old_value_datatype: typing.Type[openhab.ohtypes.CommandType]
   old_value_raw: str
   old_value: typing.Any
   old_unit_of_measure: str

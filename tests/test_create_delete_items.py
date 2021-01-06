@@ -24,7 +24,7 @@ from typing import TYPE_CHECKING, List, Set, Dict, Tuple, Union, Any, Optional, 
 import openhab
 import openhab.events
 import openhab.items as items
-import openhab.types
+import openhab.ohtypes
 import logging
 import random
 import tests.testutil as testutil
@@ -307,7 +307,7 @@ def test_SwitchItem(item_factory, nameprefix):
     x2.toggle()
     testutil.doassert("ON", x2.state, "itemstate")
 
-    new_value = openhab.types.OnOffType.OFF
+    new_value = openhab.ohtypes.OnOffType.OFF
     x2.state = new_value
 
     log.info("itemsate:{}".format(x2.state))

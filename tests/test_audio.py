@@ -23,7 +23,7 @@ from __future__ import annotations
 import openhab
 import openhab.events
 import openhab.items as items
-import openhab.types
+import openhab.ohtypes
 import logging
 import time
 
@@ -79,7 +79,7 @@ def test_interpret(myopenhab: openhab.OpenHAB):
     log.info("interpreting text:'{text}'".format(text=text))
     vi.interpret(text=text)
     time.sleep(0.3)
-    switchitem.state == openhab.types.OnOffType.ON
+    switchitem.state == openhab.ohtypes.OnOffType.ON
   finally:
     switchitem.delete()
 

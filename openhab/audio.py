@@ -23,7 +23,7 @@ from __future__ import annotations
 
 import typing
 
-import openhab.types
+import openhab.ohtypes
 
 
 class Audiosink:
