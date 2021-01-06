@@ -553,7 +553,7 @@ class Item:
     if state_type_class in self.state_event_types:
       item_state_event = self._digest_external_state_event(state_type_class, value)
       return item_state_event
-    raise Exception('unknown state event type')
+    raise Exception(f'Unknown state event type - {str(raw_event)}')
 
   def _parse_external_state_changed_event(self, raw_event: openhab.events.RawItemEvent) -> openhab.events.ItemStateEvent:
     """Private method to process a state changed event coming from openHAB.
