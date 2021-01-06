@@ -111,7 +111,7 @@ Example usage of the library:
 
     #define a callback function to receive events
     def onLight_switchCommand(item: openhab.items.Item, event: openhab.events.ItemCommandEvent):
-        log.info("########################### COMMAND of {} to {} (itemsvalue:{}) from OPENHAB".format(event.itemname, event.newValueRaw, item.state))
+        log.info("########################### COMMAND of {} to {} (itemsvalue:{}) from OPENHAB".format(event.item_name, event.value_raw, item.state))
         if event.source == openhab.events.EventSourceOpenhab:
             log.info("this change came from openhab")
 
