@@ -19,16 +19,16 @@
 #
 # pylint: disable=bad-indentation
 
-import openhab
-import openhab.events
-import openhab.ohtypes
-import time
-import openhab.items as items
 import logging
 import random
-import testutil
-
+import time
 from datetime import datetime
+
+import openhab
+import openhab.events
+import openhab.items as items
+import openhab.ohtypes
+from . import testutil
 
 log = logging.getLogger(__name__)
 logging.basicConfig(level=10, format="%(levelno)s:%(asctime)s - %(message)s - %(name)s - PID:%(process)d - THREADID:%(thread)d - %(levelname)s - MODULE:%(module)s, -FN:%(filename)s -FUNC:%(funcName)s:%(lineno)d")
@@ -39,7 +39,6 @@ log.info("infomessage")
 log.debug("debugmessage")
 
 base_url = 'http://localhost:8080/rest'
-base_url = 'http://10.10.20.81:8080/rest'
 
 expected_state = None
 state_correct_count = 0
@@ -98,7 +97,7 @@ def on_item_command(item: openhab.items.Item, event: openhab.events.ItemCommandE
     command_correct_count += 1
 
 
-myopenhab = openhab.OpenHAB(base_url, auto_update=True)
+myopenhab = openhab.OpenHAB(base_url, auto_update=True, username='admin', password='admin')
 myItemfactory = openhab.items.ItemFactory(myopenhab)
 
 random.seed()
@@ -971,19 +970,19 @@ def test_rollershutter_item():
 
 
 def test_echos_for_rollershutter_item():
-
   global do_breakpoint
-  count=0
+  count = 0
   try:
     log.info("testing echos for rollershutter")
 
     def on_item_command(item: openhab.items.Item, event: openhab.events.ItemCommandEvent):
       global count
-      count +=1
+      count += 1
 
     def on_item_statechange(item: openhab.items.Item, event: openhab.events.ItemStateChangedEvent):
       global count
       count += 1
+
     def on_item_state(item: openhab.items.Item, event: openhab.events.ItemStateEvent):
       global count
       count += 1
@@ -1041,5 +1040,5 @@ test_rollershutter_item()
 test_echos_for_rollershutter_item()
 log.info("tests for events finished successfully")
 
-myopenhab.loop_for_events()
+# myopenhab.loop_for_events()
 log.info("stopping program")
