@@ -18,7 +18,7 @@ before_install:
 install:
   - pip install -U pip
   - pip install --upgrade-strategy eager .[test]
-  - docker run -d --name openhab -p 8080:8080 -e OPENHAB_HTTP_PORT=8080 -v $TRAVIS_BUILD_DIR/docker/openhab_conf:/openhab/conf $image
+  - docker run -d --name openhab -p 8080:8080 -e OPENHAB_HTTP_PORT=8080 -v $TRAVIS_BUILD_DIR/docker/openhab_conf:/openhab/conf $TRAVIS_BUILD_DIR/docker/openhab_userdata:/openhab/userdata $image
   - python docker/test_connectivity.py
 
 script:
