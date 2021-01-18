@@ -3,6 +3,7 @@
 
 #
 # Alexey Grubauer (c) 2020-present <alexey@ingenious-minds.at>
+# Georges Toth (c) 2021-present <georges@trypill.org>
 #
 # python-openhab is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -20,12 +21,16 @@
 # pylint: disable=bad-indentation
 
 from __future__ import annotations
+
+import logging
+import time
+
+import pytest
+
 import openhab
 import openhab.events
 import openhab.items as items
 import openhab.ohtypes
-import logging
-import time
 
 log = logging.getLogger(__name__)
 logging.basicConfig(level=10, format="%(levelno)s:%(asctime)s - %(message)s - %(name)s - PID:%(process)d - THREADID:%(thread)d - %(levelname)s - MODULE:%(module)s, -FN:%(filename)s -FUNC:%(funcName)s:%(lineno)d")
@@ -35,25 +40,31 @@ log.warning("www")
 log.info("iii")
 log.debug("ddddd")
 
-base_url = 'http://10.10.20.80:8080/rest'
+base_url = 'http://localhost:8080/rest'
+
+
+@pytest.fixture
+def myopenhab():
+  return openhab.OpenHAB(base_url, auto_update=False, username='admin', password='admin')
 
 
 def test_sinks(myopenhab: openhab.OpenHAB):
   log.info("starting tests 'test sinks'")
-  ds=myopenhab.get_audio_defaultsink()
+  ds = myopenhab.get_audio_defaultsink()
   log.info("defaultsink:{}".format(ds))
-  allSinks=myopenhab.get_all_audiosinks()
+  allSinks = myopenhab.get_all_audiosinks()
   for aSink in allSinks:
     log.info("sink:{}".format(aSink))
 
 
 def test_voices(myopenhab: openhab.OpenHAB):
   log.info("starting tests 'test voices'")
-  dv=myopenhab.get_audio_defaultvoice()
+  dv = myopenhab.get_audio_defaultvoice()
   log.info("defaultvoice:{}".format(dv))
-  allVoices=myopenhab.get_all_voices()
+  allVoices = myopenhab.get_all_voices()
   for aVoice in allVoices:
     log.info("voice:{}".format(aVoice))
+
 
 def test_voiceinterpreters(myopenhab: openhab.OpenHAB):
   log.info("starting tests 'test test_voiceinterpreters'")
@@ -64,8 +75,10 @@ def test_voiceinterpreters(myopenhab: openhab.OpenHAB):
   vi = myopenhab.get_voicesinterpreter("system")
   log.info("system voiceinterpreter:{}".format(vi))
 
+
 def test_say(myopenhab: openhab.OpenHAB):
-  myopenhab.get_audio_defaultvoice().say("das ist ein test",myopenhab.get_audio_defaultsink())
+  myopenhab.get_audio_defaultvoice().say("das ist ein test", myopenhab.get_audio_defaultsink())
+
 
 def test_interpret(myopenhab: openhab.OpenHAB):
   my_item_factory = openhab.items.ItemFactory(myopenhab)
@@ -75,24 +88,10 @@ def test_interpret(myopenhab: openhab.OpenHAB):
     switchitem.off()
     time.sleep(0.3)
     vi = myopenhab.get_voicesinterpreter("system")
-    text="schalte {} ein".format(switchitem.name)
+    text = "switch {} on".format(switchitem.name)
     log.info("interpreting text:'{text}'".format(text=text))
     vi.interpret(text=text)
     time.sleep(0.3)
     switchitem.state == openhab.ohtypes.OnOffType.ON
   finally:
     switchitem.delete()
-
-
-
-
-
-
-myopenhab = openhab.OpenHAB(base_url, auto_update=False)
-
-
-# test_sinks(myopenhab)
-# test_voices(myopenhab)
-# test_voiceinterpreters(myopenhab)
-# test_say(myopenhab)
-test_interpret(myopenhab)
