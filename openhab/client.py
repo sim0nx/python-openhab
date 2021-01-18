@@ -538,13 +538,13 @@ class OpenHAB:
   def say(self, text: str, audiosinkid: str, voiceid: str) -> None:
     """Text to speech output."""
     url = '{baseurl}/voice/say/?voiceid={voiceid}&sinkid={sinkid}'.format(baseurl=self.base_url, voiceid=requests.utils.quote(voiceid), sinkid=requests.utils.quote(audiosinkid))
-    r = self.session.post(url, data=text, headers={'Accept': 'application/json'}, timeout=self.timeout)
+    r = self.session.post(url, data=text, headers={'Accept': 'application/json', 'Content-Type': 'text/plain'}, timeout=self.timeout)
     self._check_req_return(r)
 
   def interpret(self, text: str, voiceinterpreterid: str) -> None:
     """Interpret text as command."""
     url = '{baseurl}/voice/interpreters/{interpreterid}'.format(baseurl=self.base_url, interpreterid=requests.utils.quote(voiceinterpreterid))
-    r = self.session.post(url, data=text, headers={'Accept': 'application/json'}, timeout=self.timeout)
+    r = self.session.post(url, data=text, headers={'Accept': 'application/json', 'Content-Type': 'text/plain'}, timeout=self.timeout)
     self._check_req_return(r)
 
 
