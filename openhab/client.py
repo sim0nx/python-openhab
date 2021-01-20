@@ -133,6 +133,7 @@ class OpenHAB:
               event_data send by openhab in a Dict
     """
     log = logging.getLogger(__name__)
+
     if "type" in event_data:
       event_reason = event_data["type"]
 
@@ -548,6 +549,7 @@ class OpenHAB:
     return self.req_get('/voice/interpreters')
 
   def say(self, text: str, audiosinkid: str, voiceid: str):
+    log.info("sending say command to OH for voiceid:'{}', audiosinkid:'{}'".format(voiceid,audiosinkid))
     url=self.base_url + "/voice/say/?voiceid={voiceid}&sinkid={sinkid}".format(voiceid=requests.utils.quote(voiceid), sinkid=requests.utils.quote(audiosinkid))
     r = self.session.post(url, data=text, headers={'Accept': 'application/json'}, timeout=self.timeout)
     self._check_req_return(r)

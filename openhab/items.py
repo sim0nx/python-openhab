@@ -239,6 +239,8 @@ class Item:
     self.init_from_json(json_data)
     self.last_command_sent_time = datetime.fromtimestamp(0)
     self.last_command_sent = ""
+    self.last_change_sent_time = datetime.fromtimestamp(0)
+    self.last_change_sent = None
     self.openhab.register_item(self)
     self.event_listeners: typing.Dict[typing.Callable[[openhab.items.Item, openhab.events.ItemEvent], None], Item.EventListener] = {}
 
@@ -317,6 +319,8 @@ class Item:
 
   def _validate_value(self, value: typing.Union[str, typing.Type[openhab.types.CommandType]]) -> None:
     """Private method for verifying the new value before modifying the state of the item."""
+    if value == openhab.types.CommandType.UNDEF:
+      return 
     if self.type_ == 'String':
       if not isinstance(value, (str, bytes)):
         raise ValueError()
@@ -360,9 +364,9 @@ class Item:
       if event.source != openhab.events.EventSourceOpenhab:
         result = True
         return result
-      if self.last_command_sent_time + timedelta(milliseconds=self.openhab.maxEchoToOpenhabMS) > now:
+      if self.last_change_sent_time + timedelta(milliseconds=self.openhab.maxEchoToOpenhabMS) > now:
         if event.type == openhab.events.ItemCommandEventType:
-          if self.last_command_sent == event.value:
+          if self.last_change_sent == event.value:
             # this is the echo of the command we just sent to openHAB.
             result = True
             return result
@@ -526,7 +530,7 @@ class Item:
     if command_type_class in self.command_event_types:
       item_command_event = self._digest_external_command_event(command_type_class, command)
       return item_command_event
-    raise Exception("unknown command event type")
+    raise Exception("unknown command event type:'{}'".format(command_type_class))
 
   def _parse_external_state_event(self, raw_event: openhab.events.RawItemEvent) -> openhab.events.ItemStateEvent:
     """Private method to process a state event coming from openhab
@@ -537,11 +541,13 @@ class Item:
           """
     state_type = raw_event.content["type"]
     state_type_class = openhab.types.CommandType.get_type_for(state_type)
+    if state_type_class is None:
+      raise Exception("unknown statetype:'{}'".format(state_type))
     value = raw_event.content["value"]
-    if state_type_class in self.state_event_types:
+    if state_type_class in self.state_event_types+[openhab.types.UndefType]:
       item_state_event = self.digest_external_state_event(state_type_class, value)
       return item_state_event
-    raise Exception("unknown state event type")
+    raise Exception("unknown state event type:'{}'".format(state_type_class))
 
   def _parse_external_state_changed_event(self, raw_event: openhab.events.RawItemEvent) -> openhab.events.ItemStateEvent:
     """Private method to process a state changed event coming from openhab
@@ -727,8 +733,9 @@ class Item:
                       on the item data_type and is checked accordingly.
     """
     # noinspection PyTypeChecker
-    self.last_command_sent_time = datetime.now()
-    self.last_command_sent = value
+    self.last_change_sent_time = datetime.now()
+    self.last_change_sent = value
+
     self.openhab.req_put('/items/{}/state'.format(self.name), data=value)
 
   def update(self, value: typing.Any) -> None:
@@ -783,7 +790,12 @@ class Item:
     self._validate_value(value)
     v = self._rest_format(value)
     self._state = value
-    self.last_command_sent_time = datetime.now()
+    now=datetime.now()
+    self.last_command_sent_time = now
+    self.last_change_sent_time = now
+
+    self.last_command_sent = value
+    self.last_change_sent = value
     self.openhab.req_post('/items/{}'.format(self.name), data=v)
 
     unit_of_measure = ""
