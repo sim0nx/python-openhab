@@ -994,6 +994,8 @@ def test_echos_for_rollershutter_item():
     testitem.add_event_listener(openhab.events.ItemStateChangedEventType, on_item_statechange, also_get_my_echos_from_openhab=False)
 
     testitem.command(75.66)
+    testitem.command(75.65)
+    testitem.command(75.64)
 
     time.sleep(0.5)
     testutil.doassert(0, count)

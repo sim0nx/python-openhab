@@ -31,6 +31,7 @@ import dateutil.parser
 
 import openhab.types
 import openhab.events
+import openhab.history
 from datetime import datetime, timedelta
 
 __author__ = 'Georges Toth <georges@trypill.org>'
@@ -208,7 +209,7 @@ class Item:
 
   TYPENAME = "unknown"
 
-  def __init__(self, openhab_conn: 'openhab.client.OpenHAB', json_data: dict, auto_update: typing.Optional[bool] = True) -> None:
+  def __init__(self, openhab_conn: 'openhab.client.OpenHAB', json_data: dict, auto_update: typing.Optional[bool] = True, maxEchoToOpenhabMS = None) -> None:
     """Constructor.
 
     Args:
@@ -237,12 +238,13 @@ class Item:
     self.logger = logging.getLogger(__name__)
 
     self.init_from_json(json_data)
-    self.last_command_sent_time = datetime.fromtimestamp(0)
-    self.last_command_sent = ""
-    self.last_change_sent_time = datetime.fromtimestamp(0)
-    self.last_change_sent = None
     self.openhab.register_item(self)
     self.event_listeners: typing.Dict[typing.Callable[[openhab.items.Item, openhab.events.ItemEvent], None], Item.EventListener] = {}
+    self.maxEchoToOpenhabMS = maxEchoToOpenhabMS
+    if self.maxEchoToOpenhabMS is None:
+      self.maxEchoToOpenhabMS = self.openhab.maxEchoToOpenhabMS
+    self.change_sent_history = openhab.history.History(self.maxEchoToOpenhabMS/1000) #this History hold all recent changes sent to OH. We need this for subsequent events coming in to check if these incoming events are our own echo or not.
+    # this is necessary as the we might send MANY changes out to OH and receive back events of those changes with some delay and they would all be recognized as not an echo (although they are). The history stores the last values sent within a given time period.
 
   def init_from_json(self, json_data: dict) -> None:
     """Initialize this object from a json configuration as fetched from openHAB.
@@ -360,36 +362,23 @@ class Item:
     """find out if the incoming event is actually just a echo of my previous command or update"""
     now = datetime.now()
     result = None
+    time_sent = None
     try:
       if event.source != openhab.events.EventSourceOpenhab:
         result = True
-        return result
-      if self.last_change_sent_time + timedelta(milliseconds=self.openhab.maxEchoToOpenhabMS) > now:
-        if event.type == openhab.events.ItemCommandEventType:
-          if self.last_change_sent == event.value:
-            # this is the echo of the command we just sent to openHAB.
-            result = True
-            return result
-          else:
-            self.logger.debug("it is not an echo. last command sent:{}, eventvalue:{}".format(self.last_command_sent, event.value))
-        elif event.type in [openhab.events.ItemStateChangedEventType, openhab.events.ItemStateEventType]:
-          if self._state == event.value:
-            # this is the echo of the command we just sent to openHAB.
-            result = True
-            return result
-          else:
-            self.logger.debug("it is not an echo. previous state:{}, eventvalue:{}".format(self._state, event.value))
-      result = False
+      else:
+        time_sent,item = self.change_sent_history.get(event.value)
+        result = time_sent is not None
       return result
     finally:
-      self.logger.debug("checking if it is my own echo result:{result} for item:{itemname}, event.source:{source}, event.data_type{datatype}, self._state:{state}, event.new_value:{value}, self.last_command_sent_time:{last_command_sent_time}, now:{now}".format(
+      self.logger.debug("check if it is my own echo result:{result} for item:{itemname}, event.source:{source}, event.data_type{datatype}, self._state:{state}, event.new_value:{value}, time sent:{time_sent}, now:{now}".format(
           result=result,
           itemname=event.item_name,
           source=event.source,
           datatype=event.type,
           state=self._state,
           value=event.value,
-          last_command_sent_time=self.last_command_sent_time,
+          time_sent=time_sent,
           now=now))
 
   def delete(self):
@@ -733,8 +722,9 @@ class Item:
                       on the item data_type and is checked accordingly.
     """
     # noinspection PyTypeChecker
-    self.last_change_sent_time = datetime.now()
-    self.last_change_sent = value
+
+    self.change_sent_history.add(value)
+    self.logger.debug("sending update to OH for item {} with new value:{}".format(self.name,value))
 
     self.openhab.req_put('/items/{}/state'.format(self.name), data=value)
 
@@ -790,12 +780,8 @@ class Item:
     self._validate_value(value)
     v = self._rest_format(value)
     self._state = value
-    now=datetime.now()
-    self.last_command_sent_time = now
-    self.last_change_sent_time = now
 
-    self.last_command_sent = value
-    self.last_change_sent = value
+    self.change_sent_history.add(value)
     self.openhab.req_post('/items/{}'.format(self.name), data=v)
 
     unit_of_measure = ""
