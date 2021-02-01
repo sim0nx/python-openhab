@@ -30,6 +30,13 @@ __author__ = 'Georges Toth <georges@trypill.org>'
 __license__ = 'AGPLv3+'
 
 
+class TypeNotImplementedError(NotImplementedError):
+  """Exception raised for incoming OH events containing not implemented datatypes"""
+  def __init__(self, itemname: str, datatype: str):
+    self.itemname = itemname
+    self.datatype = datatype
+
+
 class CommandType(metaclass=abc.ABCMeta):
   """Base command data_type class."""
 
@@ -263,7 +270,7 @@ class DecimalType(CommandType):
       value_unit_of_measure = m.group(2)
       try:
         return_value = int(value_value)
-      except:
+      except ValueError:
         try:
           return_value = float(value_value)
         except Exception as e:

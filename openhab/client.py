@@ -209,6 +209,8 @@ class OpenHAB:
         asyncio.run(run_loop())
       except asyncio.TimeoutError:
         self.logger.info("reconnecting after timeout")
+      except openhab.types.TypeNotImplementedError as e:
+        self.logger.warning("received unknown datatye '{}' for item '{}'".format(e.datatype,e.itemname))
       except Exception as e:
         self.logger.exception(e)
 

@@ -531,7 +531,7 @@ class Item:
     state_type = raw_event.content["type"]
     state_type_class = openhab.types.CommandType.get_type_for(state_type)
     if state_type_class is None:
-      raise Exception("unknown statetype:'{}'".format(state_type))
+      raise openhab.types.TypeNotImplementedError(itemname=self.name,datatype=state_type)
     value = raw_event.content["value"]
     if state_type_class in self.state_event_types+[openhab.types.UndefType]:
       item_state_event = self.digest_external_state_event(state_type_class, value)
