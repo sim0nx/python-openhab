@@ -31,6 +31,8 @@ import threading
 import requests
 import weakref
 import json
+from datetime import datetime,timedelta,timezone
+
 
 
 from requests.auth import HTTPBasicAuth
@@ -54,7 +56,8 @@ class OpenHAB:
                http_auth: typing.Optional[requests.auth.AuthBase] = None,
                timeout: typing.Optional[float] = None,
                auto_update: typing.Optional[bool] = False,
-               max_echo_to_openhab_ms: typing.Optional[int] = 800) -> None:
+               max_echo_to_openhab_ms: typing.Optional[int] = 800,
+               min_time_between_slotted_changes_ms: typing.Optional[float]=0) -> None:
     """Class Constructor.
 
     Args:
@@ -69,6 +72,7 @@ class OpenHAB:
       auto_update (bool, optional): True: receive Openhab Item Events to actively get informed about changes.
       max_echo_to_openhab_ms (int, optional): interpret Events from openHAB which hold a state-value equal to items current state-value
                                               which are coming in within maxEchoToOpenhabMS milliseconds since our update/command as echos of our own update//command
+      min_time_between_slotted_changes_ms: the minimum time between 2 changes of items.Item which have turned on use_slotted_sending. (see description of items.Item)
     Returns:
       OpenHAB: openHAB class instance.
     """
@@ -94,6 +98,9 @@ class OpenHAB:
     self.__keep_event_daemon_running__ = False
     self.__wait_while_looping = threading.Event()
     self.eventListeners: typing.List[typing.Callable] = []
+    self._last_slotted_modification_sent = datetime.fromtimestamp(0)
+    self._slotted_modification_lock = threading.RLock()
+    self.min_time_between_slotted_changes_ms = min_time_between_slotted_changes_ms
     if self.autoUpdate:
       self.__installSSEClient__()
 

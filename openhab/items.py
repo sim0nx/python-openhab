@@ -60,7 +60,10 @@ class ItemFactory:
                             group_names: typing.Optional[typing.List[str]] = None,
                             group_type: typing.Optional[str] = None,
                             function_name: typing.Optional[str] = None,
-                            function_params: typing.Optional[typing.List[str]] = None
+                            function_params: typing.Optional[typing.List[str]] = None,
+                            auto_update: typing.Optional[bool] = True,
+                            maxEchoToOpenhabMS=None,
+                            use_slotted_sending: bool = False
                             ) -> Item:
     """creates a new item in openhab if there is no item with name 'name' yet.
     if there is an item with 'name' already in openhab, the item gets updated with the infos provided. be aware that not provided fields will be deleted in openhab.
@@ -82,6 +85,10 @@ class ItemFactory:
           group_type (str): optional group_type. no documentation found
           function_name (str): optional function_name. no documentation found
           function_params (List of str): optional list of function Params. no documentation found
+          auto_update (bool): if True you will receive changes of the item from openhab.
+          maxEchoToOpenhabMS: when you change an item openhab gets informed about that change. Then openhab will inform all listeners (including ourself) about that change. The item will protect you from those echos if they happen within this timespan.
+          use_slotted_sending: when you send many consecutive changes very rapidly to openhab it might happen that openhab things or other bindings can not digest this that quickly and will therefore lose some of the changes.
+                            if you set use_slotted_sending to True, the item will make sure that no more than min_time_between_slotted_changes_ms milliseconds specified at client.openHAB.
 
         Returns:
           the created Item
@@ -103,6 +110,9 @@ class ItemFactory:
     while True:
       try:
         result = self.get_item(name)
+        result.autoUpdate = auto_update
+        result.maxEchoToOpenhabMS = maxEchoToOpenhabMS
+        result.use_slotted_sending = use_slotted_sending
         return result
       except Exception as e:
         retrycounter -= 1
@@ -121,8 +131,7 @@ class ItemFactory:
                                   group_names: typing.Optional[typing.List[str]] = None,
                                   group_type: typing.Optional[str] = None,
                                   function_name: typing.Optional[str] = None,
-                                  function_params: typing.Optional[typing.List[str]] = None
-                                  ) -> None:
+                                  function_params: typing.Optional[typing.List[str]] = None) -> None:
     """creates a new item in openhab if there is no item with name 'name' yet.
       if there is an item with 'name' already in openhab, the item gets updated with the infos provided. be aware that not provided fields will be deleted in openhab.
       consider to get the existing item via 'getItem' and then read out existing fields to populate the parameters here.
@@ -143,6 +152,9 @@ class ItemFactory:
             group_type (str): optional group_type. no documentation found
             function_name (str): optional function_name. no documentation found
             function_params (List of str): optional list of function Params. no documentation found
+            maxEchoToOpenhabMS: when you change an item openhab gets informed about that change. Then openhab will inform all listeners (including ourself) about that change. The item will protect you from those echos if they happen within this timespan.
+            use_slotted_sending: when you send many consecutive changes very rapidly to openhab it might happen that openhab things or other bindings can not digest this that quickly and will therefore lose some of the changes.
+                            if you set use_slotted_sending to True, the item will make sure that no more than min_time_between_slotted_changes_ms milliseconds specified at client.openHAB.
 
 
           """
@@ -179,6 +191,7 @@ class ItemFactory:
 
     json_body = json.dumps(paramdict)
     logging.getLogger(__name__).debug("about to create item with PUT request:{}".format(json_body))
+
     self.openHABClient.req_json_put('/items/{}'.format(name), json_data=json_body)
 
   def get_item(self, itemname,force_request_to_openhab:typing.Optional[bool]=False) -> Item:
@@ -209,13 +222,17 @@ class Item:
 
   TYPENAME = "unknown"
 
-  def __init__(self, openhab_conn: 'openhab.client.OpenHAB', json_data: dict, auto_update: typing.Optional[bool] = True, maxEchoToOpenhabMS = None) -> None:
+  def __init__(self, openhab_conn: 'openhab.client.OpenHAB', json_data: dict, auto_update: typing.Optional[bool] = True, maxEchoToOpenhabMS = None, use_slotted_sending:bool = False) -> None:
     """Constructor.
 
     Args:
       openhab_conn (openhab.OpenHAB): openHAB object.
       json_data (dic): A dict converted from the JSON data returned by the openHAB
                        server.
+      auto_update (bool): if True you will receive changes of the item from openhab.
+      maxEchoToOpenhabMS: when you change an item openhab gets informed about that change. Then openhab will inform all listeners (including ourself) about that change. The item will protect you from those echos if they happen within this timespan.
+      use_slotted_sending: when you send many consecutive changes very rapidly to openhab it might happen that openhab things or other bindings can not digest this that quickly and will therefore lose some of the changes.
+                            if you set use_slotted_sending to True, the item will make sure that no more than min_time_between_slotted_changes_ms milliseconds specified at client.openHAB.
     """
     self.openhab = openhab_conn
     self.autoUpdate = auto_update
@@ -241,6 +258,7 @@ class Item:
     self.openhab.register_item(self)
     self.event_listeners: typing.Dict[typing.Callable[[openhab.items.Item, openhab.events.ItemEvent], None], Item.EventListener] = {}
     self.maxEchoToOpenhabMS = maxEchoToOpenhabMS
+    self.use_slotted_sending = use_slotted_sending
     if self.maxEchoToOpenhabMS is None:
       self.maxEchoToOpenhabMS = self.openhab.maxEchoToOpenhabMS
     self.change_sent_history = openhab.history.History(self.maxEchoToOpenhabMS/1000) #this History hold all recent changes sent to OH. We need this for subsequent events coming in to check if these incoming events are our own echo or not.
@@ -714,6 +732,21 @@ class Item:
     """String representation."""
     return '<{0} - {1} : {2}>'.format(self.type_, self.name, self._state)
 
+  def wait_for_sending_slot(self):
+    try:
+      self.openhab._slotted_modification_lock.acquire()
+      now = datetime.utcnow()
+      wait_until = self.openhab._last_slotted_modification_sent + timedelta(milliseconds=self.openhab.min_time_between_slotted_changes_ms)
+      if wait_until > now:
+        wait_time = wait_until - now
+        wait_time_seconds = wait_time.seconds + wait_time.microseconds / 1000000
+        self.logger.debug("waiting for {} seconds for sending slotted update to OH for item {}.".format(wait_time_seconds, self.name))
+        time.sleep(wait_time_seconds)
+      self.openhab._last_slotted_modification_sent = datetime.utcnow()
+
+    finally:
+      self.openhab._slotted_modification_lock.release()
+
   def _update(self, value: typing.Any) -> None:
     """Updates the state of an item, input validation is expected to be already done.
 
@@ -724,8 +757,10 @@ class Item:
     # noinspection PyTypeChecker
 
     self.change_sent_history.add(value)
-    self.logger.debug("sending update to OH for item {} with new value:{}".format(self.name,value))
 
+    if self.use_slotted_sending:
+      self.wait_for_sending_slot()
+    self.logger.debug("sending update to OH for item {} with new value:{}".format(self.name, value))
     self.openhab.req_put('/items/{}/state'.format(self.name), data=value)
 
   def update(self, value: typing.Any) -> None:
@@ -782,7 +817,10 @@ class Item:
     self._state = value
 
     self.change_sent_history.add(value)
+    if self.use_slotted_sending:
+      self.wait_for_sending_slot()
     self.openhab.req_post('/items/{}'.format(self.name), data=v)
+
 
     unit_of_measure = ""
     if hasattr(self, "_unitOfMeasure"):

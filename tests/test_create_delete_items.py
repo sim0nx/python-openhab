@@ -27,6 +27,7 @@ import openhab.items as items
 import openhab.types
 import logging
 import random
+import time
 import tests.testutil as testutil
 from datetime import datetime
 
@@ -344,6 +345,52 @@ def test_register_all_items(item_factory:openhab.items.ItemFactory ,myopenhab:op
     finally:
       x2.delete()
 
+def test_slotted_sending(item_factory:openhab.items.ItemFactory ,myopenhab:openhab.OpenHAB):
+  try:
+    myopenhab.min_time_between_slotted_changes_ms = 500
+    testnumber_slotted: openhab.items.NumberItem = item_factory.create_or_update_item(name="test_slotted", data_type="Number",use_slotted_sending=True)
+    testnumber_not_slotted: openhab.items.NumberItem = item_factory.create_or_update_item(name="test_not_slotted", data_type="Number", use_slotted_sending=False)
+    testnumber_slotted.state=0.1
+    started = datetime.now()
+    number_of_changes = 10
+    log.info("starting to test if slotted items really wait and unslotted items do not wait.")
+    for i in range(1,number_of_changes+1):
+      log.info("about to send value {}".format(i))
+      testnumber_slotted.state = i
+      log.info("did send value {}".format(i))
+      testnumber_not_slotted.state = i
+    finished = datetime.now()
+    duration = finished-started
+    duration_in_seconds = duration.seconds+duration.microseconds/1000000
+    min_expected_duration = number_of_changes * myopenhab.min_time_between_slotted_changes_ms / 1000
+    log.info("the run took {} seconds".format(duration_in_seconds))
+    log.info("we expect it should have taken at least {} seconds".format(min_expected_duration))
+    log.info("we expect it  should have taken less than {} seconds".format(2 * min_expected_duration))
+    testutil.doassert(True,duration_in_seconds >= min_expected_duration,"duration")
+    testutil.doassert(True, duration_in_seconds < 2 * min_expected_duration, "duration")
+
+    # now we test that it should not wait because there is enough time passed since last change
+    time.sleep(myopenhab.min_time_between_slotted_changes_ms/1000)
+    log.info("starting to test if slotted items do not wait if the last send was long enough back in time.")
+    started = datetime.now()
+    testnumber_slotted.state = 0
+    finished = datetime.now()
+    duration = finished - started
+    duration_in_seconds = duration.seconds + duration.microseconds / 1000000
+    max_expected_duration = myopenhab.min_time_between_slotted_changes_ms / 1000
+    log.info("the run took {} seconds".format(duration_in_seconds))
+    log.info("we expect it should have taken less than {} seconds".format(max_expected_duration))
+    testutil.doassert(True, duration_in_seconds < myopenhab.min_time_between_slotted_changes_ms / 1000, "duration")
+
+
+
+  finally:
+    myopenhab.min_time_between_slotted_changes_ms = 0
+
+
+
+
+
 
 
 myopenhab = openhab.OpenHAB(base_url, auto_update=False)
@@ -351,6 +398,7 @@ keeprunning = True
 random.seed()
 mynameprefix = "x2_{}".format(random.randint(1, 1000))
 
-test_create_and_delete_items(myopenhab, mynameprefix)
+#test_create_and_delete_items(myopenhab, mynameprefix)
 my_item_factory = openhab.items.ItemFactory(myopenhab)
-test_register_all_items(item_factory=my_item_factory, myopenhab=myopenhab)
+#test_register_all_items(item_factory=my_item_factory, myopenhab=myopenhab)
+test_slotted_sending(item_factory=my_item_factory, myopenhab=myopenhab)
