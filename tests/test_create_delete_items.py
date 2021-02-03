@@ -386,6 +386,8 @@ def test_slotted_sending(item_factory:openhab.items.ItemFactory ,myopenhab:openh
 
   finally:
     myopenhab.min_time_between_slotted_changes_ms = 0
+    testnumber_slotted.delete()
+    testnumber_not_slotted.delete()
 
 
 

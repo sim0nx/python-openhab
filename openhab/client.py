@@ -390,21 +390,31 @@ class OpenHAB:
 
     return items
 
-  def get_item(self, name: str, force_request_to_openhab:typing.Optional[bool]=False) -> openhab.items.Item:
+  def get_item(self, name: str, force_request_to_openhab:typing.Optional[bool]=False,auto_update: typing.Optional[bool] = True,maxEchoToOpenhabMS=None, use_slotted_sending: bool = False) -> openhab.items.Item:
     """Returns an item with its state and data_type as fetched from openHAB.
 
     Args:
       name (str): The name of the item to fetch from openHAB.
+      force_request_to_openhab (bool): ignore cached items and ask openhab
+      auto_update (bool): if True you will receive changes of the item from openhab.
+      maxEchoToOpenhabMS: when you change an item openhab gets informed about that change. Then openhab will inform all listeners (including ourself) about that change. The item will protect you from those echos if they happen within this timespan.
+      use_slotted_sending: when you send many consecutive changes very rapidly to openhab it might happen that openhab things or other bindings can not digest this that quickly and will therefore lose some of the changes.
+                        if you set use_slotted_sending to True, the item will make sure that no more than min_time_between_slotted_changes_ms milliseconds specified at client.openHAB.
 
     Returns:
       Item: A corresponding Item class instance with the state of the requested item.
     """
     if name in self.all_items and not force_request_to_openhab:
-      return self.all_items[name]
+      item= self.all_items[name]
+    else:
+      json_data = self.get_item_raw(name)
+      item= self.json_to_item(json_data)
+    item.autoUpdate = auto_update
+    if maxEchoToOpenhabMS is not None:
+      item.maxEchoToOpenhabMS = maxEchoToOpenhabMS
+    item.use_slotted_sending = use_slotted_sending
+    return item
 
-
-    json_data = self.get_item_raw(name)
-    return self.json_to_item(json_data)
 
   def json_to_item(self, json_data: dict) -> openhab.items.Item:
     """This method takes as argument the RAW (JSON decoded) response for an openHAB item.

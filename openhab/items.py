@@ -194,14 +194,20 @@ class ItemFactory:
 
     self.openHABClient.req_json_put('/items/{}'.format(name), json_data=json_body)
 
-  def get_item(self, itemname,force_request_to_openhab:typing.Optional[bool]=False) -> Item:
+  def get_item(self, itemname,force_request_to_openhab:typing.Optional[bool]=False,auto_update: typing.Optional[bool] = True,maxEchoToOpenhabMS=None, use_slotted_sending: bool = False) -> Item:
     """get a existing openhab item
           Args:
               itemname (str): unique name of the item
+              force_request_to_openhab (bool): ignore cached items and ask openhab
+              auto_update (bool): if True you will receive changes of the item from openhab.
+              maxEchoToOpenhabMS: when you change an item openhab gets informed about that change. Then openhab will inform all listeners (including ourself) about that change. The item will protect you from those echos if they happen within this timespan.
+              use_slotted_sending: when you send many consecutive changes very rapidly to openhab it might happen that openhab things or other bindings can not digest this that quickly and will therefore lose some of the changes.
+                                if you set use_slotted_sending to True, the item will make sure that no more than min_time_between_slotted_changes_ms milliseconds specified at client.openHAB.
           Returns:
             Item: the Item
     """
-    return self.openHABClient.get_item(name=itemname,force_request_to_openhab=force_request_to_openhab)
+    item = self.openHABClient.get_item(name=itemname,force_request_to_openhab=force_request_to_openhab,auto_update=auto_update,maxEchoToOpenhabMS=maxEchoToOpenhabMS,use_slotted_sending=use_slotted_sending)
+    return item
 
   def fetch_all_items(self) -> typing.Dict[str, openhab.items.Item]:
     """Returns all items defined in openHAB.
