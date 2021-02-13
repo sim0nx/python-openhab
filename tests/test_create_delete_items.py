@@ -30,6 +30,7 @@ import random
 import time
 import tests.testutil as testutil
 from datetime import datetime
+from requests.auth import HTTPBasicAuth
 
 log = logging.getLogger(__name__)
 logging.basicConfig(level=10, format="%(levelno)s:%(asctime)s - %(message)s - %(name)s - PID:%(process)d - THREADID:%(thread)d - %(levelname)s - MODULE:%(module)s, -FN:%(filename)s -FUNC:%(funcName)s:%(lineno)d")
@@ -39,9 +40,10 @@ log.warning("www")
 log.info("iii")
 log.debug("ddddd")
 
-base_url = 'http://10.10.20.81:8080/rest'
-#base_url = 'http://localhost:8080/rest'
-
+TOKEN=""
+base_url_oh2 = 'http://10.10.20.80:8080/rest'
+base_url_oh3 = "http://10.10.20.85:8080/rest"
+token = "in openhab admin web interface klick your created user (lower left corner). then create new API toker and copy it here"
 
 def test_create_and_delete_items(myopenhab: openhab.OpenHAB, nameprefix):
     log.info("starting tests 'create and delete items'")
@@ -392,15 +394,24 @@ def test_slotted_sending(item_factory:openhab.items.ItemFactory ,myopenhab:openh
 
 
 
+target_oh_version = 3
+myopenhab = None
+if target_oh_version==2:
+  myopenhab = openhab.OpenHAB(base_url_oh2, openhab_version= openhab.OpenHAB.Version.OH2 ,auto_update=False)
+elif target_oh_version==3:
+  http_auth = HTTPBasicAuth(token, "")
+  myopenhab = openhab.OpenHAB(base_url_oh3, openhab_version= openhab.OpenHAB.Version.OH3 , auto_update=False, http_auth=http_auth)
+
+myItemfactory = openhab.items.ItemFactory(myopenhab)
 
 
+#myopenhab = openhab.OpenHAB(base_url, auto_update=False,http_auth=HTTPBasicAuth(TOKEN,""))
 
-myopenhab = openhab.OpenHAB(base_url, auto_update=False)
 keeprunning = True
 random.seed()
 mynameprefix = "x2_{}".format(random.randint(1, 1000))
 
-#test_create_and_delete_items(myopenhab, mynameprefix)
+test_create_and_delete_items(myopenhab, mynameprefix)
 my_item_factory = openhab.items.ItemFactory(myopenhab)
 #test_register_all_items(item_factory=my_item_factory, myopenhab=myopenhab)
-test_slotted_sending(item_factory=my_item_factory, myopenhab=myopenhab)
+#test_slotted_sending(item_factory=my_item_factory, myopenhab=myopenhab)

@@ -32,10 +32,12 @@ import requests
 import weakref
 import json
 from datetime import datetime,timedelta,timezone
-
+from enum import Enum
 
 
 from requests.auth import HTTPBasicAuth
+from aiohttp.helpers import BasicAuth
+from aiohttp import ClientSession
 
 
 import openhab.items
@@ -43,12 +45,16 @@ import openhab.events
 import openhab.types
 import openhab.audio
 
+
 __author__ = 'Georges Toth <georges@trypill.org>'
 __license__ = 'AGPLv3+'
 
 
 class OpenHAB:
   """openHAB REST API client."""
+  class Version(Enum):
+    OH2 = 2
+    OH3 = 3
 
   def __init__(self, base_url: str,
                username: typing.Optional[str] = None,
@@ -56,6 +62,8 @@ class OpenHAB:
                http_auth: typing.Optional[requests.auth.AuthBase] = None,
                timeout: typing.Optional[float] = None,
                auto_update: typing.Optional[bool] = False,
+               openhab_version:typing.Optional[Version] = Version.OH2,
+               http_headers_for_autoupdate: typing.Optional[typing.Dict[str,str]] = None,
                max_echo_to_openhab_ms: typing.Optional[int] = 800,
                min_time_between_slotted_changes_ms: typing.Optional[float]=0) -> None:
     """Class Constructor.
@@ -77,13 +85,23 @@ class OpenHAB:
       OpenHAB: openHAB class instance.
     """
     self.base_url = base_url
-    self.events_url = "{}/events?topics=smarthome/items".format(base_url.strip('/'))
+    self.openhab_version = openhab_version
+    if self.openhab_version == OpenHAB.Version.OH2:
+      self.events_url = "{}/events?topics=smarthome/items".format(base_url.strip('/'))
+    elif self.openhab_version == OpenHAB.Version.OH3:
+      self.events_url = "{}/events".format(base_url.strip('/'))
+    else:
+      raise ValueError("Unknown Openhab Version specified")
     self.autoUpdate = auto_update
     self.session = requests.Session()
     self.session.headers['accept'] = 'application/json'
     self.registered_items = weakref.WeakValueDictionary()
     self.all_items:typing.Dict[str,openhab.items.Item] = {}
     self.http_buffersize = 4*1024*1024
+    self.http_auth=http_auth
+    if http_headers_for_autoupdate is None:
+      http_headers_for_autoupdate = {}
+    self.sse_headers = http_headers_for_autoupdate
 
     if http_auth is not None:
       self.session.auth = http_auth
@@ -97,6 +115,7 @@ class OpenHAB:
     self.sseDaemon = None
     self.__keep_event_daemon_running__ = False
     self.__wait_while_looping = threading.Event()
+    #self.sse_session = ClientSession()
     self.eventListeners: typing.List[typing.Callable] = []
     self._last_slotted_modification_sent = datetime.fromtimestamp(0)
     self._slotted_modification_lock = threading.RLock()
@@ -195,10 +214,21 @@ class OpenHAB:
     """the actual handler to receive Events from openhab
             """
     self.logger.info("about to connect to Openhab Events-Stream.")
+    # this curls works:
+    # iobroker @ iobrokerserver: ~$ curl - X
+    # GET
+    # "http://10.10.20.85:8080/rest/events" - H
+    # "accept: */*" - H
+    # "Authorization: oh.ingenioushome.vFACRDQPY0Pf7JwgXZcqUz9rjrJYt0IZaeVobkrkLNfVx3mzhiWAdTqApWt3B2hL21z82eFj1VFbHqOMAAhQ"
 
     async def run_loop():
-      async with sse_client.EventSource(self.events_url, read_bufsize=self.http_buffersize) as event_source:
+
+
+
+
+      async with sse_client.EventSource(self.events_url, headers=self.sse_headers, read_bufsize=self.http_buffersize) as event_source:
         try:
+
           self.logger.info("starting Openhab - Event Daemon")
           async for event in event_source:
             if not self.__keep_event_daemon_running__:

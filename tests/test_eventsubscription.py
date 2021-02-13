@@ -27,6 +27,8 @@ import openhab.items as items
 import logging
 import random
 import testutil
+from requests.auth import HTTPBasicAuth
+
 
 from datetime import datetime
 
@@ -38,8 +40,13 @@ log.warning("waringingmessage")
 log.info("infomessage")
 log.debug("debugmessage")
 
-base_url = 'http://localhost:8080/rest'
-base_url = 'http://10.10.20.81:8080/rest'
+
+base_url_oh2 = 'http://10.10.20.80:8080/rest'
+base_url_oh3 = "http://10.10.20.85:8080/rest"
+token = "in openhab admin web interface klick your created user (lower left corner). then create new API toker and copy it here"
+target_oh_version = 3
+
+
 
 expected_state = None
 state_correct_count = 0
@@ -54,6 +61,18 @@ state_changed_correct_count = 0
 count = 0
 
 do_breakpoint = False
+
+
+if target_oh_version==2:
+  headers = {"Authorization": token}
+  myopenhab = openhab.OpenHAB(base_url_oh2, openhab_version= openhab.OpenHAB.Version.OH2 ,auto_update=True,http_auth=HTTPBasicAuth(token,""),http_headers_for_autoupdate=headers)
+elif target_oh_version==3:
+  headers = {"Authorization": "{}".format(token)}
+  myopenhab = openhab.OpenHAB(base_url_oh3, openhab_version= openhab.OpenHAB.Version.OH3 , auto_update=True, http_auth=HTTPBasicAuth(token, ""), http_headers_for_autoupdate=headers)
+myItemfactory = openhab.items.ItemFactory(myopenhab)
+
+random.seed()
+namesuffix = "_{}".format(random.randint(1, 1000))
 
 
 def on_item_state(item: openhab.items.Item, event: openhab.events.ItemStateEvent):
@@ -98,11 +117,6 @@ def on_item_command(item: openhab.items.Item, event: openhab.events.ItemCommandE
     command_correct_count += 1
 
 
-myopenhab = openhab.OpenHAB(base_url, auto_update=True)
-myItemfactory = openhab.items.ItemFactory(myopenhab)
-
-random.seed()
-namesuffix = "_{}".format(random.randint(1, 1000))
 
 
 def create_event_data(event_type: openhab.events.ItemEventType, itemname, payload):
