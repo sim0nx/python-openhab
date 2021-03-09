@@ -162,12 +162,14 @@ class OpenHAB:
 
     if "type" in event_data:
       event_reason = event_data["type"]
+      log.debug("received Event: {}".format(event_data))
 
       if event_reason in ["ItemCommandEvent", "ItemStateEvent", "ItemStateChangedEvent"]:
         item_name = event_data["topic"].split("/")[-2]
         event_data = json.loads(event_data["payload"])
 
         raw_event = openhab.events.RawItemEvent(item_name=item_name, event_type=event_reason, content=event_data)
+        log.debug("about to inform listeners")
         self._inform_event_listeners(raw_event)
 
         if item_name in self.registered_items:
@@ -214,6 +216,8 @@ class OpenHAB:
     """the actual handler to receive Events from openhab
             """
     self.logger.info("about to connect to Openhab Events-Stream.")
+    ct = threading.currentThread()
+    ct.name = "sse_client_handler started at {}".format(datetime.now())
     # this curls works:
     # iobroker @ iobrokerserver: ~$ curl - X
     # GET
@@ -249,7 +253,8 @@ class OpenHAB:
       except openhab.types.TypeNotImplementedError as e:
         self.logger.warning("received unknown datatye '{}' for item '{}'".format(e.datatype,e.itemname))
       except Exception as e:
-        self.logger.exception(e)
+        self.logger.warning("problem receiving event: '{}' ".format(e))
+
 
     self.sseDaemon = None
 
@@ -338,7 +343,7 @@ class OpenHAB:
     self._check_req_return(r)
     return r.json()
 
-  def req_post(self, uri_path: str, data: typing.Optional[dict] = None) -> None:
+  def req_post(self, uri_path: str, data: typing.Optional[dict] = None, headers: typing.Optional[dict]=None) -> None:
     """Helper method for initiating a HTTP POST request.
 
     Besides doing the actual request, it also checks the return value and returns the resulting decoded
@@ -351,10 +356,12 @@ class OpenHAB:
     Returns:
       None: No data is returned.
     """
-    r = self.session.post(self.base_url + uri_path, data=data, headers={'Content-Type': 'text/plain'}, timeout=self.timeout)
+    if headers is None:
+      headers = {'Content-Type': 'text/plain'}
+    r = self.session.post(self.base_url + uri_path, data=data, headers=headers, timeout=self.timeout)
     self._check_req_return(r)
 
-  def req_json_put(self, uri_path: str, json_data: str = None) -> None:
+  def req_json_put(self, uri_path: str, json_data: str = None, headers: typing.Optional[dict]=None) -> None:
     """Helper method for initiating a HTTP PUT request.
 
         Besides doing the actual request, it also checks the return value and returns the resulting decoded
@@ -368,11 +375,12 @@ class OpenHAB:
         Returns:
           None: No data is returned.
         """
-
-    r = self.session.put(self.base_url + uri_path, data=json_data, headers={'Content-Type': 'application/json', "Accept": "application/json"}, timeout=self.timeout)
+    if headers is None:
+      headers = {'Content-Type': 'application/json', "Accept": "application/json"}
+    r = self.session.put(self.base_url + uri_path, data=json_data, headers=headers, timeout=self.timeout)
     self._check_req_return(r)
 
-  def req_del(self,  uri_path: str) -> None:
+  def req_del(self,  uri_path: str, headers: typing.Optional[dict]=None) -> None:
     """Helper method for initiating a HTTP DELETE request.
 
         Besides doing the actual request, it also checks the return value and returns the resulting decoded
@@ -385,10 +393,12 @@ class OpenHAB:
         Returns:
           None: No data is returned.
         """
-    r = self.session.delete(self.base_url + uri_path, headers={"Accept": "application/json"})
+    if headers is None:
+      headers = {"Accept": "application/json"}
+    r = self.session.delete(self.base_url + uri_path, headers=headers)
     self._check_req_return(r)
 
-  def req_put(self, uri_path: str, data: typing.Optional[dict] = None) -> None:
+  def req_put(self, uri_path: str, data: typing.Optional[dict] = None, headers: typing.Optional[dict]=None) -> None:
     """Helper method for initiating a HTTP PUT request.
 
     Besides doing the actual request, it also checks the return value and returns the resulting decoded
@@ -401,7 +411,9 @@ class OpenHAB:
     Returns:
       None: No data is returned.
     """
-    r = self.session.put(self.base_url + uri_path, data=data, headers={'Content-Type': 'text/plain'}, timeout=self.timeout)
+    if headers is None:
+      headers = {'Content-Type': 'text/plain'}
+    r = self.session.put(self.base_url + uri_path, data=data, headers=headers, timeout=self.timeout)
     self._check_req_return(r)
 
   # fetch all items
@@ -598,7 +610,7 @@ class OpenHAB:
     return self.req_get('/voice/interpreters')
 
   def say(self, text: str, audiosinkid: str, voiceid: str):
-    log.info("sending say command to OH for voiceid:'{}', audiosinkid:'{}'".format(voiceid,audiosinkid))
+    self.logger.info("sending say command to OH for voiceid:'{}', audiosinkid:'{}'".format(voiceid,audiosinkid))
     url=self.base_url + "/voice/say/?voiceid={voiceid}&sinkid={sinkid}".format(voiceid=requests.utils.quote(voiceid), sinkid=requests.utils.quote(audiosinkid))
     r = self.session.post(url, data=text, headers={'Accept': 'application/json'}, timeout=self.timeout)
     self._check_req_return(r)
@@ -607,6 +619,15 @@ class OpenHAB:
     url=self.base_url + "/voice/interpreters/{interpreterid}".format(interpreterid=requests.utils.quote(voiceinterpreterid))
     r = self.session.post(url, data=text, headers={'Accept': 'application/json'}, timeout=self.timeout)
     self._check_req_return(r)
+
+# UI
+  def _get_all_widgets_raw(self):
+    url = "/ui/components/ui%3Awidget"
+    return self.req_get(url)
+
+  def _get_widget_raw(self, component_UID:str):
+    url = "/ui/components/ui%3Awidget/{componentUID}".format(componentUID=component_UID)
+    return self.req_get(url)
 
 
 

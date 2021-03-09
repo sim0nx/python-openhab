@@ -588,7 +588,7 @@ class Item:
           """
     if not self.autoUpdate:
       return
-    self.logger.debug("processing external event:{}".format(raw_event))
+    self.logger.debug("processing external event:{}".format(raw_event[:200]))
 
     if raw_event.event_type == openhab.events.ItemCommandEvent.type:
       event = self._parse_external_command_event(raw_event)

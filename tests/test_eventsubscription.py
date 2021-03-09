@@ -43,13 +43,17 @@ log.debug("debugmessage")
 
 base_url_oh2 = 'http://10.10.20.80:8080/rest'
 base_url_oh3 = "http://10.10.20.85:8080/rest"
+
 token = "in openhab admin web interface klick your created user (lower left corner). then create new API toker and copy it here"
+token=OPENHAB_AUTH_TOKEN_PRODUCTION
+
 target_oh_version = 3
 
 
 
 expected_state = None
 state_correct_count = 0
+state_count = 0
 
 expected_command = None
 command_correct_count = 0
@@ -57,7 +61,7 @@ command_correct_count = 0
 expected_new_state = None
 expected_old_state = None
 state_changed_correct_count = 0
-
+sleeptime_in_event_listener = 0
 count = 0
 
 do_breakpoint = False
@@ -79,6 +83,7 @@ def on_item_state(item: openhab.items.Item, event: openhab.events.ItemStateEvent
   global state_correct_count
   log.info("########################### STATE arrived for {itemname} : eventvalue:{eventvalue}(event value raraw:{eventvalueraw}) (itemstate:{itemstate},item_state:{item_state})".format(
     itemname=event.item_name, eventvalue=event.value, eventvalueraw=event.value_raw, item_state=item._state, itemstate=item.state))
+  time.sleep(sleeptime_in_event_listener)
   if expected_state is not None:
     if isinstance(event.value, datetime):
       testutil.doassert(expected_state, event.value.replace(tzinfo=None), "stateEvent item {} ".format(item.name))
@@ -90,6 +95,7 @@ def on_item_state(item: openhab.items.Item, event: openhab.events.ItemStateEvent
 def on_item_statechange(item: openhab.items.Item, event: openhab.events.ItemStateChangedEvent):
   global state_changed_correct_count
   log.info("########################### STATE of {itemname} CHANGED from {oldvalue} to {newvalue} (items state: {new_value_item}.".format(itemname=event.item_name, oldvalue=event.old_value, newvalue=event.value, new_value_item=item.state))
+  time.sleep(sleeptime_in_event_listener)
   if expected_new_state is not None:
     if isinstance(event.value, datetime):
       testutil.doassert(expected_new_state, event.value.replace(tzinfo=None), "state changed event item {} value".format(item.name))
@@ -109,6 +115,7 @@ def on_item_command(item: openhab.items.Item, event: openhab.events.ItemCommandE
   global command_correct_count
   log.info("########################### COMMAND arrived for {itemname} : eventvalue:{eventvalue}(event value raraw:{eventvalueraw}) (itemstate:{itemstate},item_state:{item_state})".format(
     itemname=event.item_name, eventvalue=event.value, eventvalueraw=event.value_raw, item_state=item._state, itemstate=item.state))
+  time.sleep(sleeptime_in_event_listener)
   if expected_command is not None:
     if isinstance(event.value, datetime):
       testutil.doassert(expected_command, event.value.replace(tzinfo=None), "command event item {}".format(item.name))
@@ -254,6 +261,56 @@ def test_number_item():
     pass
     testitem.delete()
 
+def test_events_stress():
+  created_itemname = "test_eventSubscription_numberitem_A{}".format(namesuffix)
+  def on_item_state_stress(item: openhab.items.Item, event: openhab.events.ItemStateEvent):
+    global state_correct_count
+    global state_count
+
+    log.info("########################### STATE arrived for {itemname} : eventvalue:{eventvalue}(event value raraw:{eventvalueraw}) (itemstate:{itemstate},item_state:{item_state})".format(
+      itemname=event.item_name, eventvalue=event.value, eventvalueraw=event.value_raw, item_state=item._state, itemstate=item.state))
+    if item.name == created_itemname:
+      state_count += 1
+    time.sleep(sleeptime_in_event_listener)
+    if expected_state is not None:
+      if isinstance(event.value, datetime):
+        testutil.doassert(expected_state, event.value.replace(tzinfo=None), "stateEvent item {} ".format(item.name))
+      else:
+        testutil.doassert(expected_state, event.value, "stateEvent item {} ".format(item.name))
+      state_correct_count += 1
+
+  try:
+    testitem: openhab.items.NumberItem = myItemfactory.create_or_update_item(name=created_itemname, data_type=openhab.items.NumberItem)
+    testitem.add_event_listener(openhab.events.ItemStateEventType, on_item_state_stress, also_get_my_echos_from_openhab=True)
+    #testitem.add_event_listener(openhab.events.ItemCommandEventType, on_item_command, also_get_my_echos_from_openhab=False)
+    #testitem.add_event_listener(openhab.events.ItemStateChangedEventType, on_item_statechange, also_get_my_echos_from_openhab=False)
+
+    expected_state = None
+    sleeptime_in_event_listener = 0.5
+    state_correct_count = 0
+    global state_count
+    state_count = 0
+    number_of_messages = 30
+    for i in range(1,number_of_messages+1):
+      log.info("sending state:{}".format(i))
+      testitem.state = i
+      time.sleep(sleeptime_in_event_listener / 2)
+
+    #
+    #
+    #
+    # sending_state = 123.4
+    # expected_new_state = expected_state = sending_state
+    # expected_command = sending_state
+    # expected_old_state = None
+    #
+    # testitem.state = sending_state
+    time.sleep(((number_of_messages /2)+3)*sleeptime_in_event_listener)
+    testutil.doassert(number_of_messages, state_count)
+
+  finally:
+    pass
+    testitem.delete()
 
 def test_string_item():
   global expected_state
@@ -1033,28 +1090,29 @@ def test_echos_for_rollershutter_item():
     testitem.delete()
 
 
-time.sleep(3)
-log.info("stopping daemon")
-myopenhab.stop_receiving_events()
-log.info("stopped daemon")
-time.sleep(1)
-testitem: openhab.items.RollershutterItem = myItemfactory.create_or_update_item(name="dummy_test_item_{}".format(namesuffix), data_type=openhab.items.RollershutterItem)
-time.sleep(1)
-testitem.delete()
-time.sleep(1)
-log.info("restarting daemon")
-myopenhab.start_receiving_events()
-log.info("restarted daemon")
+# time.sleep(3)
+# log.info("stopping daemon")
+# myopenhab.stop_receiving_events()
+# log.info("stopped daemon")
+# time.sleep(1)
+# testitem: openhab.items.RollershutterItem = myItemfactory.create_or_update_item(name="dummy_test_item_{}".format(namesuffix), data_type=openhab.items.RollershutterItem)
+# time.sleep(1)
+# testitem.delete()
+# time.sleep(1)
+# log.info("restarting daemon")
+# myopenhab.start_receiving_events()
+# log.info("restarted daemon")
 
-test_number_item()
-test_string_item()
-test_datetime_item()
-test_player_item()
-test_switch_item()
-test_contact_item()
-test_dimmer_item()
-test_rollershutter_item()
-test_echos_for_rollershutter_item()
+# test_number_item()
+# test_string_item()
+# test_datetime_item()
+# test_player_item()
+# test_switch_item()
+# test_contact_item()
+# test_dimmer_item()
+# test_rollershutter_item()
+# test_echos_for_rollershutter_item()
+test_events_stress()
 log.info("tests for events finished successfully")
 
 myopenhab.loop_for_events()
