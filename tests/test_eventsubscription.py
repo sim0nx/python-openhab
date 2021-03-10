@@ -44,7 +44,8 @@ log.debug("debugmessage")
 base_url_oh2 = 'http://10.10.20.80:8080/rest'
 base_url_oh3 = "http://10.10.20.85:8080/rest"
 token = "in openhab admin web interface klick your created user (lower left corner). then create new API toker and copy it here"
-
+OPENHAB_AUTH_TOKEN_PRODUCTION = "oh.ingenioushome.vFACRDQPY0Pf7JwgXZcqUz9rjrJYt0IZaeVobkrkLNfVx3mzhiWAdTqApWt3B2hL21z82eFj1VFbHqOMAAhQ"
+token=OPENHAB_AUTH_TOKEN_PRODUCTION
 
 target_oh_version = 3
 
@@ -1089,28 +1090,28 @@ def test_echos_for_rollershutter_item():
     testitem.delete()
 
 
-# time.sleep(3)
-# log.info("stopping daemon")
-# myopenhab.stop_receiving_events()
-# log.info("stopped daemon")
-# time.sleep(1)
-# testitem: openhab.items.RollershutterItem = myItemfactory.create_or_update_item(name="dummy_test_item_{}".format(namesuffix), data_type=openhab.items.RollershutterItem)
-# time.sleep(1)
-# testitem.delete()
-# time.sleep(1)
-# log.info("restarting daemon")
-# myopenhab.start_receiving_events()
-# log.info("restarted daemon")
+time.sleep(3)
+log.info("stopping daemon")
+myopenhab.stop_receiving_events()
+log.info("stopped daemon")
+time.sleep(1)
+testitem: openhab.items.RollershutterItem = myItemfactory.create_or_update_item(name="dummy_test_item_{}".format(namesuffix), data_type=openhab.items.RollershutterItem)
+time.sleep(1)
+testitem.delete()
+time.sleep(1)
+log.info("restarting daemon")
+myopenhab.start_receiving_events()
+log.info("restarted daemon")
 
-# test_number_item()
-# test_string_item()
-# test_datetime_item()
-# test_player_item()
-# test_switch_item()
-# test_contact_item()
-# test_dimmer_item()
-# test_rollershutter_item()
-# test_echos_for_rollershutter_item()
+test_number_item()
+test_string_item()
+test_datetime_item()
+test_player_item()
+test_switch_item()
+test_contact_item()
+test_dimmer_item()
+test_rollershutter_item()
+test_echos_for_rollershutter_item()
 test_events_stress()
 log.info("tests for events finished successfully")
 

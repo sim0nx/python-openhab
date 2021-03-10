@@ -113,6 +113,7 @@ class OpenHAB:
 
     self.logger = logging.getLogger(__name__)
     self.sseDaemon = None
+    self.sse_event_dispatcher_daemon = None
     self.__keep_event_daemon_running__ = False
     self.__wait_while_looping = threading.Event()
     #self.sse_session = ClientSession()
@@ -120,6 +121,11 @@ class OpenHAB:
     self._last_slotted_modification_sent = datetime.fromtimestamp(0)
     self._slotted_modification_lock = threading.RLock()
     self.min_time_between_slotted_changes_ms = min_time_between_slotted_changes_ms
+    self.incoming_events = []
+    self.incoming_events_rlock = threading.RLock()
+    self.__keep_event_dispatcher_running__ = False
+    self.__dispatcher_is_running = False
+    self.__sse_event_received = threading.Event()
     if self.autoUpdate:
       self.__installSSEClient__()
 
@@ -162,7 +168,7 @@ class OpenHAB:
 
     if "type" in event_data:
       event_reason = event_data["type"]
-      log.debug("received Event: {}".format(event_data))
+
 
       if event_reason in ["ItemCommandEvent", "ItemStateEvent", "ItemStateChangedEvent"]:
         item_name = event_data["topic"].split("/")[-2]
@@ -212,6 +218,33 @@ class OpenHAB:
     elif listener in self.eventListeners:
       self.eventListeners.remove(listener)
 
+  def event_dispatcher_thread(self):
+    ct = threading.currentThread()
+    ct.name = "sse_event_dispatcher (started at {})".format(datetime.now())
+    self.__dispatcher_is_running = True
+    while True:
+      if not self.__keep_event_dispatcher_running__:
+        self.__dispatcher_is_running = False
+        return
+      event_data = None
+      try:
+        self.incoming_events_rlock.acquire()
+        try:
+          if len(self.incoming_events) > 0:
+            event_data = self.incoming_events.pop(0)
+        finally:
+          self.incoming_events_rlock.release()
+        if event_data is None:
+          #no data available in Q, so we wait 10seconds for a wakeup event
+          self.__sse_event_received.wait(10)
+          self.__sse_event_received.clear()
+        else:
+          self.logger.debug("dispatching Event: {}...".format(str(event_data)[:300]))
+          self._parse_event(event_data)
+      except Exception as e:
+        self.logger.warning("problem dispatching event: '{}' ".format(e))
+
+
   def sse_client_handler(self):
     """the actual handler to receive Events from openhab
             """
@@ -239,7 +272,14 @@ class OpenHAB:
               self.sseDaemon = None
               return
             event_data = json.loads(event.data)
-            self._parse_event(event_data)
+            self.logger.debug("received Event: {}...".format(str(event_data)[:300]))
+            self.incoming_events_rlock.acquire()
+            try:
+              self.incoming_events.append(event_data)
+            finally:
+              self.incoming_events_rlock.release()
+            self.__sse_event_received.set() # inform dispatcher thread about the new event
+            #self._parse_event(event_data)
 
         except ConnectionError as exception:
           self.logger.error("connection error")
@@ -308,13 +348,16 @@ class OpenHAB:
 
   def __installSSEClient__(self) -> None:
     """ installs an event Stream to receive all Item events"""
-
+    self.__keep_event_dispatcher_running__ = True
     self.__keep_event_daemon_running__ = True
     self.keep_running = True
+    self.sse_event_dispatcher_daemon = threading.Thread(target=self.event_dispatcher_thread, args=(), daemon=True)
     self.sseDaemon = threading.Thread(target=self.sse_client_handler, args=(), daemon=True)
 
     self.logger.info("about to connect to Openhab Events-Stream.")
+    self.sse_event_dispatcher_daemon.start()
     self.sseDaemon.start()
+    self.logger.info("connected to Openhab Events-Stream.")
 
   def stop_looping(self):
     """ method to reactivate the thread which went into the loop_for_events loop.
