@@ -25,6 +25,7 @@ from dataclasses import dataclass
 import openhab.types
 import dateutil.parser
 import datetime
+import json
 
 class WidgetFactory:
   """A factory to get UI widgets from Openhab, create new or delete existing widgets in openHAB"""
@@ -73,41 +74,46 @@ class WidgetFactory:
 class Widget():
   def __init__(self, openhab_conn: openhab.client.OpenHAB, widget:typing.Dict, loaded:typing.Optional[bool]=True):
     self.openhab = openhab_conn
-    self._uid: str = widget["uid"]
-    self._timestamp: datetime = dateutil.parser.parse(widget["timestamp"])
     self.code: typing.Dict = widget
     self._loaded = loaded
+    self._changed_uid = False
 
   @property
   def uid(self) -> str:
-    return self._uid
+    return self.code["uid"]
+
 
   @uid.setter
   def uid(self, uid: str) -> None:
-    if uid != self._uid:
+    if uid != self.uid:
       self._changed_uid = True
-    self._uid = uid
     self.code["uid"] = uid
+
 
 
   @property
   def timestamp(self) -> datetime:
-    return self._timestamp
+    return dateutil.parser.parse(self.code["timestamp"])
 
   @timestamp.setter
   def timestamp(self, timestamp: datetime) -> None:
-    self._timestamp = timestamp
+
     self.code["timestamp"] = timestamp.strftime("%b %d, %Y, %I:%M:%S %p")
 
   def __str__(self):
     return str(self.code)
 
+  def set_code(self, code:typing.Dict):
+    self.code = code
 
   def delete(self):
     self.openhab.req_del("/ui/components/ui%3Awidget/{componentUID}".format(componentUID=self.uid), headers = {'Content-Type': '*/*'})
 
   def save(self):
-    if self._loaded:
-      self.openhab.req_put("/ui/components/ui%3Awidget/{componentUID}".format(componentUID=self.uid), data=str(self.code), headers = {'Content-Type': 'application/json'})
+    code_str = json.dumps(self.code)
+    if self._loaded and not self._changed_uid:
+      #self.openhab.req_put("/ui/components/ui%3Awidget/{componentUID}".format(componentUID=self.uid), data=str(self.code), headers = {'Content-Type': 'application/json'})
+      self.openhab.req_put("/ui/components/ui%3Awidget/{componentUID}".format(componentUID=self.uid), data=code_str, headers={'Content-Type': 'application/json'})
     else:
-      self.openhab.req_post("/ui/components/ui%3Awidget".format(componentUID=self.uid), data=str(self.code), headers = {'Content-Type': 'application/json'})
+      #self.openhab.req_post("/ui/components/ui%3Awidget".format(componentUID=self.uid), data=str(self.code), headers = {'Content-Type': 'application/json'})
+      self.openhab.req_post("/ui/components/ui%3Awidget".format(componentUID=self.uid), data=code_str, headers={'Content-Type': 'application/json'})
