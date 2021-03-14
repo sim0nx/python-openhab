@@ -227,10 +227,12 @@ class OpenHAB:
         self.__dispatcher_is_running = False
         return
       event_data = None
+      qlen = 0
       try:
         self.incoming_events_rlock.acquire()
         try:
-          if len(self.incoming_events) > 0:
+          qlen=len(self.incoming_events)
+          if  qlen > 0:
             event_data = self.incoming_events.pop(0)
         finally:
           self.incoming_events_rlock.release()
@@ -239,7 +241,7 @@ class OpenHAB:
           self.__sse_event_received.wait(10)
           self.__sse_event_received.clear()
         else:
-          self.logger.debug("dispatching Event: {}...".format(str(event_data)[:300]))
+          self.logger.debug("dispatching Event (items in eventQ:{}), Event: {}...".format(qlen,str(event_data)[:300]))
           self._parse_event(event_data)
       except Exception as e:
         self.logger.warning("problem dispatching event: '{}' ".format(e))
@@ -272,7 +274,8 @@ class OpenHAB:
               self.sseDaemon = None
               return
             event_data = json.loads(event.data)
-            self.logger.debug("received Event: {}...".format(str(event_data)[:300]))
+            qlen = len(self.incoming_events)
+            self.logger.debug("received Event.qlen:{}. event: {}...".format(qlen,str(event_data)[:300]))
             self.incoming_events_rlock.acquire()
             try:
               self.incoming_events.append(event_data)
