@@ -28,7 +28,7 @@ import logging
 import random
 import testutil
 from requests.auth import HTTPBasicAuth
-
+from token_store import token
 
 from datetime import datetime
 
@@ -43,9 +43,7 @@ log.debug("debugmessage")
 
 base_url_oh2 = 'http://10.10.20.80:8080/rest'
 base_url_oh3 = "http://10.10.20.85:8080/rest"
-token = "in openhab admin web interface klick your created user (lower left corner). then create new API toker and copy it here"
-OPENHAB_AUTH_TOKEN_PRODUCTION = "oh.ingenioushome.vFACRDQPY0Pf7JwgXZcqUz9rjrJYt0IZaeVobkrkLNfVx3mzhiWAdTqApWt3B2hL21z82eFj1VFbHqOMAAhQ"
-token=OPENHAB_AUTH_TOKEN_PRODUCTION
+
 
 target_oh_version = 3
 

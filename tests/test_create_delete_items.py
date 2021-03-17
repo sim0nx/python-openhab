@@ -31,6 +31,7 @@ import time
 import tests.testutil as testutil
 from datetime import datetime
 from requests.auth import HTTPBasicAuth
+from token_store import token
 
 log = logging.getLogger(__name__)
 logging.basicConfig(level=10, format="%(levelno)s:%(asctime)s - %(message)s - %(name)s - PID:%(process)d - THREADID:%(thread)d - %(levelname)s - MODULE:%(module)s, -FN:%(filename)s -FUNC:%(funcName)s:%(lineno)d")
@@ -43,7 +44,7 @@ log.debug("ddddd")
 TOKEN=""
 base_url_oh2 = 'http://10.10.20.80:8080/rest'
 base_url_oh3 = "http://10.10.20.85:8080/rest"
-token = "in openhab admin web interface klick your created user (lower left corner). then create new API toker and copy it here"
+
 
 def test_create_and_delete_items(myopenhab: openhab.OpenHAB, nameprefix):
     log.info("starting tests 'create and delete items'")

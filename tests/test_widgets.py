@@ -29,6 +29,7 @@ import logging
 import time
 from requests.auth import HTTPBasicAuth
 import yaml
+from token_store import token
 
 log = logging.getLogger(__name__)
 logging.basicConfig(level=10, format="%(levelno)s:%(asctime)s - %(message)s - %(name)s - PID:%(process)d - THREADID:%(thread)d - %(levelname)s - MODULE:%(module)s, -FN:%(filename)s -FUNC:%(funcName)s:%(lineno)d")
@@ -39,8 +40,8 @@ log.info("iii")
 log.debug("ddddd")
 
 base_url_oh3 = 'http://10.10.20.85:8080/rest'
-#token = "in openhab admin web interface klick your created user (lower left corner). then create new API toker and copy it here"
-token=OPENHAB_AUTH_TOKEN_PRODUCTION = "oh.ingenioushome.vFACRDQPY0Pf7JwgXZcqUz9rjrJYt0IZaeVobkrkLNfVx3mzhiWAdTqApWt3B2hL21z82eFj1VFbHqOMAAhQ"
+
+
 
 def test_widgets(myopenhab: openhab.OpenHAB):
   log.info("starting tests 'test widgets'")
