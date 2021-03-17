@@ -19,44 +19,256 @@
 #
 
 # pylint: disable=bad-indentation
-
+from __future__ import annotations
 import datetime
 import logging
+import inspect
 import re
 import typing
-
+import json
+import time
 import dateutil.parser
 
 import openhab.types
+import openhab.events
+import openhab.history
+from datetime import datetime, timedelta
 
 __author__ = 'Georges Toth <georges@trypill.org>'
 __license__ = 'AGPLv3+'
 
 
+class ItemFactory:
+  """A factory to get an Item from Openhab, create new or delete existing items in openHAB"""
+
+  def __init__(self, openhab_client: openhab.client.OpenHAB):
+    """Constructor.
+
+        Args:
+          openhab_client (openhab.OpenHAB): openHAB object.
+
+        """
+    self.openHABClient = openhab_client
+
+  def create_or_update_item(self,
+                            name: str,
+                            data_type: typing.Union[str, typing.Type[Item]],
+                            quantity_type: typing.Optional[str] = None,
+                            label: typing.Optional[str] = None,
+                            category: typing.Optional[str] = None,
+                            tags: typing.Optional[typing.List[str]] = None,
+                            group_names: typing.Optional[typing.List[str]] = None,
+                            group_type: typing.Optional[str] = None,
+                            function_name: typing.Optional[str] = None,
+                            function_params: typing.Optional[typing.List[str]] = None,
+                            auto_update: typing.Optional[bool] = True,
+                            maxEchoToOpenhabMS=None,
+                            use_slotted_sending: bool = False
+                            ) -> Item:
+    """creates a new item in openhab if there is no item with name 'name' yet.
+    if there is an item with 'name' already in openhab, the item gets updated with the infos provided. be aware that not provided fields will be deleted in openhab.
+    consider to get the existing item via 'getItem' and then read out existing fields to populate the parameters here.
+
+    This function blocks until the item is created.
+
+
+        Args:
+          name (str): unique name of the item
+          data_type ( str or any Itemclass): the type used in openhab (like Group, Number, Contact, DateTime, Rollershutter, Color, Dimmer, Switch, Player)
+                           server.
+                           To create groups use the itemtype 'Group'!
+          quantity_type (str): optional quantity_type ( like Angle, Temperature, Illuminance (see https://www.openhab.org/docs/concepts/units-of-measurement.html))
+          label (str): optional openhab label (see https://www.openhab.org/docs/configuration/items.html#label)
+          category (str): optional category. no documentation found
+          tags (List of str): optional list of tags (see https://www.openhab.org/docs/configuration/items.html#tags)
+          group_names (List of str): optional list of groups this item belongs to.
+          group_type (str): optional group_type. no documentation found
+          function_name (str): optional function_name. no documentation found
+          function_params (List of str): optional list of function Params. no documentation found
+          auto_update (bool): if True you will receive changes of the item from openhab.
+          maxEchoToOpenhabMS: when you change an item openhab gets informed about that change. Then openhab will inform all listeners (including ourself) about that change. The item will protect you from those echos if they happen within this timespan.
+          use_slotted_sending: when you send many consecutive changes very rapidly to openhab it might happen that openhab things or other bindings can not digest this that quickly and will therefore lose some of the changes.
+                            if you set use_slotted_sending to True, the item will make sure that no more than min_time_between_slotted_changes_ms milliseconds specified at client.openHAB.
+
+        Returns:
+          the created Item
+        """
+
+    self.create_or_update_item_async(name=name,
+                                     type=data_type,
+                                     quantity_type=quantity_type,
+                                     label=label,
+                                     category=category,
+                                     tags=tags,
+                                     group_names=group_names,
+                                     group_type=group_type,
+                                     function_name=function_name,
+                                     function_params=function_params)
+
+    time.sleep(0.05)
+    retrycounter = 10
+    while True:
+      try:
+        result = self.get_item(name)
+        result.autoUpdate = auto_update
+        result.maxEchoToOpenhabMS = maxEchoToOpenhabMS
+        result.use_slotted_sending = use_slotted_sending
+        return result
+      except Exception as e:
+        retrycounter -= 1
+        if retrycounter < 0:
+          raise e
+        else:
+          time.sleep(0.05)
+
+  def create_or_update_item_async(self,
+                                  name: str,
+                                  type: typing.Union[str, typing.Type[Item]],
+                                  quantity_type: typing.Optional[str] = None,
+                                  label: typing.Optional[str] = None,
+                                  category: typing.Optional[str] = None,
+                                  tags: typing.Optional[typing.List[str]] = None,
+                                  group_names: typing.Optional[typing.List[str]] = None,
+                                  group_type: typing.Optional[str] = None,
+                                  function_name: typing.Optional[str] = None,
+                                  function_params: typing.Optional[typing.List[str]] = None) -> None:
+    """creates a new item in openhab if there is no item with name 'name' yet.
+      if there is an item with 'name' already in openhab, the item gets updated with the infos provided. be aware that not provided fields will be deleted in openhab.
+      consider to get the existing item via 'getItem' and then read out existing fields to populate the parameters here.
+
+      This function does not wait for openhab to create the item. Use this function if you need to create many items quickly.
+
+
+          Args:
+            name (str): unique name of the item
+            type ( str or any Itemclass): the data_type used in openhab (like Group, Number, Contact, DateTime, Rollershutter, Color, Dimmer, Switch, Player)
+                             server.
+                             To create groups use the itemtype 'Group'!
+            quantity_type (str): optional quantity_type ( like Angle, Temperature, Illuminance (see https://www.openhab.org/docs/concepts/units-of-measurement.html))
+            label (str): optional openhab label (see https://www.openhab.org/docs/configuration/items.html#label)
+            category (str): optional category. no documentation found
+            tags (List of str): optional list of tags (see https://www.openhab.org/docs/configuration/items.html#tags)
+            group_names (List of str): optional list of groups this item belongs to.
+            group_type (str): optional group_type. no documentation found
+            function_name (str): optional function_name. no documentation found
+            function_params (List of str): optional list of function Params. no documentation found
+            maxEchoToOpenhabMS: when you change an item openhab gets informed about that change. Then openhab will inform all listeners (including ourself) about that change. The item will protect you from those echos if they happen within this timespan.
+            use_slotted_sending: when you send many consecutive changes very rapidly to openhab it might happen that openhab things or other bindings can not digest this that quickly and will therefore lose some of the changes.
+                            if you set use_slotted_sending to True, the item will make sure that no more than min_time_between_slotted_changes_ms milliseconds specified at client.openHAB.
+
+
+          """
+    paramdict: typing.Dict[str, typing.Union[str, typing.List[str], typing.Dict[str, typing.Union[str, typing.List]]]] = {}
+    itemtypename = type
+    if inspect.isclass(type):
+      if issubclass(type, Item):
+        itemtypename = type.TYPENAME
+
+    if quantity_type is None:
+        paramdict["type"] = itemtypename
+    else:
+        paramdict["type"] = "{}:{}".format(itemtypename, quantity_type)
+
+    paramdict["name"] = name
+
+    if label is not None:
+        paramdict["label"] = label
+
+    if category is not None:
+        paramdict["category"] = category
+
+    if tags is not None:
+        paramdict["tags"] = tags
+
+    if group_names is not None:
+        paramdict["groupNames"] = group_names
+
+    if group_type is not None:
+        paramdict["groupType"] = group_type
+
+    if function_name is not None and function_params is not None:
+        paramdict["function"] = {"name": function_name, "params": function_params}
+
+    json_body = json.dumps(paramdict)
+    logging.getLogger(__name__).debug("about to create item with PUT request:{}".format(json_body))
+
+    self.openHABClient.req_json_put('/items/{}'.format(name), json_data=json_body)
+
+  def get_item(self, itemname,force_request_to_openhab:typing.Optional[bool]=False,auto_update: typing.Optional[bool] = True,maxEchoToOpenhabMS=None, use_slotted_sending: bool = False) -> Item:
+    """get a existing openhab item
+          Args:
+              itemname (str): unique name of the item
+              force_request_to_openhab (bool): ignore cached items and ask openhab
+              auto_update (bool): if True you will receive changes of the item from openhab.
+              maxEchoToOpenhabMS: when you change an item openhab gets informed about that change. Then openhab will inform all listeners (including ourself) about that change. The item will protect you from those echos if they happen within this timespan.
+              use_slotted_sending: when you send many consecutive changes very rapidly to openhab it might happen that openhab things or other bindings can not digest this that quickly and will therefore lose some of the changes.
+                                if you set use_slotted_sending to True, the item will make sure that no more than min_time_between_slotted_changes_ms milliseconds specified at client.openHAB.
+          Returns:
+            Item: the Item
+    """
+    item = self.openHABClient.get_item(name=itemname,force_request_to_openhab=force_request_to_openhab,auto_update=auto_update,maxEchoToOpenhabMS=maxEchoToOpenhabMS,use_slotted_sending=use_slotted_sending)
+    return item
+
+  def fetch_all_items(self) -> typing.Dict[str, openhab.items.Item]:
+    """Returns all items defined in openHAB.
+
+      Returns:
+        dict: Returns a dict with item names as key and item class instances as value.
+      """
+    return self.openHABClient.fetch_all_items()
+
 class Item:
   """Base item class."""
 
   types = []  # type: typing.List[typing.Type[openhab.types.CommandType]]
+  state_types = []
+  command_event_types = []
+  state_event_types = []
+  state_changed_event_types = []
 
-  def __init__(self, openhab_conn: 'openhab.client.OpenHAB', json_data: dict) -> None:
+  TYPENAME = "unknown"
+
+  def __init__(self, openhab_conn: 'openhab.client.OpenHAB', json_data: dict, auto_update: typing.Optional[bool] = True, maxEchoToOpenhabMS = None, use_slotted_sending:bool = False) -> None:
     """Constructor.
 
     Args:
       openhab_conn (openhab.OpenHAB): openHAB object.
       json_data (dic): A dict converted from the JSON data returned by the openHAB
                        server.
+      auto_update (bool): if True you will receive changes of the item from openhab.
+      maxEchoToOpenhabMS: when you change an item openhab gets informed about that change. Then openhab will inform all listeners (including ourself) about that change. The item will protect you from those echos if they happen within this timespan.
+      use_slotted_sending: when you send many consecutive changes very rapidly to openhab it might happen that openhab things or other bindings can not digest this that quickly and will therefore lose some of the changes.
+                            if you set use_slotted_sending to True, the item will make sure that no more than min_time_between_slotted_changes_ms milliseconds specified at client.openHAB.
     """
     self.openhab = openhab_conn
+    self.autoUpdate = auto_update
     self.type_ = None
+
+    self.quantityType = None
+    self.editable = None
+    self.label = ""
+    self.category = ""
+    self.tags = ""
+    self.groupNames = ""
+    self._unitOfMeasure = ""
     self.group = False
     self.name = ''
     self._state = None  # type: typing.Optional[typing.Any]
     self._raw_state = None  # type: typing.Optional[typing.Any]  # raw state as returned by the server
+    self._raw_state_event = None  # type: str  # raw state as received from Serverevent
     self._members = {}  # type: typing.Dict[str, typing.Any] #  group members (key = item name), for none-group items it's empty
 
     self.logger = logging.getLogger(__name__)
 
     self.init_from_json(json_data)
+    self.openhab.register_item(self)
+    self.event_listeners: typing.Dict[typing.Callable[[openhab.items.Item, openhab.events.ItemEvent], None], Item.EventListener] = {}
+    self.maxEchoToOpenhabMS = maxEchoToOpenhabMS
+    self.use_slotted_sending = use_slotted_sending
+    if self.maxEchoToOpenhabMS is None:
+      self.maxEchoToOpenhabMS = self.openhab.maxEchoToOpenhabMS
+    self.change_sent_history = openhab.history.History(self.maxEchoToOpenhabMS/1000) #this History hold all recent changes sent to OH. We need this for subsequent events coming in to check if these incoming events are our own echo or not.
+    # this is necessary as the we might send MANY changes out to OH and receive back events of those changes with some delay and they would all be recognized as not an echo (although they are). The history stores the last values sent within a given time period.
 
   def init_from_json(self, json_data: dict) -> None:
     """Initialize this object from a json configuration as fetched from openHAB.
@@ -70,24 +282,48 @@ class Item:
       self.group = True
       if 'groupType' in json_data:
         self.type_ = json_data['groupType']
-
       # init members
       for i in json_data['members']:
         self.members[i['name']] = self.openhab.json_to_item(i)
 
     else:
       self.type_ = json_data['type']
-    self.__set_state(json_data['state'])
+
+      parts = self.type_.split(":")
+      if len(parts) == 2:
+        self.quantityType = parts[1]
+
+    if "editable" in json_data:
+      self.editable = json_data['editable']
+    if "label" in json_data:
+      self.label = json_data['label']
+    if "category" in json_data:
+      self.category = json_data['category']
+    if "tags" in json_data:
+      self.tags = json_data['tags']
+    if "groupNames" in json_data:
+      self.groupNames = json_data['groupNames']
+
+    self._raw_state = json_data['state']
+
+    if self.is_undefined(self._raw_state):
+      self._state = None
+    else:
+      self._state, self._unitOfMeasure = self._parse_rest(self._raw_state)
 
   @property
-  def state(self) -> typing.Any:
+  def state(self, fetch_from_openhab=False) -> typing.Any:
     """The state property represents the current state of the item.
+    Args:
+      fetch_from_openhab (bool) : override auto_update setting and refresh the state now.
 
-    The state is automatically refreshed from openHAB on reading it.
-    Updating the value via this property send an update to the event bus.
+    The state is automatically refreshed from openHAB through incoming events if auto_update is turned on.
+    If auto_update is not turned on, the state gets refreshed now.
+    Updating the value via this property sends an update to the event bus.
     """
-    json_data = self.openhab.get_item_raw(self.name)
-    self.init_from_json(json_data)
+    if not self.autoUpdate or fetch_from_openhab:
+      json_data = self.openhab.get_item_raw(self.name)
+      self.init_from_json(json_data)
 
     return self._state
 
@@ -109,6 +345,8 @@ class Item:
 
   def _validate_value(self, value: typing.Union[str, typing.Type[openhab.types.CommandType]]) -> None:
     """Private method for verifying the new value before modifying the state of the item."""
+    if value == openhab.types.CommandType.UNDEF:
+      return 
     if self.type_ == 'String':
       if not isinstance(value, (str, bytes)):
         raise ValueError()
@@ -128,9 +366,9 @@ class Item:
     else:
       raise ValueError()
 
-  def _parse_rest(self, value: str) -> typing.Any:
+  def _parse_rest(self, value: str) -> typing.Tuple[str, str]:
     """Parse a REST result into a native object."""
-    return value
+    return value, ""
 
   def _rest_format(self, value: str) -> typing.Union[str, bytes]:
     """Format a value before submitting to openHAB."""
@@ -144,55 +382,465 @@ class Item:
 
     return _value
 
+  def _is_my_own_echo(self, event: openhab.events.ItemEvent):
+    """find out if the incoming event is actually just a echo of my previous command or update"""
+    now = datetime.now()
+    result = None
+    time_sent = None
+    try:
+      if event.source != openhab.events.EventSourceOpenhab:
+        result = True
+      else:
+        time_sent,item = self.change_sent_history.get(event.value)
+        result = time_sent is not None
+      return result
+    finally:
+      self.logger.debug("check if it is my own echo result:{result} for item:{itemname}, event.source:{source}, event.data_type{datatype}, self._state:{state}, event.new_value:{value}, time sent:{time_sent}, now:{now}".format(
+          result=result,
+          itemname=event.item_name,
+          source=event.source,
+          datatype=event.type,
+          state=self._state,
+          value=event.value,
+          time_sent=time_sent,
+          now=now))
+
+  def delete(self):
+    """deletes the item from openhab """
+    self.openhab.req_del('/items/{}'.format(self.name))
+    self.openhab.unregister_item(self.name)
+    self._state = None
+    self.remove_all_event_listeners()
+
+  def __extract_value_and_unitofmeasure(self, value: str) -> typing.Tuple[str, str]:
+    """Private method to extract value and unit of measue
+
+        Args:
+          value (str): the parsed value
+
+        Returns:
+          tuple[str,str] : 2 strings containing the value and the unit of measure
+        """
+    if isinstance(value, tuple):
+      value_result = value[0]
+      uom = value[1]
+      return value_result, uom
+    else:
+      return value, ""
+
+  def _digest_external_command_event(self, command_type_class: typing.Type[openhab.types.CommandType], command: str) -> openhab.events.ItemCommandEvent:
+    """Private method to process a command event coming from openhab
+
+            Args:
+              command_type_class (openhab.types.CommandType): the fitting CommandType to correctly process the command
+              command (str): the received command
+
+            Returns:
+              openhab.events.ItemCommandEvent : the populated event
+            """
+    parsed_value = command_type_class.parse(command)
+    value_result, uom = self.__extract_value_and_unitofmeasure(parsed_value)
+    is_non_value_command = False
+    if command_type_class not in self.state_changed_event_types + self.state_event_types:
+      is_non_value_command = True
+    item_command_event = openhab.events.ItemCommandEvent(item_name=self.name,
+                                                         source=openhab.events.EventSourceOpenhab,
+                                                         value_datatype=command_type_class,
+                                                         value=value_result,
+                                                         unit_of_measure=uom,
+                                                         value_raw=command,
+                                                         is_my_own_echo=False,
+                                                         is_non_value_command=is_non_value_command)
+    item_command_event.is_my_own_echo = self._is_my_own_echo(item_command_event)
+    if command_type_class in self.state_types:
+      if not item_command_event.is_my_own_echo:
+        self.__set_state(value_result)
+        self._unitOfMeasure = uom
+    return item_command_event
+
+  def digest_external_state_event(self, state_type_class: typing.Type[openhab.types.CommandType], value: str) -> openhab.events.ItemStateEvent:
+    """Private method to process a state event coming from openhab
+
+                Args:
+                  state_type_class (openhab.types.CommandType): the fitting CommandType to correctly process the value
+                  value (str): the received new state
+
+                Returns:
+                  openhab.events.ItemStateEvent : the populated event
+                """
+    parsed_value = state_type_class.parse(value)
+    value_result, uom = self.__extract_value_and_unitofmeasure(parsed_value)
+    is_non_value_command = False
+    if state_type_class not in self.state_changed_event_types + self.state_event_types:
+      is_non_value_command = True
+    item_state_event = openhab.events.ItemStateEvent(item_name=self.name,
+                                                     source=openhab.events.EventSourceOpenhab,
+                                                     value_datatype=state_type_class,
+                                                     value=value_result,
+                                                     unit_of_measure=uom,
+                                                     value_raw=value,
+                                                     is_my_own_echo=False,
+                                                     is_non_value_command=is_non_value_command)
+
+    item_state_event.is_my_own_echo = self._is_my_own_echo(item_state_event)
+    if item_state_event in self.state_types:
+      if not item_state_event.is_my_own_echo:
+        self.__set_state(value_result)
+        self._unitOfMeasure = uom
+    return item_state_event
+
+  def digest_external_state_changed_event(self, state_type_class: typing.Type[openhab.types.CommandType], value: str, old_state_type_class: typing.Type[openhab.types.CommandType], old_value: str) -> openhab.events.ItemStateChangedEvent:
+
+    """Private method to process a state changed event coming from openhab
+
+                Args:
+                  state_type_class (openhab.types.CommandType): the fitting CommandType to correctly process the value
+                  value (str): the new state
+                  old_state_type_class (openhab.types.CommandType): the fitting CommandType to correctly process the old_value
+                  old_value (str): the old state
+
+                Returns:
+                  openhab.events.ItemStateChangedEvent : the populated event
+                """
+    parsed_value = state_type_class.parse(value)
+    value_result, uom = self.__extract_value_and_unitofmeasure(parsed_value)
+    old_value_result = old_uom = ""
+    if old_state_type_class is not None:
+      parsed_old_value = old_state_type_class.parse(old_value)
+      old_value_result, old_uom = self.__extract_value_and_unitofmeasure(parsed_old_value)
+    is_non_value_command = False
+    if state_type_class not in self.state_changed_event_types + self.state_event_types:
+      is_non_value_command = True
+    item_state_changed_event = openhab.events.ItemStateChangedEvent(item_name=self.name,
+                                                                    source=openhab.events.EventSourceOpenhab,
+                                                                    value_datatype=state_type_class,
+                                                                    value=value_result,
+                                                                    unit_of_measure=uom,
+                                                                    value_raw=value,
+                                                                    old_value_datatype=old_state_type_class,
+                                                                    old_value=old_value_result,
+                                                                    old_unit_of_measure=old_uom,
+                                                                    old_value_raw=old_value,
+                                                                    is_my_own_echo=False,
+                                                                    is_non_value_command=is_non_value_command)
+
+    item_state_changed_event.is_my_own_echo = self._is_my_own_echo(item_state_changed_event)
+    if item_state_changed_event in self.state_types:
+      if not item_state_changed_event.is_my_own_echo:
+        self._state = value_result
+    return item_state_changed_event
+
+  def _parse_external_command_event(self, raw_event: openhab.events.RawItemEvent) -> openhab.events.ItemCommandEvent:
+    """Private method to process a command event coming from openhab
+          Args:
+            raw_event (openhab.events.RawItemEvent): the raw event
+          Returns:
+            openhab.events.ItemCommandEvent : the populated event
+          """
+    command_type = raw_event.content["type"]
+    command_type_class = openhab.types.CommandType.get_type_for(command_type)
+    command = raw_event.content["value"]
+    if command_type_class in self.command_event_types:
+      item_command_event = self._digest_external_command_event(command_type_class, command)
+      return item_command_event
+    raise Exception("unknown command event type:'{}'".format(command_type_class))
+
+  def _parse_external_state_event(self, raw_event: openhab.events.RawItemEvent) -> openhab.events.ItemStateEvent:
+    """Private method to process a state event coming from openhab
+          Args:
+               raw_event (openhab.events.RawItemEvent): the raw event
+          Returns:
+            openhab.events.ItemStateEvent : the populated event
+          """
+    state_type = raw_event.content["type"]
+    state_type_class = openhab.types.CommandType.get_type_for(state_type)
+    if state_type_class is None:
+      raise openhab.types.TypeNotImplementedError(itemname=self.name,datatype=state_type)
+    value = raw_event.content["value"]
+    if state_type_class in self.state_event_types+[openhab.types.UndefType]:
+      item_state_event = self.digest_external_state_event(state_type_class, value)
+      return item_state_event
+    raise Exception("unknown state event type:'{}'".format(state_type_class))
+
+  def _parse_external_state_changed_event(self, raw_event: openhab.events.RawItemEvent) -> openhab.events.ItemStateEvent:
+    """Private method to process a state changed event coming from openhab
+          Args:
+               raw_event (openhab.events.RawItemEvent): the raw event
+          Returns:
+            openhab.events.ItemStateEvent : the populated event
+          """
+    state_changed_type = raw_event.content["type"]
+    state_changed_type_class = openhab.types.CommandType.get_type_for(state_changed_type)
+    state_changed_old_type = raw_event.content["oldType"]
+    state_changed_old_type_class = openhab.types.CommandType.get_type_for(state_changed_old_type)
+    value = raw_event.content["value"]
+    old_value = raw_event.content["oldValue"]
+    if state_changed_type_class in self.state_changed_event_types:
+      item_state_changed_event = self.digest_external_state_changed_event(state_type_class=state_changed_type_class, value=value, old_state_type_class=state_changed_old_type_class, old_value=old_value)
+      return item_state_changed_event
+    raise Exception("unknown statechanged event type:{}".format(state_changed_type_class))
+
+  def _process_external_event(self, raw_event: openhab.events.RawItemEvent):
+    """Private method to process a event coming from openhab and inform all Listeners about the event
+          Args:
+               raw_event (openhab.events.RawItemEvent): the raw event
+
+          """
+    if not self.autoUpdate:
+      return
+    self.logger.debug("processing external event:{}".format(str(raw_event)[:300]))
+
+    if raw_event.event_type == openhab.events.ItemCommandEvent.type:
+      event = self._parse_external_command_event(raw_event)
+    elif raw_event.event_type == openhab.events.ItemStateChangedEvent.type:
+      event = self._parse_external_state_changed_event(raw_event)
+    elif raw_event.event_type == openhab.events.ItemStateEvent.type:
+      event = self._parse_external_state_event(raw_event)
+    else:
+      raise NotImplementedError("Event type:{} is not implemented.".format(raw_event.event_type))
+
+    for aListener in self.event_listeners.values():
+      if event.type in aListener.listeningTypes:
+        if not event.is_my_own_echo or aListener.alsoGetMyEchosFromOpenHAB:
+          try:
+            aListener.callbackfunction(self, event)
+          except Exception as e:
+            self.logger.exception("error executing Eventlistener for item:{}.".format(event.item_name), e)
+
+  def _process_internal_event(self, event: openhab.events.ItemEvent):
+    """Private method to process a event coming from local changes and inform all Listeners about the event
+             Args:
+                  event (openhab.events.ItemEvent): the internal event
+
+             """
+    self.logger.debug("processing internal event:{}".format(event))
+    for aListener in self.event_listeners.values():
+      if event.type in aListener.listeningTypes:
+        if aListener.onlyIfEventsourceIsOpenhab:
+          continue
+        else:
+          try:
+            aListener.callbackfunction(self, event)
+          except Exception as e:
+            self.logger.exception("error executing Eventlistener for item:{}.".format(event.item_name), e)
+
+  class EventListener(object):
+    """EventListener Objects hold data about a registered event listener"""
+    def __init__(self, listening_types: typing.Set[openhab.events.EventType], listener: typing.Callable[[openhab.items.Item, openhab.events.ItemEvent], None], only_if_eventsource_is_openhab: bool, also_get_my_echos_from_openhab: bool):
+      """Constructor of an EventListener Object
+        Args:
+          listening_types (openhab.events.EventType or set of openhab.events.EventType): the eventTypes the listener is interested in.
+          only_if_eventsource_is_openhab (bool): the listener only wants events that are coming from openhab.
+          also_get_my_echos_from_openhab (bool): the listener also wants to receive events coming from openhab that originally were triggered by commands or changes by our item itself.
+
+
+      """
+      all_types = {openhab.events.ItemStateEvent.type, openhab.events.ItemCommandEvent.type, openhab.events.ItemStateChangedEvent.type}
+      if listening_types is None:
+        self.listeningTypes = all_types
+      elif not hasattr(listening_types, '__iter__'):
+        self.listeningTypes = {listening_types}
+      elif not listening_types:
+        self.listeningTypes = all_types
+      else:
+        self.listeningTypes = listening_types
+
+      self.callbackfunction: typing.Callable[[openhab.items.Item, openhab.events.ItemEvent], None] = listener
+      self.onlyIfEventsourceIsOpenhab = only_if_eventsource_is_openhab
+      self.alsoGetMyEchosFromOpenHAB = also_get_my_echos_from_openhab
+
+    def add_types(self, listening_types: typing.Union[openhab.events.EventType, typing.Set[openhab.events.EventType]]):
+      """add aditional listening types
+              Args:
+                listening_types (openhab.events.EventType or set of openhab.events.EventType): the additional eventTypes the listener is interested in.
+
+            """
+      if listening_types is None:
+        return
+      elif not hasattr(listening_types, '__iter__'):
+        self.listeningTypes.add(listening_types)
+      elif not listening_types:
+        return
+      else:
+        self.listeningTypes.update(listening_types)
+
+    def remove_types(self, listening_types: typing.Union[openhab.events.EventType, typing.Set[openhab.events.EventType]]):
+      """remove listening types
+          Args:
+            listening_types (openhab.events.EventType or set of openhab.events.EventType): the eventTypes the listener is not interested in anymore
+
+        """
+      if listening_types is None:
+        self.listeningTypes.clear()
+      elif not hasattr(listening_types, '__iter__'):
+        self.listeningTypes.remove(listening_types)
+      elif not listening_types:
+        self.listeningTypes.clear()
+      else:
+        self.listeningTypes.difference_update(listening_types)
+
+  def add_event_listener(self, listening_types: typing.Union[openhab.events.EventType, typing.Set[openhab.events.EventType]], listener: typing.Callable[[openhab.items.Item, openhab.events.ItemEvent], None],
+                         only_if_eventsource_is_openhab=True,
+                         also_get_my_echos_from_openhab=False):
+    """add a Listener interested in changes of items happening in openhab
+        Args:
+          Args:
+          listening_types (openhab.events.EventType or set of openhab.events.EventType): the eventTypes the listener is interested in.
+          listener (Callable[[openhab.items.Item,openhab.events.ItemEvent],None]: a method with 2 parameters:
+            item (openhab.items.Item): the item that received a command, change or update
+            event (openhab.events.ItemEvent): the item Event holding the actual change
+          only_if_eventsource_is_openhab (bool): the listener only wants events that are coming from openhab.
+          also_get_my_echos_from_openhab (bool): the listener also wants to receive events coming from openhab that originally were triggered by commands or changes by our item itself.
+
+
+      """
+
+    if listener in self.event_listeners:
+      event_listener = self.event_listeners[listener]
+      event_listener.add_types(listening_types)
+      event_listener.onlyIfEventsourceIsOpenhab = only_if_eventsource_is_openhab
+    else:
+      event_listener = Item.EventListener(listening_types=listening_types, listener=listener, only_if_eventsource_is_openhab=only_if_eventsource_is_openhab, also_get_my_echos_from_openhab=also_get_my_echos_from_openhab)
+      self.event_listeners[listener] = event_listener
+
+  def remove_all_event_listeners(self):
+    self.event_listeners = {}
+
+  def remove_event_listener(self, types: typing.Union[openhab.events.EventType, typing.Set[openhab.events.EventType]], listener: typing.Callable[[openhab.items.Item, openhab.events.ItemEvent], None]):
+    """removes a previously registered Listener interested in changes of items happening in openhab
+            Args:
+              Args:
+              listening_types (openhab.events.EventType or set of openhab.events.EventType): the eventTypes the listener is interested in.
+              listener: the previously registered listener method.
+
+
+          """
+    if listener in self.event_listeners:
+      event_listener = self.event_listeners[listener]
+      event_listener.remove_types(types)
+      if not event_listener.listeningTypes:
+        self.event_listeners.pop(listener)
+
+  def is_undefined(self, value: str) -> bool:
+    for aStateType in self.state_types:
+      if not aStateType.is_undefined(value):
+        return False
+    return True
+
   def __set_state(self, value: str) -> None:
     """Private method for setting the internal state."""
-    self._raw_state = value
-
-    if value in ('UNDEF', 'NULL'):
+    if self.is_undefined(value):
       self._state = None
     else:
-      self._state = self._parse_rest(value)
+      self._state = value
 
   def __str__(self) -> str:
     """String representation."""
     return '<{0} - {1} : {2}>'.format(self.type_, self.name, self._state)
 
+  def wait_for_sending_slot(self):
+    try:
+      self.openhab._slotted_modification_lock.acquire()
+      now = datetime.utcnow()
+      wait_until = self.openhab._last_slotted_modification_sent + timedelta(milliseconds=self.openhab.min_time_between_slotted_changes_ms)
+      if wait_until > now:
+        wait_time = wait_until - now
+        wait_time_seconds = wait_time.seconds + wait_time.microseconds / 1000000
+        self.logger.debug("waiting for {} seconds for sending slotted update to OH for item {}.".format(wait_time_seconds, self.name))
+        time.sleep(wait_time_seconds)
+      self.openhab._last_slotted_modification_sent = datetime.utcnow()
+
+    finally:
+      self.openhab._slotted_modification_lock.release()
+
   def _update(self, value: typing.Any) -> None:
     """Updates the state of an item, input validation is expected to be already done.
 
     Args:
-      value (object): The value to update the item with. The type of the value depends
-                      on the item type and is checked accordingly.
+      value (object): The value to update the item with. The data_type of the value depends
+                      on the item data_type and is checked accordingly.
     """
     # noinspection PyTypeChecker
+
+    self.change_sent_history.add(value)
+
+    if self.use_slotted_sending:
+      self.wait_for_sending_slot()
+    self.logger.debug("sending update to OH for item {} with new value:{}".format(self.name, value))
     self.openhab.req_put('/items/{}/state'.format(self.name), data=value)
 
   def update(self, value: typing.Any) -> None:
     """Updates the state of an item.
 
     Args:
-      value (object): The value to update the item with. The type of the value depends
-                      on the item type and is checked accordingly.
+      value (object): The value to update the item with. The data_type of the value depends
+                      on the item data_type and is checked accordingly.
     """
+    oldstate = self._state
     self._validate_value(value)
 
     v = self._rest_format(value)
-
+    self._state = value
     self._update(v)
+
+    if oldstate == self._state:
+      event = openhab.events.ItemStateEvent(item_name=self.name,
+                                            source=openhab.events.EventSourceInternal,
+                                            value_datatype=self.type_,
+                                            value=self._state,
+                                            value_raw=None,
+                                            unit_of_measure=self._unitOfMeasure,
+                                            is_my_own_echo=False,
+                                            is_non_value_command=False
+                                            )
+    else:
+      event = openhab.events.ItemStateChangedEvent(item_name=self.name,
+                                                   source=openhab.events.EventSourceInternal,
+                                                   value_datatype=self.type_,
+                                                   value=self._state,
+                                                   value_raw=None,
+                                                   unit_of_measure=self._unitOfMeasure,
+                                                   old_value_datatype=self.type_,
+                                                   old_value=oldstate,
+                                                   old_value_raw="",
+                                                   old_unit_of_measure="",
+                                                   is_my_own_echo=False,
+                                                   is_non_value_command=False
+                                                   )
+    self._process_internal_event(event)
 
   # noinspection PyTypeChecker
   def command(self, value: typing.Any) -> None:
     """Sends the given value as command to the event bus.
 
     Args:
-      value (object): The value to send as command to the event bus. The type of the
-                      value depends on the item type and is checked accordingly.
+      value (object): The value to send as command to the event bus. The data_type of the
+                      value depends on the item data_type and is checked accordingly.
     """
+
     self._validate_value(value)
-
     v = self._rest_format(value)
+    self._state = value
 
+    self.change_sent_history.add(value)
+    if self.use_slotted_sending:
+      self.wait_for_sending_slot()
     self.openhab.req_post('/items/{}'.format(self.name), data=v)
+
+
+    unit_of_measure = ""
+    if hasattr(self, "_unitOfMeasure"):
+      unit_of_measure = self._unitOfMeasure
+    event = openhab.events.ItemCommandEvent(item_name=self.name,
+                                            source=openhab.events.EventSourceInternal,
+                                            value_datatype=self.type_,
+                                            value=value,
+                                            value_raw=None,
+                                            unit_of_measure=unit_of_measure,
+                                            is_my_own_echo=True,
+                                            is_non_value_command=False
+                                            )
+    self._process_internal_event(event)
 
   def update_state_null(self) -> None:
     """Update the state of the item to *NULL*."""
@@ -229,10 +877,28 @@ class Item:
     return False
 
 
+class StringItem(Item):
+  """DateTime item data_type."""
+
+  types = [openhab.types.StringType]
+  state_types = types
+  command_event_types = types
+  state_event_types = types
+  state_changed_event_types = types
+
+  TYPENAME = "String"
+
+
 class DateTimeItem(Item):
-  """DateTime item type."""
+  """DateTime item data_type."""
 
   types = [openhab.types.DateTimeType]
+  state_types = types
+  command_event_types = types
+  state_event_types = types
+  state_changed_event_types = types
+
+  TYPENAME = "DateTime"
 
   def __gt__(self, other: datetime.datetime) -> bool:
     """Greater than comparison."""
@@ -262,7 +928,7 @@ class DateTimeItem(Item):
 
     return not self.__eq__(other)
 
-  def _parse_rest(self, value: str) -> datetime.datetime:
+  def _parse_rest(self, value) -> typing.Tuple[datetime, str]:
     """Parse a REST result into a native object.
 
     Args:
@@ -272,7 +938,7 @@ class DateTimeItem(Item):
       datetime.datetime: The datetime.datetime object as converted from the string
                          parameter.
     """
-    return dateutil.parser.parse(value)
+    return dateutil.parser.parse(value), ""
 
   def _rest_format(self, value: datetime.datetime) -> str:
     """Format a value before submitting to openHAB.
@@ -289,54 +955,76 @@ class DateTimeItem(Item):
 
 
 class PlayerItem(Item):
-  """PlayerItem item type."""
+  """PlayerItem item data_type."""
+  TYPENAME = "Player"
 
-  types = [openhab.types.PlayerType]
+  types = [openhab.types.PlayPauseType, openhab.types.NextPrevious, openhab.types.RewindFastforward]
+  state_types = [openhab.types.PlayPauseType, openhab.types.RewindFastforward]
+  command_event_types = [openhab.types.PlayPauseType, openhab.types.NextPrevious, openhab.types.RewindFastforward]
+  state_event_types = [openhab.types.PlayPauseType, openhab.types.RewindFastforward]
+  state_changed_event_types = [openhab.types.PlayPauseType, openhab.types.RewindFastforward]
 
   def play(self) -> None:
-    """Set the state of the player to PLAY."""
-    self.command('PLAY')
+    """send the command PLAY."""
+    self.command(openhab.types.PlayPauseType.PLAY)
 
   def pause(self) -> None:
-    """Set the state of the player to PAUSE."""
-    self.command('PAUSE')
+    """send the command PAUSE."""
+    self.command(openhab.types.PlayPauseType.PAUSE)
 
   def next(self) -> None:
-    """Set the state of the player to NEXT."""
-    self.command('NEXT')
+    """send the command NEXT."""
+    self.command(openhab.types.NextPrevious.NEXT)
 
   def previous(self) -> None:
-    """Set the state of the player to PREVIOUS."""
-    self.command('PREVIOUS')
+    """send the command PREVIOUS."""
+    self.command(openhab.types.NextPrevious.PREVIOUS)
+
+  def fastforward(self) -> None:
+    """send the command FASTFORWARD"""
+    self.command(openhab.types.RewindFastforward.FASTFORWARD)
+
+  def rewind(self) -> None:
+    """send the command REWIND."""
+    self.command(openhab.types.RewindFastforward.REWIND)
 
 
 class SwitchItem(Item):
-  """SwitchItem item type."""
-
+  """SwitchItem item data_type."""
   types = [openhab.types.OnOffType]
+  state_types = types
+  command_event_types = types
+  state_event_types = types
+  state_changed_event_types = types
+  TYPENAME = "Switch"
 
   def on(self) -> None:
     """Set the state of the switch to ON."""
-    self.command('ON')
+    self.command(openhab.types.OnOffType.ON)
 
   def off(self) -> None:
     """Set the state of the switch to OFF."""
-    self.command('OFF')
+    self.command(openhab.types.OnOffType.OFF)
 
   def toggle(self) -> None:
     """Toggle the state of the switch to OFF to ON and vice versa."""
-    if self.state == 'ON':
+    if self.state == openhab.types.OnOffType.ON:
       self.off()
-    else:
+    elif self.state == openhab.types.OnOffType.OFF:
       self.on()
 
 
 class NumberItem(Item):
-  """NumberItem item type."""
+  """NumberItem item data_type."""
 
   types = [openhab.types.DecimalType]
+  state_types = types
+  command_event_types = types
+  state_event_types = types
+  state_changed_event_types = types
+  TYPENAME = "Number"
 
-  def _parse_rest(self, value: str) -> float:
+  def _parse_rest(self, value: str) -> typing.Tuple[typing.Union[float, None], str]:
     """Parse a REST result into a native object.
 
     Args:
@@ -344,13 +1032,23 @@ class NumberItem(Item):
 
     Returns:
       float: The float object as converted from the string parameter.
+      str: The unit Of Measure or empty string
     """
-    # Items of type NumberItem may contain units of measurement. Here we make sure to strip them off.
-    # @TODO possibly implement supporting UoM data for NumberItems not sure this would be useful.
-    m = re.match(r'''^(-?[0-9.]+)''', value)
+    if value in ('UNDEF', 'NULL'):
+      return None, ""
+    # m = re.match(r'''^(-?[0-9.]+)''', value)
+    try:
+      m = re.match("(-?[0-9.]+)\s?(.*)?$", value)
 
-    if m:
-      return float(m.group(1))
+      if m:
+        value = m.group(1)
+        unit_of_measure = m.group(2)
+
+        return float(value), unit_of_measure
+      else:
+        return float(value), ""
+    except Exception as e:
+      self.logger.error("error in parsing new value '{}' for '{}'".format(value, self.name), e)
 
     raise ValueError('{}: unable to parse value "{}"'.format(self.__class__, value))
 
@@ -367,32 +1065,42 @@ class NumberItem(Item):
 
 
 class ContactItem(Item):
-  """Contact item type."""
+  """Contact item data_type."""
 
   types = [openhab.types.OpenCloseType]
+  state_types = types
+  command_event_types = types
+  state_event_types = types
+  state_changed_event_types = types
+  TYPENAME = "Contact"
 
   def command(self, *args, **kwargs) -> None:
     """This overrides the `Item` command method.
 
-    Note: Commands are not accepted for items of type contact.
+    Note: Commands are not accepted for items of data_type contact.
     """
     raise ValueError('This item ({}) only supports updates, not commands!'.format(self.__class__))
 
   def open(self) -> None:
     """Set the state of the contact item to OPEN."""
-    self.state = 'OPEN'
+    self.state = openhab.types.OpenCloseType.OPEN
 
   def closed(self) -> None:
     """Set the state of the contact item to CLOSED."""
-    self.state = 'CLOSED'
+    self.state = openhab.types.OpenCloseType.CLOSED
 
 
 class DimmerItem(Item):
-  """DimmerItem item type."""
+  """DimmerItem item data_type."""
 
   types = [openhab.types.OnOffType, openhab.types.PercentType, openhab.types.IncreaseDecreaseType]
+  state_types = [openhab.types.PercentType]
+  command_event_types = [openhab.types.OnOffType, openhab.types.PercentType, openhab.types.IncreaseDecreaseType]
+  state_event_types = [openhab.types.OnOffType, openhab.types.PercentType]
+  state_changed_event_types = [openhab.types.PercentType]
+  TYPENAME = "Dimmer"
 
-  def _parse_rest(self, value: str) -> int:
+  def _parse_rest(self, value: str) -> typing.Tuple[float, str]:
     """Parse a REST result into a native object.
 
     Args:
@@ -401,7 +1109,7 @@ class DimmerItem(Item):
     Returns:
       int: The int object as converted from the string parameter.
     """
-    return int(float(value))
+    return float(value), ""
 
   def _rest_format(self, value: typing.Union[str, int]) -> str:
     """Format a value before submitting to OpenHAB.
@@ -419,28 +1127,32 @@ class DimmerItem(Item):
 
   def on(self) -> None:
     """Set the state of the dimmer to ON."""
-    self.command('ON')
+    self.command(openhab.types.OnOffType.ON)
 
   def off(self) -> None:
     """Set the state of the dimmer to OFF."""
-    self.command('OFF')
+    self.command(openhab.types.OnOffType.OFF)
 
   def increase(self) -> None:
     """Increase the state of the dimmer."""
-    self.command('INCREASE')
+    self.command(openhab.types.IncreaseDecreaseType.INCREASE)
 
   def decrease(self) -> None:
     """Decrease the state of the dimmer."""
-    self.command('DECREASE')
+    self.command(openhab.types.IncreaseDecreaseType.DECREASE)
 
 
-class ColorItem(Item):
-  """ColorItem item type."""
+class ColorItem(DimmerItem):
+  """ColorItem item data_type."""
 
-  types = [openhab.types.OnOffType, openhab.types.PercentType, openhab.types.IncreaseDecreaseType,
-           openhab.types.ColorType]
+  types = [openhab.types.OnOffType, openhab.types.PercentType, openhab.types.IncreaseDecreaseType, openhab.types.ColorType]
+  state_types = [openhab.types.ColorType]
+  command_event_types = [openhab.types.OnOffType, openhab.types.PercentType, openhab.types.IncreaseDecreaseType, openhab.types.ColorType]
+  state_event_types = [openhab.types.OnOffType, openhab.types.PercentType, openhab.types.ColorType]
+  state_changed_event_types = [openhab.types.ColorType]
+  TYPENAME = "Color"
 
-  def _parse_rest(self, value: str) -> str:
+  def _parse_rest(self, value: str) -> typing.Tuple[typing.Tuple[int, int, float], str]:
     """Parse a REST result into a native object.
 
     Args:
@@ -449,7 +1161,8 @@ class ColorItem(Item):
     Returns:
       str: The str object as converted from the string parameter.
     """
-    return str(value)
+    result = openhab.types.ColorType.parse(value)
+    return result, ""
 
   def _rest_format(self, value: typing.Union[str, int]) -> str:
     """Format a value before submitting to openHAB.
@@ -460,34 +1173,29 @@ class ColorItem(Item):
     Returns:
       str: The string as possibly converted from the parameter.
     """
+    if isinstance(value, tuple):
+      if len(value) == 3:
+        return "{},{},{}".format(value[0], value[1], value[2])
     if not isinstance(value, str):
       return str(value)
 
     return value
 
-  def on(self) -> None:
-    """Set the state of the color to ON."""
-    self.command('ON')
-
-  def off(self) -> None:
-    """Set the state of the color to OFF."""
-    self.command('OFF')
-
-  def increase(self) -> None:
-    """Increase the state of the color."""
-    self.command('INCREASE')
-
-  def decrease(self) -> None:
-    """Decrease the state of the color."""
-    self.command('DECREASE')
+  def __extract_value_and_unitofmeasure(self, value: str):
+    return value, ""
 
 
 class RollershutterItem(Item):
-  """RollershutterItem item type."""
+  """RollershutterItem item data_type."""
 
-  types = [openhab.types.UpDownType, openhab.types.PercentType, openhab.types.StopType]
+  types = [openhab.types.UpDownType, openhab.types.PercentType, openhab.types.StopMoveType]
+  state_types = [openhab.types.PercentType]
+  command_event_types = [openhab.types.UpDownType, openhab.types.StopMoveType, openhab.types.PercentType]
+  state_event_types = [openhab.types.UpDownType, openhab.types.PercentType]
+  state_changed_event_types = [openhab.types.PercentType]
+  TYPENAME = "Rollershutter"
 
-  def _parse_rest(self, value: str) -> int:
+  def _parse_rest(self, value: str) -> typing.Tuple[int, str]:
     """Parse a REST result into a native object.
 
     Args:
@@ -496,7 +1204,7 @@ class RollershutterItem(Item):
     Returns:
       int: The int object as converted from the string parameter.
     """
-    return int(float(value))
+    return int(float(value)), ""
 
   def _rest_format(self, value: typing.Union[str, int]) -> str:
     """Format a value before submitting to openHAB.
@@ -514,12 +1222,12 @@ class RollershutterItem(Item):
 
   def up(self) -> None:
     """Set the state of the dimmer to ON."""
-    self.command('UP')
+    self.command(openhab.types.UpDownType.UP)
 
   def down(self) -> None:
     """Set the state of the dimmer to OFF."""
-    self.command('DOWN')
+    self.command(openhab.types.UpDownType.DOWN)
 
   def stop(self) -> None:
     """Set the state of the dimmer to OFF."""
-    self.command('STOP')
+    self.command(openhab.types.StopMoveType.STOP)

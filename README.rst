@@ -21,12 +21,29 @@ python library for accessing the openHAB REST API
 This library allows for easily accessing the openHAB REST API.
 A number of features are implemented but not all, this is work in progress.
 
+currently you can
+ items:
+     - retrieve current state of items
+     - send updates and commands to items
+     - receive commands, updates and changes triggered by openhab
+     - create new items and groups
+     - delete items and groups
+
+ audio:
+     - retrieve audiosinks
+     - retrieve voices
+     - say text on audiosink using a voice
+     - retrieve voice interpreter
+     - send commands to voice interpreter
+
+
 Requirements
 ------------
 
   - python >= 3.5
   - python :: dateutil
   - python :: requests
+  - python :: aiohttp_sse_client
   - openHAB version 2
 
 Installation
@@ -49,7 +66,7 @@ Example usage of the library:
     from openhab import OpenHAB
     
     base_url = 'http://localhost:8080/rest'
-    openhab = OpenHAB(base_url)
+    openhab = OpenHAB(base_url,autoUpdate=True)
    
     # fetch all items
     items = openhab.fetch_all_items()
@@ -87,6 +104,77 @@ Example usage of the library:
     for v in lights_group.members.values():
       v.update('OFF')
 
+    # receive updates from openhab:
+
+    # fetch a item and keep it
+    testroom1_LampOnOff = openhab.get_item('light_switch')
+
+    #define a callback function to receive events
+    def onLight_switchCommand(item: openhab.items.Item, event: openhab.events.ItemCommandEvent):
+        log.info("########################### COMMAND of {} to {} (itemsvalue:{}) from OPENHAB".format(event.itemname, event.newValueRaw, item.state))
+        if event.source == openhab.events.EventSourceOpenhab:
+            log.info("this change came from openhab")
+
+    # install listener for events to receive all events (from internal and openhab)
+    testroom1_LampOnOff.add_event_listener(listening_types=openhab.events.ItemCommandEventType, listener=onLight_switchCommand, only_if_eventsource_is_openhab=False)
+
+    # if you switch the item yourself you will also get update / state / command events. (with  event.source == openhab.events.EventSourceInternal)
+    testroom1_LampOnOff.off()
+
+    #Events stop to be delivered
+    testroom1_LampOnOff=None
+
+
+    #create or delete items:
+    # first instantiate a Factory:
+    itemFactory = openhab.items.ItemFactory(openhab)
+    #create the item
+    testDimmer = itemFactory.create_or_update_item(name="the_testDimmer", data_type=openhab.items.DimmerItem)
+    #use item
+    testDimmer.state = 95
+    testDimmer.off()
+    testDimmer.command("ON")
+    #or better:
+    testDimmer.command(openhab.types.OnOffType.OFF)
+
+
+
+
+    # you can set or change many item attributes:
+
+    itemname = "CreateItemTest"
+    item_quantity_type = "Angle"  # "Length",Temperature,,Pressure,Speed,Intensity,Dimensionless,Angle
+    itemtype = "Number"
+
+    labeltext = "das ist eine testzahl:"
+    itemlabel = "[{labeltext}%.1f °]".format(labeltext=labeltext)
+    itemcategory = "TestCategory"
+    itemtags: List[str] = ["testtag1", "testtag2"]
+    itemgroup_names: List[str] = ["testgroup1", "testgroup2"]
+    grouptype = "testgrouptype"
+    functionname = "testfunctionname"
+    functionparams: List[str] = ["testfunctionnameParam1", "testfunctionnameParam2", "testfunctionnameParam3"]
+
+    x2 = item_factory.create_or_update_item(name=itemname,
+                                            data_type=itemtype,
+                                            quantity_type=item_quantity_type,
+                                            label=itemlabel,
+                                            category=itemcategory,
+                                            tags=itemtags,
+                                            group_names=itemgroup_names,
+                                            group_type=grouptype,
+                                            function_name=functionname,
+                                            function_params=functionparams)
+
+
+    #you can "say" something on the default audio sink with the default voice
+    dv=openhab.get_audio_defaultvoice()
+    ds=openhab.get_audio_defaultsink()
+    dv.say("this is a test",ds)
+
+    # you can send a textual "voice" command to openhab for interpretation/execution:
+    vi = openhab.get_voicesinterpreter("system")
+    vi.interpret("switch on the_testDimmer")
 
 Note on NULL and UNDEF
 ----------------------

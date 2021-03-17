@@ -1,8 +1,8 @@
-#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
+"""utils for testing """
 
 #
-# Georges Toth (c) 2016-present <georges@trypill.org>
+# Alexey Grubauer (c) 2020-present <alexey@ingenious-minds.at>
 #
 # python-openhab is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -17,29 +17,12 @@
 # You should have received a copy of the GNU General Public License
 # along with python-openhab.  If not, see <http://www.gnu.org/licenses/>.
 #
+# pylint: disable=bad-indentation
+import logging
+from typing import TYPE_CHECKING, List, Set, Dict, Tuple, Union, Any, Optional, NewType, Callable
+
+log = logging.getLogger()
 
 
-import datetime
-import openhab
-import openhab.items
-
-base_url = 'http://localhost:8080/rest'
-
-oh = openhab.OpenHAB(base_url)
-
-# fetch all items
-items = oh.fetch_all_items()
-
-# fetch other items, show how to toggle a switch
-sunset = items.get('Sunset')
-sunrise = items.get('Sunrise')
-knx_day_night: openhab.items.SwitchItem = items.get('KNX_day_night')
-
-now = datetime.datetime.now(datetime.timezone.utc)
-
-if now > sunrise.state and now < sunset.state:
-  knx_day_night.on()
-else:
-  knx_day_night.off()
-
-print(knx_day_night.state)
+def doassert(expect: Any, actual: Any, label: Optional[str] = ""):
+    assert actual == expect, "expected {label}:'{expect}', but it actually has '{actual}'".format(label=label, actual=actual, expect=expect)

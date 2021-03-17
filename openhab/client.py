@@ -17,7 +17,6 @@
 # You should have received a copy of the GNU General Public License
 # along with python-openhab.  If not, see <http://www.gnu.org/licenses/>.
 #
-
 # pylint: disable=bad-indentation
 
 import logging
@@ -25,10 +24,27 @@ import re
 import typing
 import warnings
 
+
+from aiohttp_sse_client import client as sse_client
+import asyncio
+import threading
 import requests
+import weakref
+import json
+from datetime import datetime,timedelta,timezone
+from enum import Enum
+
+
 from requests.auth import HTTPBasicAuth
+from aiohttp.helpers import BasicAuth
+from aiohttp import ClientSession
+
 
 import openhab.items
+import openhab.events
+import openhab.types
+import openhab.audio
+
 
 __author__ = 'Georges Toth <georges@trypill.org>'
 __license__ = 'AGPLv3+'
@@ -36,13 +52,21 @@ __license__ = 'AGPLv3+'
 
 class OpenHAB:
   """openHAB REST API client."""
+  class Version(Enum):
+    OH2 = 2
+    OH3 = 3
 
   def __init__(self, base_url: str,
                username: typing.Optional[str] = None,
                password: typing.Optional[str] = None,
                http_auth: typing.Optional[requests.auth.AuthBase] = None,
-               timeout: typing.Optional[float] = None) -> None:
-    """Class constructor.
+               timeout: typing.Optional[float] = None,
+               auto_update: typing.Optional[bool] = False,
+               openhab_version:typing.Optional[Version] = Version.OH2,
+               http_headers_for_autoupdate: typing.Optional[typing.Dict[str,str]] = None,
+               max_echo_to_openhab_ms: typing.Optional[int] = 800,
+               min_time_between_slotted_changes_ms: typing.Optional[float]=0) -> None:
+    """Class Constructor.
 
     Args:
       base_url (str): The openHAB REST URL, e.g. http://example.com/rest
@@ -51,16 +75,33 @@ class OpenHAB:
       password (str, optional): A optional password, used in conjunction with a optional
                       provided username, in case openHAB requires authentication.
       http_auth (AuthBase, optional): An alternative to username/password pair, is to
-                            specify a custom http authentication object of type :class:`requests.auth.AuthBase`.
+                            specify a custom http authentication object of data_type :class:`requests.auth.AuthBase`.
       timeout (float, optional): An optional timeout for REST transactions
-
+      auto_update (bool, optional): True: receive Openhab Item Events to actively get informed about changes.
+      max_echo_to_openhab_ms (int, optional): interpret Events from openHAB which hold a state-value equal to items current state-value
+                                              which are coming in within maxEchoToOpenhabMS milliseconds since our update/command as echos of our own update//command
+      min_time_between_slotted_changes_ms: the minimum time between 2 changes of items.Item which have turned on use_slotted_sending. (see description of items.Item)
     Returns:
       OpenHAB: openHAB class instance.
     """
     self.base_url = base_url
-
+    self.openhab_version = openhab_version
+    if self.openhab_version == OpenHAB.Version.OH2:
+      self.events_url = "{}/events?topics=smarthome/items".format(base_url.strip('/'))
+    elif self.openhab_version == OpenHAB.Version.OH3:
+      self.events_url = "{}/events".format(base_url.strip('/'))
+    else:
+      raise ValueError("Unknown Openhab Version specified")
+    self.autoUpdate = auto_update
     self.session = requests.Session()
     self.session.headers['accept'] = 'application/json'
+    self.registered_items = weakref.WeakValueDictionary()
+    self.all_items:typing.Dict[str,openhab.items.Item] = {}
+    self.http_buffersize = 4*1024*1024
+    self.http_auth=http_auth
+    if http_headers_for_autoupdate is None:
+      http_headers_for_autoupdate = {}
+    self.sse_headers = http_headers_for_autoupdate
 
     if http_auth is not None:
       self.session.auth = http_auth
@@ -68,25 +109,269 @@ class OpenHAB:
       self.session.auth = HTTPBasicAuth(username, password)
 
     self.timeout = timeout
+    self.maxEchoToOpenhabMS = max_echo_to_openhab_ms
 
     self.logger = logging.getLogger(__name__)
+    self.sseDaemon = None
+    self.sse_event_dispatcher_daemon = None
+    self.__keep_event_daemon_running__ = False
+    self.__wait_while_looping = threading.Event()
+    #self.sse_session = ClientSession()
+    self.eventListeners: typing.List[typing.Callable] = []
+    self._last_slotted_modification_sent = datetime.fromtimestamp(0)
+    self._slotted_modification_lock = threading.RLock()
+    self.min_time_between_slotted_changes_ms = min_time_between_slotted_changes_ms
+    self.incoming_events = []
+    self.incoming_events_rlock = threading.RLock()
+    self.__keep_event_dispatcher_running__ = False
+    self.__dispatcher_is_running = False
+    self.__sse_event_received = threading.Event()
+    if self.autoUpdate:
+      self.__installSSEClient__()
 
-  @staticmethod
-  def _check_req_return(req: requests.Response) -> None:
+  def _check_req_return(self, req: requests.Response) -> None:
     """Internal method for checking the return value of a REST HTTP request.
 
     Args:
       req (requests.Response): A requests Response object.
 
     Returns:
-      None: Returns None if no error occured; else raises an exception.
+      None: Returns None if no error occurred; else raises an exception.
 
     Raises:
       ValueError: Raises a ValueError exception in case of a non-successful
                   REST request.
     """
     if not 200 <= req.status_code < 300:
+      self.logger.error("HTTP error: {} caused by request '{}' with content '{}' ".format(req.status_code, req.url, req.content))
+
       req.raise_for_status()
+
+  def _parse_item(self, event: openhab.events.ItemEvent) -> None:
+    """method to parse an ItemEvent from openhab.
+        it interprets the received ItemEvent data.
+        in case the item was previously registered it will then delegate further parsing of the event to item itself through a call of the items _processExternalEvent method
+
+            Args:
+                  event:openhab.events.ItemEvent holding the event data
+        """
+
+  def _parse_event(self, event_data: typing.Dict) -> None:
+    """method to parse a event from openhab.
+    it interprets the received event dictionary and populates an openhab.events.event Object.
+    for Item events it then calls _parseItem for a more detailed interpretation of the received data
+    then it informs all registered listeners of openhab events
+        Args:
+              event_data send by openhab in a Dict
+    """
+    log = logging.getLogger(__name__)
+
+    if "type" in event_data:
+      event_reason = event_data["type"]
+
+
+      if event_reason in ["ItemCommandEvent", "ItemStateEvent", "ItemStateChangedEvent"]:
+        item_name = event_data["topic"].split("/")[-2]
+        event_data = json.loads(event_data["payload"])
+
+        raw_event = openhab.events.RawItemEvent(item_name=item_name, event_type=event_reason, content=event_data)
+        log.debug("about to inform listeners")
+        self._inform_event_listeners(raw_event)
+
+        if item_name in self.registered_items:
+          item = self.registered_items[item_name]
+          if item is None:
+            self.logger.warning("item '{}' was removed in all scopes. Ignoring the events coming in for it.".format(item_name))
+          else:
+            item._process_external_event(raw_event)
+        else:
+          self.logger.debug("item '{}' not registered. ignoring the arrived event.".format(item_name))
+
+    else:
+      log.debug("received unknown Event-data_type in Openhab Event stream: {}".format(event_data))
+
+  def _inform_event_listeners(self, event: openhab.events.RawItemEvent):
+    """internal method to send itemevents to listeners.
+          Args:
+                event:openhab.events.ItemEvent to be sent to listeners
+        """
+    for aListener in self.eventListeners:
+      try:
+        aListener(event)
+      except Exception as e:
+        self.logger.error("error executing Eventlistener for event:{}.".format(event.item_name), e)
+
+  def add_event_listener(self, listener: typing.Callable[[openhab.events.RawItemEvent], None]):
+    """method to register a callback function to get informed about all Item-Events received from openhab.
+          Args:
+              listener:typing.Callable[[openhab.events.ItemEvent] a method with one parameter of data_type openhab.events.ItemEvent which will be called for every event
+        """
+    self.eventListeners.append(listener)
+
+  def remove_event_listener(self, listener: typing.Optional[typing.Callable[[openhab.events.RawItemEvent], None]] = None):
+    """method to unregister a callback function to stop getting informed about all Item-Events received from openhab.
+          Args:
+              listener:typing.Callable[[openhab.events.ItemEvent] the method to be removed.
+        """
+    if listener is None:
+      self.eventListeners.clear()
+    elif listener in self.eventListeners:
+      self.eventListeners.remove(listener)
+
+  def event_dispatcher_thread(self):
+    ct = threading.currentThread()
+    ct.name = "sse_event_dispatcher (started at {})".format(datetime.now())
+    self.__dispatcher_is_running = True
+    while True:
+      if not self.__keep_event_dispatcher_running__:
+        self.__dispatcher_is_running = False
+        return
+      event_data = None
+      qlen = 0
+      try:
+        self.incoming_events_rlock.acquire()
+        try:
+          qlen=len(self.incoming_events)
+          if  qlen > 0:
+            event_data = self.incoming_events.pop(0)
+        finally:
+          self.incoming_events_rlock.release()
+        if event_data is None:
+          #no data available in Q, so we wait 10seconds for a wakeup event
+          self.__sse_event_received.wait(10)
+          self.__sse_event_received.clear()
+        else:
+          self.logger.debug("dispatching Event (items in eventQ:{}), Event: {}...".format(qlen,str(event_data)[:300]))
+          self._parse_event(event_data)
+      except Exception as e:
+        self.logger.warning("problem dispatching event: '{}' ".format(e))
+
+
+  def sse_client_handler(self):
+    """the actual handler to receive Events from openhab
+            """
+    self.logger.info("about to connect to Openhab Events-Stream.")
+    ct = threading.currentThread()
+    ct.name = "sse_client_handler started at {}".format(datetime.now())
+    # this curls works:
+    # iobroker @ iobrokerserver: ~$ curl - X
+    # GET
+    # "http://10.10.20.85:8080/rest/events" - H
+    # "accept: */*" - H
+    # "Authorization: oh.ingenioushome.vFACRDQPY0Pf7JwgXZcqUz9rjrJYt0IZaeVobkrkLNfVx3mzhiWAdTqApWt3B2hL21z82eFj1VFbHqOMAAhQ"
+
+    async def run_loop():
+
+
+
+
+      async with sse_client.EventSource(self.events_url, headers=self.sse_headers, read_bufsize=self.http_buffersize) as event_source:
+        try:
+
+          self.logger.info("starting Openhab - Event Daemon")
+          async for event in event_source:
+            if not self.__keep_event_daemon_running__:
+              self.sseDaemon = None
+              return
+            event_data = json.loads(event.data)
+            qlen = len(self.incoming_events)
+            self.logger.debug("received Event.qlen:{}. event: {}...".format(qlen,str(event_data)[:300]))
+            self.incoming_events_rlock.acquire()
+            try:
+              self.incoming_events.append(event_data)
+            finally:
+              self.incoming_events_rlock.release()
+            self.__sse_event_received.set() # inform dispatcher thread about the new event
+            #self._parse_event(event_data)
+
+        except ConnectionError as exception:
+          self.logger.error("connection error")
+          self.logger.exception(exception)
+    while self.__keep_event_daemon_running__:
+      # keep restarting the handler after timeouts or connection issues
+      try:
+        asyncio.run(run_loop())
+      except asyncio.TimeoutError:
+        self.logger.info("reconnecting after timeout")
+      except openhab.types.TypeNotImplementedError as e:
+        self.logger.warning("received unknown datatye '{}' for item '{}'".format(e.datatype,e.itemname))
+      except Exception as e:
+        self.logger.warning("problem receiving event: '{}' ".format(e))
+
+
+    self.sseDaemon = None
+
+  def get_registered_items(self) -> weakref.WeakValueDictionary:
+    """get a Dict of weak references to registered items.
+            Args:
+              an Item object
+        """
+    return self.registered_items
+
+  def register_all_items(self) -> None:
+    """fetches all items from openhab and caches them in all_items.
+      subsequent calls to get_item will use this cache.
+      subsequent calls to register_all_items will rebuld the chache
+    """
+    self.all_items = self.fetch_all_items()
+    for item in self.all_items.values():
+      self.register_item(item)
+
+  def register_item(self, item: openhab.items.Item) -> None:
+    """method to register an instantiated item. registered items can receive commands and updates from openhab.
+    Usually you don´t need to register as Items register themself.
+        Args:
+          an Item object
+    """
+    if item is not None and item.name is not None:
+      if item.name not in self.registered_items:
+        self.logger.debug("registered item:{}".format(item.name))
+        self.registered_items[item.name] = item
+
+  def unregister_item(self,name):
+    if name in self.all_items:
+      self.all_items.pop(name)
+
+  def stop_receiving_events(self):
+    """stop to receive events from openhab.
+        """
+    self.__keep_event_daemon_running__ = False
+
+  def start_receiving_events(self):
+    """start to receive events from openhab.
+        """
+    if not self.__keep_event_daemon_running__:
+      if self.sseDaemon is not None:
+        if self.sseDaemon.is_alive():
+          # we are running already and did not stop yet.
+          # so we simply keep running
+          self.__keep_event_daemon_running__ = True
+          return
+    self.__installSSEClient__()
+
+  def __installSSEClient__(self) -> None:
+    """ installs an event Stream to receive all Item events"""
+    self.__keep_event_dispatcher_running__ = True
+    self.__keep_event_daemon_running__ = True
+    self.keep_running = True
+    self.sse_event_dispatcher_daemon = threading.Thread(target=self.event_dispatcher_thread, args=(), daemon=True)
+    self.sseDaemon = threading.Thread(target=self.sse_client_handler, args=(), daemon=True)
+
+    self.logger.info("about to connect to Openhab Events-Stream.")
+    self.sse_event_dispatcher_daemon.start()
+    self.sseDaemon.start()
+    self.logger.info("connected to Openhab Events-Stream.")
+
+  def stop_looping(self):
+    """ method to reactivate the thread which went into the loop_for_events loop.
+        """
+    self.__wait_while_looping.set()
+
+  def loop_for_events(self):
+    """ method to keep waiting for events from openhab
+            you can use this method after your program finished initialization and all other work and now wants to keep waiting for events.
+    """
+    self.__wait_while_looping.wait()
 
   def req_get(self, uri_path: str) -> typing.Any:
     """Helper method for initiating a HTTP GET request.
@@ -104,7 +389,7 @@ class OpenHAB:
     self._check_req_return(r)
     return r.json()
 
-  def req_post(self, uri_path: str, data: typing.Optional[dict] = None) -> None:
+  def req_post(self, uri_path: str, data: typing.Optional[dict] = None, headers: typing.Optional[dict]=None) -> None:
     """Helper method for initiating a HTTP POST request.
 
     Besides doing the actual request, it also checks the return value and returns the resulting decoded
@@ -117,10 +402,49 @@ class OpenHAB:
     Returns:
       None: No data is returned.
     """
-    r = self.session.post(self.base_url + uri_path, data=data, headers={'Content-Type': 'text/plain'}, timeout=self.timeout)
+    if headers is None:
+      headers = {'Content-Type': 'text/plain'}
+    r = self.session.post(self.base_url + uri_path, data=data, headers=headers, timeout=self.timeout)
     self._check_req_return(r)
 
-  def req_put(self, uri_path: str, data: typing.Optional[dict] = None) -> None:
+  def req_json_put(self, uri_path: str, json_data: str = None, headers: typing.Optional[dict]=None) -> None:
+    """Helper method for initiating a HTTP PUT request.
+
+        Besides doing the actual request, it also checks the return value and returns the resulting decoded
+        JSON data.
+
+        Args:
+          uri_path (str): The path to be used in the PUT request.
+          json_data (str): the request data as jason
+
+
+        Returns:
+          None: No data is returned.
+        """
+    if headers is None:
+      headers = {'Content-Type': 'application/json', "Accept": "application/json"}
+    r = self.session.put(self.base_url + uri_path, data=json_data, headers=headers, timeout=self.timeout)
+    self._check_req_return(r)
+
+  def req_del(self,  uri_path: str, headers: typing.Optional[dict]=None) -> None:
+    """Helper method for initiating a HTTP DELETE request.
+
+        Besides doing the actual request, it also checks the return value and returns the resulting decoded
+        JSON data.
+
+        Args:
+          uri_path (str): The path to be used in the DELETE request.
+
+
+        Returns:
+          None: No data is returned.
+        """
+    if headers is None:
+      headers = {"Accept": "application/json"}
+    r = self.session.delete(self.base_url + uri_path, headers=headers)
+    self._check_req_return(r)
+
+  def req_put(self, uri_path: str, data: typing.Optional[dict] = None, headers: typing.Optional[dict]=None) -> None:
     """Helper method for initiating a HTTP PUT request.
 
     Besides doing the actual request, it also checks the return value and returns the resulting decoded
@@ -133,7 +457,9 @@ class OpenHAB:
     Returns:
       None: No data is returned.
     """
-    r = self.session.put(self.base_url + uri_path, data=data, headers={'Content-Type': 'text/plain'}, timeout=self.timeout)
+    if headers is None:
+      headers = {'Content-Type': 'text/plain'}
+    r = self.session.put(self.base_url + uri_path, data=data, headers=headers, timeout=self.timeout)
     self._check_req_return(r)
 
   # fetch all items
@@ -152,23 +478,36 @@ class OpenHAB:
 
     return items
 
-  def get_item(self, name: str) -> openhab.items.Item:
-    """Returns an item with its state and type as fetched from openHAB.
+  def get_item(self, name: str, force_request_to_openhab:typing.Optional[bool]=False,auto_update: typing.Optional[bool] = True,maxEchoToOpenhabMS=None, use_slotted_sending: bool = False) -> openhab.items.Item:
+    """Returns an item with its state and data_type as fetched from openHAB.
 
     Args:
       name (str): The name of the item to fetch from openHAB.
+      force_request_to_openhab (bool): ignore cached items and ask openhab
+      auto_update (bool): if True you will receive changes of the item from openhab.
+      maxEchoToOpenhabMS: when you change an item openhab gets informed about that change. Then openhab will inform all listeners (including ourself) about that change. The item will protect you from those echos if they happen within this timespan.
+      use_slotted_sending: when you send many consecutive changes very rapidly to openhab it might happen that openhab things or other bindings can not digest this that quickly and will therefore lose some of the changes.
+                        if you set use_slotted_sending to True, the item will make sure that no more than min_time_between_slotted_changes_ms milliseconds specified at client.openHAB.
 
     Returns:
       Item: A corresponding Item class instance with the state of the requested item.
     """
-    json_data = self.get_item_raw(name)
+    if name in self.all_items and not force_request_to_openhab:
+      item= self.all_items[name]
+    else:
+      json_data = self.get_item_raw(name)
+      item= self.json_to_item(json_data)
+    item.autoUpdate = auto_update
+    if maxEchoToOpenhabMS is not None:
+      item.maxEchoToOpenhabMS = maxEchoToOpenhabMS
+    item.use_slotted_sending = use_slotted_sending
+    return item
 
-    return self.json_to_item(json_data)
 
   def json_to_item(self, json_data: dict) -> openhab.items.Item:
     """This method takes as argument the RAW (JSON decoded) response for an openHAB item.
 
-    It checks of what type the item is and returns a class instance of the
+    It checks of what data_type the item is and returns a class instance of the
     specific item filled with the item's state.
 
     Args:
@@ -180,6 +519,9 @@ class OpenHAB:
     _type = json_data['type']
     if _type == 'Group' and 'groupType' in json_data:
       _type = json_data["groupType"]
+
+    if _type == 'String':
+      return openhab.items.StringItem(self, json_data)
 
     if _type == 'Switch':
       return openhab.items.SwitchItem(self, json_data)
@@ -223,6 +565,116 @@ class OpenHAB:
       dict: A JSON decoded dict.
     """
     return self.req_get('/items/{}'.format(name))
+
+  # audio
+  def get_audio_defaultsink(self) -> openhab.audio.Audiosink:
+    """returns openhabs default audio sink
+
+
+        Returns:
+          openhab.audio.Audiosink: the audio sink
+    """
+    defaultsink = self._get_audio_defaultsink_raw()
+    return openhab.audio.Audiosink.json_to_audiosink(defaultsink,self)
+
+  def _get_audio_defaultsink_raw(self) -> typing.Dict:
+    return self.req_get('/audio/defaultsink')
+
+  def get_all_audiosinks(self) -> typing.List[openhab.audio.Audiosink]:
+    """returns openhabs audio sinks
+
+
+            Returns:
+              List[openhab.audio.Audiosink]: a list of audio sinks
+        """
+    result: typing.List[openhab.audio.Audiosink] = []
+    sinks = self._get_all_audiosinks_raw()
+    for sink in sinks:
+      result.append(openhab.audio.Audiosink.json_to_audiosink(sink,self))
+    return result
+
+  def _get_all_audiosinks_raw(self) -> typing.Any:
+    return self.req_get('/audio/sinks')
+
+  # voices
+  def get_audio_defaultvoice(self) -> openhab.audio.Voice:
+    """returns openhabs default voice
+
+
+        Returns:
+          openhab.audio.Voice: the voice
+    """
+    defaultvoice = self._get_audio_defaultvoice_raw()
+    return openhab.audio.Voice.json_to_voice(defaultvoice,self)
+
+  def _get_audio_defaultvoice_raw(self) -> typing.Dict:
+    return self.req_get('/voice/defaultvoice')
+
+  def get_all_voices(self) -> typing.List[openhab.audio.Voice]:
+    """returns openhabs voices
+
+
+            Returns:
+              List[openhab.audio.Voice]: a list of voices
+        """
+    result: typing.List[openhab.audio.Voice] = []
+    voices = self._get_all_voices_raw()
+    for voice in voices:
+      result.append(openhab.audio.Voice.json_to_voice(voice,self))
+    return result
+
+  def _get_all_voices_raw(self) -> typing.Dict:
+    return self.req_get('/voice/voices')
+
+  # voiceinterpreters
+  def get_voicesinterpreter(self, id:str) -> openhab.audio.Voiceinterpreter:
+    """returns a openhab voiceinterpreter
+    Args:
+      id (str): The id of the voiceinterpreter to be fetched.
+    Returns:
+      openhab.audio.Voiceinterpreter: the Voiceinterpreter
+        """
+    voiceinterpreter = self._get_voicesinterpreter_raw(id)
+    return openhab.audio.Voiceinterpreter.json_to_voiceinterpreter(voiceinterpreter,self)
+
+
+  def _get_voicesinterpreter_raw(self, id:str) -> typing.Dict:
+    return self.req_get('/voice/interpreters/{}'.format(id))
+
+  def get_all_voicesinterpreters(self) -> typing.List[openhab.audio.Voiceinterpreter]:
+    """returns openhabs voiceinterpreters
+            Returns:
+              List[openhab.audio.Voiceinterpreter]: a list of voiceinterpreters
+    """
+    result: typing.List[openhab.audio.Voiceinterpreter] = []
+    voiceinterpreters = self._get_all_voiceinterpreters_raw()
+    for voiceinterpreter in voiceinterpreters:
+      result.append(openhab.audio.Voiceinterpreter.json_to_voiceinterpreter(voiceinterpreter,self))
+    return result
+
+  def _get_all_voiceinterpreters_raw(self) -> typing.Dict:
+    return self.req_get('/voice/interpreters')
+
+  def say(self, text: str, audiosinkid: str, voiceid: str):
+    self.logger.info("sending say command to OH for voiceid:'{}', audiosinkid:'{}'".format(voiceid,audiosinkid))
+    url=self.base_url + "/voice/say/?voiceid={voiceid}&sinkid={sinkid}".format(voiceid=requests.utils.quote(voiceid), sinkid=requests.utils.quote(audiosinkid))
+    r = self.session.post(url, data=text, headers={'Accept': 'application/json'}, timeout=self.timeout)
+    self._check_req_return(r)
+
+  def interpret(self, text: str, voiceinterpreterid: str):
+    url=self.base_url + "/voice/interpreters/{interpreterid}".format(interpreterid=requests.utils.quote(voiceinterpreterid))
+    r = self.session.post(url, data=text, headers={'Accept': 'application/json'}, timeout=self.timeout)
+    self._check_req_return(r)
+
+# UI
+  def _get_all_widgets_raw(self):
+    url = "/ui/components/ui%3Awidget"
+    return self.req_get(url)
+
+  def _get_widget_raw(self, component_UID:str):
+    url = "/ui/components/ui%3Awidget/{componentUID}".format(componentUID=component_UID)
+    return self.req_get(url)
+
 
 
 # noinspection PyPep8Naming
