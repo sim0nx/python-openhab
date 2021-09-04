@@ -41,7 +41,9 @@ class OpenHAB:
                username: typing.Optional[str] = None,
                password: typing.Optional[str] = None,
                http_auth: typing.Optional[requests.auth.AuthBase] = None,
-               timeout: typing.Optional[float] = None) -> None:
+               timeout: typing.Optional[float] = None,
+               session: typing.Optional[requests.Session] = None
+               ) -> None:
     """Class constructor.
 
     Args:
@@ -53,13 +55,18 @@ class OpenHAB:
       http_auth (AuthBase, optional): An alternative to username/password pair, is to
                             specify a custom http authentication object of type :class:`requests.auth.AuthBase`.
       timeout (float, optional): An optional timeout for REST transactions
+      session: Optional requests session instance, used e.g. for OAuth2 authentication
 
     Returns:
       OpenHAB: openHAB class instance.
     """
     self.base_url = base_url
 
-    self.session = requests.Session()
+    if session is not None:
+      self.session = session
+    else:
+      self.session = requests.Session()
+
     self.session.headers['accept'] = 'application/json'
 
     if http_auth is not None:
