@@ -13,6 +13,8 @@ url_rest = f'{url_base}/rest'
 os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = '1'
 
 oauth2_token = openhab.oauth2_helper.get_oauth2_token(url_base, username='admin', password='admin')
+# print(oauth2_token)
+# raise SystemExit
 
 oauth2_config = {'client_id': r'http://127.0.0.1/auth',
                  'token_cache': str(pathlib.Path(__file__).resolve().parent.parent / '.oauth2_token_test'),
