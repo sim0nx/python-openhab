@@ -192,7 +192,7 @@ class Item:
 
     v = self._rest_format(value)
 
-    self.openhab.req_post('/items/{}'.format(self.name), data=v)
+    self.openhab.req_post(f'/items/{self.name}', data=v)
 
   def update_state_null(self) -> None:
     """Update the state of the item to *NULL*."""
@@ -241,12 +241,26 @@ class DateTimeItem(Item):
 
     return self._state > other
 
+  def __ge__(self, other: datetime.datetime) -> bool:
+    """Greater or equal comparison."""
+    if self._state is None or not isinstance(other, datetime.datetime):
+      raise NotImplementedError('You can only compare two DateTimeItem objects.')
+
+    return self._state >= other
+
   def __lt__(self, other: object) -> bool:
     """Less than comparison."""
     if not isinstance(other, datetime.datetime):
       raise NotImplementedError('You can only compare two DateTimeItem objects.')
 
     return not self.__gt__(other)
+
+  def __le__(self, other: object) -> bool:
+    """Less or equal comparison."""
+    if not isinstance(other, datetime.datetime):
+      raise NotImplementedError('You can only compare two DateTimeItem objects.')
+
+    return self._state <= other
 
   def __eq__(self, other: object) -> bool:
     """Equality comparison."""
@@ -371,7 +385,7 @@ class ContactItem(Item):
 
   types = [openhab.types.OpenCloseType]
 
-  def command(self, *args, **kwargs) -> None:
+  def command(self, *args: typing.Any, **kwargs: typing.Any) -> None:
     """This overrides the `Item` command method.
 
     Note: Commands are not accepted for items of type contact.

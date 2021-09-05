@@ -19,14 +19,16 @@
 #
 
 # pylint: disable=bad-indentation
-
+import json
 import logging
+import pathlib
 import re
 import typing
 import warnings
 
 import requests
 from requests.auth import HTTPBasicAuth
+from requests_oauthlib import OAuth2Session
 
 import openhab.items
 
@@ -42,9 +44,28 @@ class OpenHAB:
                password: typing.Optional[str] = None,
                http_auth: typing.Optional[requests.auth.AuthBase] = None,
                timeout: typing.Optional[float] = None,
-               session: typing.Optional[requests.Session] = None
+               oauth2_config: typing.Optional[typing.Dict[str, typing.Any]] = None
                ) -> None:
     """Class constructor.
+
+    The format of the optional *oauth2_config* dictionary is as follows:
+    ```python
+    {"client_id": "http://127.0.0.1/auth",
+     "token_cache": "/<path>/<to>/.oauth2_token",
+     "token":
+       {"access_token": "adsafdasfasfsafasfsafasfasfasfsa....",
+        "expires_in": 3600,
+        "refresh_token": "312e21e21e32112",
+        "scope": "admin",
+        "token_type": "bearer",
+        "user": {
+          "name": "admin",
+          "roles": [
+            "administrator"
+          ]
+        }
+    }
+    ```
 
     Args:
       base_url (str): The openHAB REST URL, e.g. http://example.com/rest
@@ -55,24 +76,39 @@ class OpenHAB:
       http_auth (AuthBase, optional): An alternative to username/password pair, is to
                             specify a custom http authentication object of type :class:`requests.auth.AuthBase`.
       timeout (float, optional): An optional timeout for REST transactions
-      session: Optional requests session instance, used e.g. for OAuth2 authentication
+      oauth2_config: Optional OAuth2 configuration dictionary
 
     Returns:
       OpenHAB: openHAB class instance.
     """
-    self.base_url = base_url
+    self.url_rest = base_url
+    self.url_base = base_url.rsplit('/', 1)[0]
 
-    if session is not None:
-      self.session = session
+    self.oauth2_config = oauth2_config
+
+    if self.oauth2_config is not None:
+      self._validate_oauth2_config(self.oauth2_config)
+
+      self.session = OAuth2Session(self.oauth2_config['client_id'],
+                                   token=self.oauth2_config['token'],
+                                   auto_refresh_url=f'{self.url_rest}/auth/token',
+                                   auto_refresh_kwargs={'client_id': self.oauth2_config['client_id']},
+                                   token_updater=self._oauth2_token_updater
+                                   )
+
+      token_cache_path = pathlib.Path(self.oauth2_config['token_cache'])
+      if not token_cache_path.is_file():
+        self._oauth2_token_updater(self.oauth2_config['token'])
+
     else:
       self.session = requests.Session()
 
-    self.session.headers['accept'] = 'application/json'
+      if http_auth is not None:
+        self.session.auth = http_auth
+      elif not (username is None or password is None):
+        self.session.auth = HTTPBasicAuth(username, password)
 
-    if http_auth is not None:
-      self.session.auth = http_auth
-    elif not (username is None or password is None):
-      self.session.auth = HTTPBasicAuth(username, password)
+    self.session.headers['accept'] = 'application/json'
 
     self.timeout = timeout
 
@@ -107,7 +143,7 @@ class OpenHAB:
     Returns:
       dict: Returns a dict containing the data returned by the OpenHAB REST server.
     """
-    r = self.session.get(self.base_url + uri_path, timeout=self.timeout)
+    r = self.session.get(self.url_rest + uri_path, timeout=self.timeout)
     self._check_req_return(r)
     return r.json()
 
@@ -124,7 +160,7 @@ class OpenHAB:
     Returns:
       None: No data is returned.
     """
-    r = self.session.post(self.base_url + uri_path, data=data, headers={'Content-Type': 'text/plain'}, timeout=self.timeout)
+    r = self.session.post(self.url_rest + uri_path, data=data, headers={'Content-Type': 'text/plain'}, timeout=self.timeout)
     self._check_req_return(r)
 
   def req_put(self, uri_path: str, data: typing.Optional[dict] = None) -> None:
@@ -140,7 +176,7 @@ class OpenHAB:
     Returns:
       None: No data is returned.
     """
-    r = self.session.put(self.base_url + uri_path, data=data, headers={'Content-Type': 'text/plain'}, timeout=self.timeout)
+    r = self.session.put(self.url_rest + uri_path, data=data, headers={'Content-Type': 'text/plain'}, timeout=self.timeout)
     self._check_req_return(r)
 
   # fetch all items
@@ -231,12 +267,56 @@ class OpenHAB:
     """
     return self.req_get('/items/{}'.format(name))
 
+  def logout(self) -> bool:
+    """OAuth2 session logout method.
+
+    Returns:
+      True or False depending on if the logout did succeed.
+    """
+    if self.oauth2_config is None or not isinstance(self.session, OAuth2Session):
+      raise ValueError('You are trying to logout from a non-OAuth2 session. This is not supported!')
+
+    data = {'refresh_token': self.oauth2_config['token']['refresh_token'],
+            'id': self.oauth2_config['client_id']
+            }
+    url_logout = f'{self.url_rest}/auth/logout'
+
+    res = self.session.post(url_logout, data=data)
+
+    return res.status_code == 200
+
+  @staticmethod
+  def _validate_oauth2_config(oauth2_config: typing.Dict[str, typing.Any]) -> bool:
+    """Validate OAuth2 configuration."""
+    if not ('client_id' in oauth2_config and 'token_cache' in oauth2_config and 'token' in oauth2_config):
+      return False
+
+    # pylint: disable=too-many-boolean-expressions
+    if 'access_token' not in oauth2_config['token'] or \
+      'expires_in' not in oauth2_config['token'] or \
+      'refresh_token' not in oauth2_config['token'] or \
+      'scope' not in oauth2_config['token'] or \
+      'token_type' not in oauth2_config['token'] or \
+      'user' not in oauth2_config['token'] or \
+      'name' not in oauth2_config['token']['user'] or \
+      'roles' not in oauth2_config['token']['user']:
+      return False
+
+    return True
+
+  def _oauth2_token_updater(self, token: typing.Dict[str, typing.Any]) -> None:
+    if self.oauth2_config is None:
+      raise ValueError('OAuth2 configuration is not set; invalid action!')
+
+    with open(self.oauth2_config['token_cache'], 'w', encoding='utf-8') as fhdl:
+      json.dump(token, fhdl)
+
 
 # noinspection PyPep8Naming
 class openHAB(OpenHAB):
-  """Legacy class wrapper."""
+  """Legacy class wrapper, **do not** use."""
 
-  def __init__(self, *args, **kwargs):
+  def __init__(self, *args: typing.Any, **kwargs: typing.Any) -> None:
     """Constructor."""
     super().__init__(*args, **kwargs)
 
