@@ -1,5 +1,6 @@
 """OAuth2 helper method for generating and fetching an OAuth2 token."""
 
+import logging
 import typing
 
 import bs4
@@ -72,11 +73,15 @@ def get_oauth2_token(base_url: str,
   res.raise_for_status()
 
   if 'location' not in res.headers:
+    logging.debug(res.headers)
+    logging.debug(res.content)
     raise KeyError('Token generation failed!')
 
   oauth_redirect_location = res.headers['location']
 
   if '?code=' not in oauth_redirect_location:
+    logging.debug(res.headers)
+    logging.debug(res.content)
     raise ValueError('Token generation failed!')
 
   oauth2_registration_code = oauth_redirect_location.split('?code=', 1)[1]
