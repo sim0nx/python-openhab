@@ -22,4 +22,4 @@ install:
   - python docker/test_connectivity.py
 
 script:
-  - pytest -v tests
+  - pytest --log-level=DEBBUG -v tests
