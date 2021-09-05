@@ -19,6 +19,7 @@ install:
   - pip install -U pip
   - pip install --upgrade-strategy eager .[test]
   - docker run -d --name openhab -p 8080:8080 -e OPENHAB_HTTP_PORT=8080 -v $TRAVIS_BUILD_DIR/docker/openhab_conf:/openhab/conf $image
+  - docker exec -it openhab /openhab/runtime/bin/client -p habopen users add admin admin admin
   - python docker/test_connectivity.py
 
 script:
