@@ -122,7 +122,8 @@ class OpenHAB:
     self._rules: typing.Optional[openhab.rules.Rules] = None
 
   @property
-  def rules(self):
+  def rules(self) -> openhab.rules.Rules:
+    """Get object for managing rules."""
     if self._rules is None:
       self._rules = openhab.rules.Rules(self)
 
@@ -161,7 +162,10 @@ class OpenHAB:
     self._check_req_return(r)
     return r.json()
 
-  def req_post(self, uri_path: str, data: typing.Optional[dict] = None) -> None:
+  def req_post(self,
+               uri_path: str,
+               data: typing.Optional[typing.Union[str, bytes, typing.Mapping[str, typing.Any], typing.Iterable[tuple[str, typing.Optional[str]]]]] = None
+               ) -> None:
     """Helper method for initiating a HTTP POST request.
 
     Besides doing the actual request, it also checks the return value and returns the resulting decoded
@@ -235,8 +239,12 @@ class OpenHAB:
       Item: A corresponding Item class instance with the state of the item.
     """
     _type = json_data['type']
+
     if _type == 'Group' and 'groupType' in json_data:
       _type = json_data["groupType"]
+
+    if _type == 'String':
+      return openhab.items.StringItem(self, json_data)
 
     if _type == 'Switch':
       return openhab.items.SwitchItem(self, json_data)

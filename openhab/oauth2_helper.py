@@ -1,6 +1,5 @@
 """OAuth2 helper method for generating and fetching an OAuth2 token."""
 
-import logging
 import typing
 
 import bs4

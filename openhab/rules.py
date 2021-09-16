@@ -20,14 +20,11 @@
 
 # pylint: disable=bad-indentation
 
-import datetime
 import logging
-import re
 import typing
 
-import dateutil.parser
-
-import openhab.types
+if typing.TYPE_CHECKING:
+  import openhab.client
 
 __author__ = 'Georges Toth <georges@trypill.org>'
 __license__ = 'AGPLv3+'
@@ -45,5 +42,6 @@ class Rules:
     self.openhab = openhab_conn
     self.logger = logging.getLogger(__name__)
 
-  def get(self):
+  def get(self) -> typing.List[typing.Dict[str, typing.Any]]:
+    """Get all rules."""
     return self.openhab.req_get('/rules')
