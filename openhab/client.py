@@ -164,7 +164,7 @@ class OpenHAB:
 
   def req_post(self,
                uri_path: str,
-               data: typing.Optional[typing.Union[str, bytes, typing.Mapping[str, typing.Any], typing.Iterable[tuple[str, typing.Optional[str]]]]] = None
+               data: typing.Optional[typing.Union[str, bytes, typing.Mapping[str, typing.Any], typing.Iterable[typing.Tuple[str, typing.Optional[str]]]]] = None
                ) -> None:
     """Helper method for initiating a HTTP POST request.
 
