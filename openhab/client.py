@@ -32,6 +32,7 @@ from requests.auth import HTTPBasicAuth
 from requests_oauthlib import OAuth2Session
 
 import openhab.items
+import openhab.rules
 
 __author__ = 'Georges Toth <georges@trypill.org>'
 __license__ = 'AGPLv3+'
@@ -117,6 +118,15 @@ class OpenHAB:
     self.timeout = timeout
 
     self.logger = logging.getLogger(__name__)
+
+    self._rules: typing.Optional[openhab.rules.Rules] = None
+
+  @property
+  def rules(self):
+    if self._rules is None:
+      self._rules = openhab.rules.Rules(self)
+
+    return self._rules
 
   @staticmethod
   def _check_req_return(req: requests.Response) -> None:
