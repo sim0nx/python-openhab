@@ -23,6 +23,7 @@ import json
 import logging
 import pathlib
 import re
+import time
 import typing
 import warnings
 
@@ -88,6 +89,9 @@ class OpenHAB:
 
     if self.oauth2_config is not None:
       self._validate_oauth2_config(self.oauth2_config)
+
+      if 'expires_at' not in self.oauth2_config['token']:
+        self.oauth2_config['token']['expires_at'] = time.time() - 10
 
       self.session = OAuth2Session(self.oauth2_config['client_id'],
                                    token=self.oauth2_config['token'],
