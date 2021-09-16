@@ -17,6 +17,7 @@ def test_datetime_update():
   dt_utc_now = datetime.datetime.utcnow().replace(tzinfo=datetime.timezone.utc)
   dt_obj.state = dt_utc_now
 
+  print(dt_obj.state)
   assert dt_obj.state.isoformat(timespec='seconds') == dt_utc_now.isoformat(timespec='seconds')
 
 
