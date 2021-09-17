@@ -181,7 +181,12 @@ class OpenHAB:
     r = self.session.post(self.url_rest + uri_path, data=data, headers={'Content-Type': 'text/plain'}, timeout=self.timeout)
     self._check_req_return(r)
 
-  def req_put(self, uri_path: str, data: typing.Optional[dict] = None) -> None:
+  def req_put(self,
+              uri_path: str,
+              data: typing.Optional[dict] = None,
+              json: typing.Optional[dict] = None,
+              headers: typing.Optional[dict] = None
+              ) -> None:
     """Helper method for initiating a HTTP PUT request.
 
     Besides doing the actual request, it also checks the return value and returns the resulting decoded
@@ -190,11 +195,16 @@ class OpenHAB:
     Args:
       uri_path (str): The path to be used in the PUT request.
       data (dict, optional): A optional dict with data to be submitted as part of the PUT request.
+      json: Data to be submitted as json.
+      headers: Specify optional custom headers.
 
     Returns:
       None: No data is returned.
     """
-    r = self.session.put(self.url_rest + uri_path, data=data, headers={'Content-Type': 'text/plain'}, timeout=self.timeout)
+    if headers is None:
+      headers = {'Content-Type': 'text/plain'}
+
+    r = self.session.put(self.url_rest + uri_path, data=data, json=json, headers=headers, timeout=self.timeout)
     self._check_req_return(r)
 
   # fetch all items
@@ -400,7 +410,8 @@ class OpenHAB:
       paramdict['function'] = {'name': function_name, 'params': function_params}
 
     self.logger.debug('About to create item with PUT request:\n%s', str(paramdict))
-    self.req_put(f'/items/{name}', data=paramdict)
+
+    self.req_put(f'/items/{name}', json=paramdict, headers={'Content-Type': 'application/json'})
 
 
 # noinspection PyPep8Naming
