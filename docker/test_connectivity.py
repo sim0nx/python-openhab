@@ -16,7 +16,7 @@ while True:
   except (requests.exceptions.RequestException, json.JSONDecodeError) as exc:
     print(str(exc))
   else:
-    if len(items):
+    if req.status_code == 200:
       break
 
   time.sleep(0.5)
