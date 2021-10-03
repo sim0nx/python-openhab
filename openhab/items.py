@@ -27,8 +27,8 @@ import typing
 
 import dateutil.parser
 
+import openhab.command_types
 import openhab.exceptions
-import openhab.types
 
 __author__ = 'Georges Toth <georges@trypill.org>'
 __license__ = 'AGPLv3+'
@@ -37,11 +37,11 @@ __license__ = 'AGPLv3+'
 class Item:
   """Base item class."""
 
-  types: typing.Sequence[typing.Type[openhab.types.CommandType]] = []
-  state_types: typing.Sequence[typing.Type[openhab.types.CommandType]] = []
-  command_event_types: typing.Sequence[typing.Type[openhab.types.CommandType]] = []
-  state_event_types: typing.Sequence[typing.Type[openhab.types.CommandType]] = []
-  state_changed_event_types: typing.Sequence[typing.Type[openhab.types.CommandType]] = []
+  types: typing.Sequence[typing.Type[openhab.command_types.CommandType]] = []
+  state_types: typing.Sequence[typing.Type[openhab.command_types.CommandType]] = []
+  command_event_types: typing.Sequence[typing.Type[openhab.command_types.CommandType]] = []
+  state_event_types: typing.Sequence[typing.Type[openhab.command_types.CommandType]] = []
+  state_changed_event_types: typing.Sequence[typing.Type[openhab.command_types.CommandType]] = []
 
   TYPENAME = 'unknown'
 
@@ -66,6 +66,8 @@ class Item:
     self._state = None  # type: typing.Optional[typing.Any]
     self._raw_state = None  # type: typing.Optional[typing.Any]  # raw state as returned by the server
     self._members = {}  # type: typing.Dict[str, typing.Any] #  group members (key = item name), for none-group items it's empty
+    self.function_name: typing.Optional[str] = None
+    self.function_params: typing.Optional[typing.Sequence[str]] = None
 
     self.logger = logging.getLogger(__name__)
 
@@ -83,6 +85,12 @@ class Item:
       self.group = True
       if 'groupType' in json_data:
         self.type_ = json_data['groupType']
+
+      if 'function' in json_data:
+        self.function_name = json_data['function']['name']
+
+        if 'params' in json_data['function']:
+          self.function_params = json_data['function']['params']
 
       # init members
       for i in json_data['members']:
@@ -144,7 +152,7 @@ class Item:
     """
     return self._members
 
-  def _validate_value(self, value: typing.Union[str, typing.Type[openhab.types.CommandType]]) -> None:
+  def _validate_value(self, value: typing.Union[str, typing.Type[openhab.command_types.CommandType]]) -> None:
     """Private method for verifying the new value before modifying the state of the item."""
     if self.type_ == 'String':
       if not isinstance(value, (str, bytes)):
@@ -193,7 +201,7 @@ class Item:
 
   def __str__(self) -> str:
     """String representation."""
-    return '<{0} - {1} : {2}>'.format(self.type_, self.name, self._state)
+    return f'<{self.type_} - {self.name} : {self._state}>'
 
   def _update(self, value: typing.Any) -> None:
     """Updates the state of an item, input validation is expected to be already done.
@@ -203,7 +211,7 @@ class Item:
                       on the item type and is checked accordingly.
     """
     # noinspection PyTypeChecker
-    self.openhab.req_put('/items/{}/state'.format(self.name), data=value)
+    self.openhab.req_put(f'/items/{self.name}/state', data=value)
 
   def update(self, value: typing.Any) -> None:
     """Updates the state of an item.
@@ -270,11 +278,19 @@ class Item:
     return False
 
 
+class GroupItem(Item):
+  """String item type."""
+
+  TYPENAME = 'Group'
+  types = []
+  state_types = []
+
+
 class StringItem(Item):
   """String item type."""
 
   TYPENAME = 'String'
-  types = [openhab.types.StringType]
+  types = [openhab.command_types.StringType]
   state_types = types
 
 
@@ -282,7 +298,7 @@ class DateTimeItem(Item):
   """DateTime item type."""
 
   TYPENAME = 'DateTime'
-  types = [openhab.types.DateTimeType]
+  types = [openhab.command_types.DateTimeType]
   state_types = types
 
   def __gt__(self, other: datetime.datetime) -> bool:
@@ -357,54 +373,54 @@ class PlayerItem(Item):
   """PlayerItem item type."""
 
   TYPENAME = 'Player'
-  types = [openhab.types.PlayPauseType, openhab.types.NextPrevious, openhab.types.RewindFastforward]
-  state_types = [openhab.types.PlayPauseType, openhab.types.RewindFastforward]
+  types = [openhab.command_types.PlayPauseType, openhab.command_types.NextPrevious, openhab.command_types.RewindFastforward]
+  state_types = [openhab.command_types.PlayPauseType, openhab.command_types.RewindFastforward]
 
   def play(self) -> None:
     """Send the command PLAY."""
-    self.command(openhab.types.PlayPauseType.PLAY)
+    self.command(openhab.command_types.PlayPauseType.PLAY)
 
   def pause(self) -> None:
     """Send the command PAUSE."""
-    self.command(openhab.types.PlayPauseType.PAUSE)
+    self.command(openhab.command_types.PlayPauseType.PAUSE)
 
   def next(self) -> None:
     """Send the command NEXT."""
-    self.command(openhab.types.NextPrevious.NEXT)
+    self.command(openhab.command_types.NextPrevious.NEXT)
 
   def previous(self) -> None:
     """Send the command PREVIOUS."""
-    self.command(openhab.types.NextPrevious.PREVIOUS)
+    self.command(openhab.command_types.NextPrevious.PREVIOUS)
 
   def fastforward(self) -> None:
     """Send the command FASTFORWARD."""
-    self.command(openhab.types.RewindFastforward.FASTFORWARD)
+    self.command(openhab.command_types.RewindFastforward.FASTFORWARD)
 
   def rewind(self) -> None:
     """Send the command REWIND."""
-    self.command(openhab.types.RewindFastforward.REWIND)
+    self.command(openhab.command_types.RewindFastforward.REWIND)
 
 
 class SwitchItem(Item):
   """SwitchItem item type."""
 
   TYPENAME = 'Switch'
-  types = [openhab.types.OnOffType]
+  types = [openhab.command_types.OnOffType]
   state_types = types
 
   def on(self) -> None:
     """Set the state of the switch to ON."""
-    self.command(openhab.types.OnOffType.ON)
+    self.command(openhab.command_types.OnOffType.ON)
 
   def off(self) -> None:
     """Set the state of the switch to OFF."""
-    self.command(openhab.types.OnOffType.OFF)
+    self.command(openhab.command_types.OnOffType.OFF)
 
   def toggle(self) -> None:
     """Toggle the state of the switch to OFF to ON and vice versa."""
-    if self.state == openhab.types.OnOffType.ON:
+    if self.state == openhab.command_types.OnOffType.ON:
       self.off()
-    elif self.state == openhab.types.OnOffType.OFF:
+    elif self.state == openhab.command_types.OnOffType.OFF:
       self.on()
 
 
@@ -412,7 +428,7 @@ class NumberItem(Item):
   """NumberItem item type."""
 
   TYPENAME = 'Number'
-  types = [openhab.types.DecimalType]
+  types = [openhab.command_types.DecimalType]
   state_types = types
 
   def _parse_rest(self, value: str) -> typing.Tuple[typing.Union[float, None], str]:  # type: ignore[override]
@@ -460,7 +476,7 @@ class ContactItem(Item):
   """Contact item type."""
 
   TYPENAME = 'Contact'
-  types = [openhab.types.OpenCloseType]
+  types = [openhab.command_types.OpenCloseType]
   state_types = types
 
   def command(self, *args: typing.Any, **kwargs: typing.Any) -> None:
@@ -472,19 +488,19 @@ class ContactItem(Item):
 
   def open(self) -> None:
     """Set the state of the contact item to OPEN."""
-    self.state = openhab.types.OpenCloseType.OPEN
+    self.state = openhab.command_types.OpenCloseType.OPEN
 
   def closed(self) -> None:
     """Set the state of the contact item to CLOSED."""
-    self.state = openhab.types.OpenCloseType.CLOSED
+    self.state = openhab.command_types.OpenCloseType.CLOSED
 
 
 class DimmerItem(Item):
   """DimmerItem item type."""
 
   TYPENAME = 'Dimmer'
-  types = [openhab.types.OnOffType, openhab.types.PercentType, openhab.types.IncreaseDecreaseType]
-  state_types = [openhab.types.PercentType]
+  types = [openhab.command_types.OnOffType, openhab.command_types.PercentType, openhab.command_types.IncreaseDecreaseType]
+  state_types = [openhab.command_types.PercentType]
 
   def _parse_rest(self, value: str) -> typing.Tuple[float, str]:  # type: ignore[override]
     """Parse a REST result into a native object.
@@ -514,27 +530,27 @@ class DimmerItem(Item):
 
   def on(self) -> None:
     """Set the state of the dimmer to ON."""
-    self.command(openhab.types.OnOffType.ON)
+    self.command(openhab.command_types.OnOffType.ON)
 
   def off(self) -> None:
     """Set the state of the dimmer to OFF."""
-    self.command(openhab.types.OnOffType.OFF)
+    self.command(openhab.command_types.OnOffType.OFF)
 
   def increase(self) -> None:
     """Increase the state of the dimmer."""
-    self.command(openhab.types.IncreaseDecreaseType.INCREASE)
+    self.command(openhab.command_types.IncreaseDecreaseType.INCREASE)
 
   def decrease(self) -> None:
     """Decrease the state of the dimmer."""
-    self.command(openhab.types.IncreaseDecreaseType.DECREASE)
+    self.command(openhab.command_types.IncreaseDecreaseType.DECREASE)
 
 
 class ColorItem(DimmerItem):
   """ColorItem item type."""
 
   TYPENAME = 'Color'
-  types = [openhab.types.OnOffType, openhab.types.PercentType, openhab.types.IncreaseDecreaseType, openhab.types.ColorType]
-  state_types = [openhab.types.ColorType]  # type: ignore
+  types = [openhab.command_types.OnOffType, openhab.command_types.PercentType, openhab.command_types.IncreaseDecreaseType, openhab.command_types.ColorType]
+  state_types = [openhab.command_types.ColorType]  # type: ignore
 
   def _parse_rest(self, value: str) -> typing.Tuple[typing.Optional[typing.Tuple[int, int, float]], str]:  # type: ignore[override]
     """Parse a REST result into a native object.
@@ -546,7 +562,7 @@ class ColorItem(DimmerItem):
       HSB components
       Optional UoM
     """
-    result = openhab.types.ColorType.parse(value)
+    result = openhab.command_types.ColorType.parse(value)
     return result, ''
 
   def _rest_format(self, value: typing.Union[typing.Tuple[int, int, float], str, int]) -> str:
@@ -576,8 +592,8 @@ class RollershutterItem(Item):
   """RollershutterItem item type."""
 
   TYPENAME = 'Rollershutter'
-  types = [openhab.types.UpDownType, openhab.types.PercentType, openhab.types.StopMoveType]
-  state_types = [openhab.types.PercentType]
+  types = [openhab.command_types.UpDownType, openhab.command_types.PercentType, openhab.command_types.StopMoveType]
+  state_types = [openhab.command_types.PercentType]
 
   def _parse_rest(self, value: str) -> typing.Tuple[int, str]:  # type: ignore[override]
     """Parse a REST result into a native object.
@@ -607,12 +623,12 @@ class RollershutterItem(Item):
 
   def up(self) -> None:
     """Set the state of the dimmer to ON."""
-    self.command(openhab.types.UpDownType.UP)
+    self.command(openhab.command_types.UpDownType.UP)
 
   def down(self) -> None:
     """Set the state of the dimmer to OFF."""
-    self.command(openhab.types.UpDownType.DOWN)
+    self.command(openhab.command_types.UpDownType.DOWN)
 
   def stop(self) -> None:
     """Set the state of the dimmer to OFF."""
-    self.command(openhab.types.StopMoveType.STOP)
+    self.command(openhab.command_types.StopMoveType.STOP)

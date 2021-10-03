@@ -253,6 +253,9 @@ class OpenHAB:
     if _type == 'Group' and 'groupType' in json_data:
       _type = json_data["groupType"]
 
+    if _type == 'Group' and 'groupType' not in json_data:
+      return openhab.items.GroupItem(self, json_data)
+
     if _type == 'String':
       return openhab.items.StringItem(self, json_data)
 
@@ -351,7 +354,7 @@ class OpenHAB:
                             category: typing.Optional[str] = None,
                             tags: typing.Optional[typing.List[str]] = None,
                             group_names: typing.Optional[typing.List[str]] = None,
-                            group_type: typing.Optional[str] = None,
+                            group_type: typing.Optional[typing.Union[str, typing.Type[openhab.items.Item]]] = None,
                             function_name: typing.Optional[str] = None,
                             function_params: typing.Optional[typing.List[str]] = None
                             ) -> None:
@@ -364,15 +367,16 @@ class OpenHAB:
       name: unique name of the item
       _type: the data_type used in openHAB (like Group, Number, Contact, DateTime, Rollershutter, Color, Dimmer, Switch, Player)
                        server.
-                       To create groups use the itemtype 'Group'!
+                       To create groups use 'GroupItem'!
       quantity_type: optional quantity_type ( like Angle, Temperature, Illuminance (see https://www.openhab.org/docs/concepts/units-of-measurement.html))
       label: optional openHAB label (see https://www.openhab.org/docs/configuration/items.html#label)
       category: optional category. no documentation found
       tags: optional list of tags (see https://www.openhab.org/docs/configuration/items.html#tags)
       group_names: optional list of groups this item belongs to.
-      group_type: optional group_type. no documentation found
-      function_name: optional function_name. no documentation found
-      function_params: optional list of function Params. no documentation found
+      group_type: Optional group_type (e.g. NumberItem, SwitchItem, etc).
+      function_name: Optional function_name. no documentation found.
+                     Can be one of ['EQUALITY', 'AND', 'OR', 'NAND', 'NOR', 'AVG', 'SUM', 'MAX', 'MIN', 'COUNT', 'LATEST', 'EARLIEST']
+      function_params: Optional list of function params (no documentation found), depending on function name.
     """
     paramdict: typing.Dict[str, typing.Union[str, typing.List[str], typing.Dict[str, typing.Union[str, typing.List]]]] = {}
 
@@ -404,10 +408,29 @@ class OpenHAB:
       paramdict['groupNames'] = group_names
 
     if group_type is not None:
-      paramdict['groupType'] = group_type
+      if isinstance(group_type, type):
+        if issubclass(group_type, openhab.items.Item):
+          paramdict['groupType'] = group_type.TYPENAME
+          # paramdict['function'] = {'name': 'AVG'}
+        else:
+          raise ValueError(f'group_type parameter must be a valid subclass of type *Item* or a string name of such a class; given value is "{str(group_type)}"')
+      else:
+        paramdict['groupType'] = group_type
 
-    if function_name is not None and function_params is not None:
-      paramdict['function'] = {'name': function_name, 'params': function_params}
+    if function_name is not None:
+      if function_name not in ('EQUALITY', 'AND', 'OR', 'NAND', 'NOR', 'AVG', 'SUM', 'MAX', 'MIN', 'COUNT', 'LATEST', 'EARLIEST'):
+        raise ValueError(f'Invalid function name "{function_name}')
+
+      if function_name in ('AND', 'OR', 'NAND', 'NOR') and (not function_params or len(function_params) != 2):
+        raise ValueError(f'Group function "{function_name}" requires two arguments')
+
+      if function_name == 'COUNT' and (not function_params or len(function_params) != 1):
+        raise ValueError(f'Group function "{function_name}" requires one arguments')
+
+      paramdict['function'] = {'name': function_name}
+
+      if function_params:
+        paramdict['function']['params'] = function_params
 
     self.logger.debug('About to create item with PUT request:\n%s', str(paramdict))
 
