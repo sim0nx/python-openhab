@@ -169,7 +169,7 @@ class Item:
           validation = True
 
       if not validation:
-        raise ValueError('Invalid value "{}"'.format(value))
+        raise ValueError(f'Invalid value "{value}"')
     else:
       raise ValueError()
 
@@ -282,8 +282,8 @@ class GroupItem(Item):
   """String item type."""
 
   TYPENAME = 'Group'
-  types = []
-  state_types = []
+  types: typing.List[typing.Type[openhab.command_types.CommandType]] = []
+  state_types: typing.List[typing.Type[openhab.command_types.CommandType]] = []
 
 
 class StringItem(Item):
@@ -456,9 +456,9 @@ class NumberItem(Item):
       return float(value), ''
 
     except (ArithmeticError, ValueError) as exc:
-      self.logger.error('error in parsing new value "{}" for "{}"'.format(value, self.name), exc)
+      self.logger.error('Error in parsing new value "%s" for "%s" - "%s"', value, self.name, exc)
 
-    raise ValueError('{}: unable to parse value "{}"'.format(self.__class__, value))
+    raise ValueError(f'{self.__class__}: unable to parse value "{value}"')
 
   def _rest_format(self, value: float) -> str:  # type: ignore[override]
     """Format a value before submitting to openHAB.
@@ -484,7 +484,7 @@ class ContactItem(Item):
 
     Note: Commands are not accepted for items of type contact.
     """
-    raise ValueError('This item ({}) only supports updates, not commands!'.format(self.__class__))
+    raise ValueError(f'This item ({self.__class__}) only supports updates, not commands!')
 
   def open(self) -> None:
     """Set the state of the contact item to OPEN."""

@@ -184,7 +184,7 @@ class OpenHAB:
   def req_put(self,
               uri_path: str,
               data: typing.Optional[dict] = None,
-              json: typing.Optional[dict] = None,
+              json_data: typing.Optional[dict] = None,
               headers: typing.Optional[dict] = None
               ) -> None:
     """Helper method for initiating a HTTP PUT request.
@@ -195,7 +195,7 @@ class OpenHAB:
     Args:
       uri_path (str): The path to be used in the PUT request.
       data (dict, optional): A optional dict with data to be submitted as part of the PUT request.
-      json: Data to be submitted as json.
+      json_data: Data to be submitted as json.
       headers: Specify optional custom headers.
 
     Returns:
@@ -204,7 +204,7 @@ class OpenHAB:
     if headers is None:
       headers = {'Content-Type': 'text/plain'}
 
-    r = self.session.put(self.url_rest + uri_path, data=data, json=json, headers=headers, timeout=self.timeout)
+    r = self.session.put(self.url_rest + uri_path, data=data, json=json_data, headers=headers, timeout=self.timeout)
     self._check_req_return(r)
 
   # fetch all items
@@ -300,7 +300,7 @@ class OpenHAB:
     Returns:
       dict: A JSON decoded dict.
     """
-    return self.req_get('/items/{}'.format(name))
+    return self.req_get(f'/items/{name}')
 
   def logout(self) -> bool:
     """OAuth2 session logout method.
@@ -378,7 +378,7 @@ class OpenHAB:
                      Can be one of ['EQUALITY', 'AND', 'OR', 'NAND', 'NOR', 'AVG', 'SUM', 'MAX', 'MIN', 'COUNT', 'LATEST', 'EARLIEST']
       function_params: Optional list of function params (no documentation found), depending on function name.
     """
-    paramdict: typing.Dict[str, typing.Union[str, typing.List[str], typing.Dict[str, typing.Union[str, typing.List]]]] = {}
+    paramdict: typing.Dict[str, typing.Union[str, typing.List[str], typing.Dict[str, typing.Union[str, typing.List[str]]]]] = {}
 
     if isinstance(_type, type):
       if issubclass(_type, openhab.items.Item):
@@ -427,14 +427,14 @@ class OpenHAB:
       if function_name == 'COUNT' and (not function_params or len(function_params) != 1):
         raise ValueError(f'Group function "{function_name}" requires one arguments')
 
-      paramdict['function'] = {'name': function_name}
-
       if function_params:
-        paramdict['function']['params'] = function_params
+        paramdict['function'] = {'name': function_name, 'params': function_params}
+      else:
+        paramdict['function'] = {'name': function_name}
 
     self.logger.debug('About to create item with PUT request:\n%s', str(paramdict))
 
-    self.req_put(f'/items/{name}', json=paramdict, headers={'Content-Type': 'application/json'})
+    self.req_put(f'/items/{name}', json_data=paramdict, headers={'Content-Type': 'application/json'})
 
 
 # noinspection PyPep8Naming

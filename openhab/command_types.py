@@ -253,7 +253,7 @@ class ColorType(CommandType):
     strvalue = str(value)
     if isinstance(value, tuple):
       if len(value) == 3:
-        strvalue = "{},{},{}".format(value[0], value[1], value[2])
+        strvalue = f'{value[0]},{value[1]},{value[2]}'
         super().validate(strvalue)
         ColorType.parse(strvalue)
 
