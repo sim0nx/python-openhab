@@ -15,3 +15,5 @@ DateTime  TheDateTime "datetime test [%s]" (Home)
 String stringtest
 
 Number  floattest
+
+Color color_item  "Color item test"
