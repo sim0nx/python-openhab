@@ -64,6 +64,7 @@ class Item:
     self.group = False
     self.name = ''
     self._state = None  # type: typing.Optional[typing.Any]
+    self._unitOfMeasure = ''
     self._raw_state = None  # type: typing.Optional[typing.Any]  # raw state as returned by the server
     self._members = {}  # type: typing.Dict[str, typing.Any] #  group members (key = item name), for none-group items it's empty
     self.function_name: typing.Optional[str] = None
@@ -139,6 +140,11 @@ class Item:
   @state.setter
   def state(self, value: typing.Any) -> None:
     self.update(value)
+
+  @property
+  def unit_of_measure(self) -> str:
+    """Return the unit of measure. Returns an empty string if there is none defined."""
+    return self._unitOfMeasure
 
   @property
   def members(self) -> typing.Dict[str, typing.Any]:
@@ -582,10 +588,6 @@ class ColorItem(DimmerItem):
       return str(value)
 
     return value
-
-  @staticmethod
-  def __extract_value_and_unitofmeasure(value: str) -> typing.Tuple[str, str]:
-    return value, ''
 
 
 class RollershutterItem(Item):

@@ -22,7 +22,6 @@
 import json
 import logging
 import pathlib
-import re
 import time
 import typing
 import warnings
@@ -269,12 +268,6 @@ class OpenHAB:
       return openhab.items.ContactItem(self, json_data)
 
     if _type.startswith('Number'):
-      if _type.startswith('Number:'):
-        m = re.match(r'''^([^\s]+)''', json_data['state'])
-
-        if m:
-          json_data['state'] = m.group(1)
-
       return openhab.items.NumberItem(self, json_data)
 
     if _type == 'Dimmer':
