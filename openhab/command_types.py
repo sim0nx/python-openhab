@@ -222,20 +222,28 @@ class ColorType(CommandType):
   SUPPORTED_TYPENAMES = [TYPENAME]
 
   @classmethod
-  def parse(cls, value: str) -> typing.Optional[typing.Tuple[int, int, float]]:
+  def parse(cls, value: str) -> typing.Optional[typing.Tuple[float, float, float]]:
     """Parse a given value."""
     if value in ColorType.UNDEFINED_STATES:
       return None
-    hs, ss, bs = re.split(',', value)
-    h = int(hs)
-    s = int(ss)
+
+    if not isinstance(value, str):
+      raise ValueError()
+
+    str_split = value.split(',')
+    if len(str_split) != 3:
+      raise ValueError()
+
+    hs, ss, bs = value.split(',', 3)
+    h = float(hs)
+    s = float(ss)
     b = float(bs)
     if not ((0 <= h <= 360) and (0 <= s <= 100) and (0 <= b <= 100)):
       raise ValueError()
     return h, s, b
 
   @classmethod
-  def validate(cls, value: typing.Union[str, typing.Tuple[int, int, float]]) -> None:
+  def validate(cls, value: typing.Union[str, typing.Tuple[float, float, float]]) -> None:
     """Value validation method.
 
     Valid values are in format H,S,B.
@@ -250,15 +258,14 @@ class ColorType(CommandType):
     Raises:
       ValueError: Raises ValueError if an invalid value has been specified.
     """
-    strvalue = str(value)
-    if isinstance(value, tuple):
-      if len(value) == 3:
-        strvalue = f'{value[0]},{value[1]},{value[2]}'
-        super().validate(strvalue)
-        ColorType.parse(strvalue)
+    if isinstance(value, str):
+      str_value = str(value)
+    elif isinstance(value, tuple) and len(value) == 3:
+      str_value = f'{value[0]},{value[1]},{value[2]}'
+    else:
+      raise ValueError()
 
-    super().validate(strvalue)
-    ColorType.parse(strvalue)
+    ColorType.parse(str_value)
 
 
 class DecimalType(CommandType):
@@ -336,9 +343,7 @@ class PercentType(CommandType):
     Raises:
       ValueError: Raises ValueError if an invalid value has been specified.
     """
-    super().validate(value)
-
-    if not 0 <= value <= 100:
+    if not (isinstance(value, (float, int)) and 0 <= value <= 100):
       raise ValueError()
 
 
