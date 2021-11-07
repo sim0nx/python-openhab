@@ -1,3 +1,3 @@
 # API Documentation - Types
 
-::: openhab.types
+::: openhab.command_types
