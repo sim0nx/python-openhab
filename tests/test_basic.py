@@ -51,3 +51,22 @@ def test_non_latin1_string():
 
   string_obj.state = 'שלום'
   assert string_obj.state == 'שלום'
+
+
+def test_color_item():
+  coloritem = oh.get_item('color_item')
+
+  coloritem.update_state_null()
+  assert coloritem.is_state_null()
+
+  coloritem.state = 1
+  assert coloritem.state == (0.0, 0.0, 1.0)
+
+  coloritem.state = '1.1, 1.2, 1.3'
+  assert coloritem.state == (1.1, 1.2, 1.3)
+
+  coloritem.state = 'OFF'
+  assert coloritem.state == (1.1, 1.2, 0.0)
+
+  coloritem.state = 'ON'
+  assert coloritem.state == (1.1, 1.2, 100.0)
