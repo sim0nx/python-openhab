@@ -189,9 +189,9 @@ class Item:
     # pylint: disable=no-self-use
     _value = value  # type: typing.Union[str, bytes]
 
-    # Only latin-1 encoding is supported by default. If non-latin-1 characters were provided, convert them to bytes.
+    # Only ascii encoding is supported by default. If non-ascii characters were provided, convert them to bytes.
     try:
-      _ = value.encode('latin-1')
+      _ = value.encode('ascii')
     except UnicodeError:
       _value = value.encode('utf-8')
 

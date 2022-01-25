@@ -46,11 +46,14 @@ def test_float():
   assert float_obj.state == 1.0
 
 
-def test_non_latin1_string():
+def test_non_ascii_string():
   string_obj = oh.get_item('stringtest')
 
   string_obj.state = 'שלום'
   assert string_obj.state == 'שלום'
+
+  string_obj.state = '°F'
+  assert string_obj.state == '°F'
 
 
 def test_color_item():
