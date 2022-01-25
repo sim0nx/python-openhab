@@ -207,7 +207,10 @@ class Item:
 
   def __str__(self) -> str:
     """String representation."""
-    return f'<{self.type_} - {self.name} : {self._state}>'
+    state = self._state
+    if self._unitOfMeasure and not isinstance(self._state, tuple):
+        state = f'{self._state} {self._unitOfMeasure}'
+    return f'<{self.type_} - {self.name} : {state}>'
 
   def _update(self, value: typing.Any) -> None:
     """Updates the state of an item, input validation is expected to be already done.
