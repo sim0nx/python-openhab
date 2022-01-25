@@ -88,5 +88,28 @@ def test_color_item():
   assert coloritem.state == (1.1, 1.2, 100.0)
 
 
+def test_number_temperature():
+  # Tests below require the OpenHAB test instance to be configured with '°C' as
+  # the unit of measure for the 'Dining_Temperature' item
+  temperature_item = oh.get_item('Dining_Temperature')
+
+  temperature_item.state = 1
+  assert temperature_item.state == 1
+  assert temperature_item.unit_of_measure == '°C'
+
+  temperature_item.state = '2 °C'
+  assert temperature_item.state == 2
+  assert temperature_item.unit_of_measure == '°C'
+
+  temperature_item.state = (3, '°C')
+  assert temperature_item.state == 3
+  assert temperature_item.unit_of_measure == '°C'
+
+  # Unit of measure conversion (performed by OpenHAB server)
+  temperature_item.state = (32, '°F')
+  assert temperature_item.state == 0
+  assert temperature_item.unit_of_measure == '°C'
+
+
 def test_session_logout():
   assert oh.logout()

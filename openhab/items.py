@@ -466,16 +466,20 @@ class NumberItem(Item):
 
     raise ValueError(f'{self.__class__}: unable to parse value "{value}"')
 
-  def _rest_format(self, value: float) -> str:  # type: ignore[override]
+  def _rest_format(self, value: typing.Union[float, typing.Tuple[float, str], str]) -> typing.Union[str, bytes]:
     """Format a value before submitting to openHAB.
 
     Args:
-      value (float): A float argument to be converted into a string.
+      value: Either a float, a tuple of (float, str), or string; in the first two cases we have to cast it to a string.
 
     Returns:
-      str: The string as converted from the float parameter.
+      str or bytes: A string or bytes as converted from the value parameter.
     """
-    return str(value)
+    if isinstance(value, tuple) and len(value) == 2:
+        return super()._rest_format(f'{value[0]} {value[1]}')
+    if not isinstance(value, str):
+        return super()._rest_format(str(value))
+    return super()._rest_format(value)
 
 
 class ContactItem(Item):

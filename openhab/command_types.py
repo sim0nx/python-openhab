@@ -297,19 +297,27 @@ class DecimalType(CommandType):
     raise ValueError()
 
   @classmethod
-  def validate(cls, value: typing.Union[float, int]) -> None:
+  def validate(cls, value: typing.Union[int, float, typing.Tuple[typing.Union[int, float], str], str]) -> None:
     """Value validation method.
 
-    Valid values are any of data_type ``float`` or ``int``.
+    Valid values are any of data_type:
+      - ``int``
+      - ``float``
+      - a tuple of (``int`` or ``float``, ``str``) for numeric value, unit of measure
+      - a ``str`` that can be parsed to one of the above by ``DecimalType.parse``
 
     Args:
-      value (float): The value to validate.
+      value (int, float, tuple, str): The value to validate.
 
     Raises:
       ValueError: Raises ValueError if an invalid value has been specified.
     """
-    if not isinstance(value, (int, float)):
-      raise ValueError()
+    if isinstance(value, str):
+        DecimalType.parse(value)
+    elif isinstance(value, tuple) and len(value) == 2:
+        DecimalType.parse(f'{value[0]} {value[1]}')
+    elif not isinstance(value, (int, float)):
+        raise ValueError()
 
 
 class PercentType(CommandType):
