@@ -59,6 +59,13 @@ def test_float():
   assert float_obj.state == 1.0
 
 
+def test_scientific_notation():
+  float_obj = oh.get_item('floattest')
+
+  float_obj.state = 1e-10
+  assert float_obj.state == 1e-10
+
+
 def test_non_ascii_string():
   string_obj = oh.get_item('stringtest')
 
@@ -107,7 +114,7 @@ def test_number_temperature():
 
   # Unit of measure conversion (performed by OpenHAB server)
   temperature_item.state = (32, '°F')
-  assert temperature_item.state == 0
+  assert round(temperature_item.state, 2) == 0
   assert temperature_item.unit_of_measure == '°C'
 
 

@@ -279,7 +279,7 @@ class DecimalType(CommandType):
     if value in DecimalType.UNDEFINED_STATES:
       return None
 
-    m = re.match(r'(-?[0-9.]+)\s?(.*)?$', value)
+    m = re.match(r'(-?[0-9.]+(?:[eE]-?[0-9]+)?)\s?(.*)?$', value)
     if m:
       value_value = m.group(1)
       value_unit_of_measure = m.group(2)

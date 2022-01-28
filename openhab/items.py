@@ -454,7 +454,7 @@ class NumberItem(Item):
       return None, ''
     # m = re.match(r'''^(-?[0-9.]+)''', value)
     try:
-      m = re.match(r'(-?[0-9.]+)\s?(.*)?$', value)
+      m = re.match(r'(-?[0-9.]+(?:[eE]-?[0-9]+)?)\s?(.*)?$', value)
 
       if m:
         value = m.group(1)
@@ -479,9 +479,9 @@ class NumberItem(Item):
       str or bytes: A string or bytes as converted from the value parameter.
     """
     if isinstance(value, tuple) and len(value) == 2:
-        return super()._rest_format(f'{value[0]} {value[1]}')
+        return super()._rest_format(f'{value[0]:G} {value[1]}')
     if not isinstance(value, str):
-        return super()._rest_format(str(value))
+        return super()._rest_format(f'{value:G}')
     return super()._rest_format(value)
 
 
