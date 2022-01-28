@@ -1,4 +1,5 @@
 import datetime
+import time
 
 import openhab
 
@@ -87,19 +88,25 @@ def test_number_temperature():
   # the unit of measure for the 'Dining_Temperature' item
   temperature_item = oh.get_item('Dining_Temperature')
 
-  temperature_item.state = 1
-  assert temperature_item.state == 1
+  temperature_item.state = 1.0
+  time.sleep(1)  # Allow time for OpenHAB test instance to process state update
+  assert temperature_item.state == 1.0
   assert temperature_item.unit_of_measure == '°C'
 
   temperature_item.state = '2 °C'
+  time.sleep(1)
   assert temperature_item.state == 2
   assert temperature_item.unit_of_measure == '°C'
 
   temperature_item.state = (3, '°C')
+  time.sleep(1)
   assert temperature_item.state == 3
   assert temperature_item.unit_of_measure == '°C'
 
   # Unit of measure conversion (performed by OpenHAB server)
   temperature_item.state = (32, '°F')
   assert round(temperature_item.state, 2) == 0
+  temperature_item.state = (212, '°F')
+  time.sleep(1)
+  assert temperature_item.state == 100
   assert temperature_item.unit_of_measure == '°C'
