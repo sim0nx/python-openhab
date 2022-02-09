@@ -64,6 +64,7 @@ def test_scientific_notation():
   float_obj = oh.get_item('floattest')
 
   float_obj.state = 1e-10
+  time.sleep(1)  # Allow time for OpenHAB test instance to process state update
   assert float_obj.state == 1e-10
 
 
