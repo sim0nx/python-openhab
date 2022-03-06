@@ -189,9 +189,9 @@ class Item:
     # pylint: disable=no-self-use
     _value = value  # type: typing.Union[str, bytes]
 
-    # Only latin-1 encoding is supported by default. If non-latin-1 characters were provided, convert them to bytes.
+    # Only ascii encoding is supported by default. If non-ascii characters were provided, convert them to bytes.
     try:
-      _ = value.encode('latin-1')
+      _ = value.encode('ascii')
     except UnicodeError:
       _value = value.encode('utf-8')
 
@@ -207,7 +207,10 @@ class Item:
 
   def __str__(self) -> str:
     """String representation."""
-    return f'<{self.type_} - {self.name} : {self._state}>'
+    state = self._state
+    if self._unitOfMeasure and not isinstance(self._state, tuple):
+        state = f'{self._state} {self._unitOfMeasure}'
+    return f'<{self.type_} - {self.name} : {state}>'
 
   def _update(self, value: typing.Any) -> None:
     """Updates the state of an item, input validation is expected to be already done.
@@ -451,7 +454,7 @@ class NumberItem(Item):
       return None, ''
     # m = re.match(r'''^(-?[0-9.]+)''', value)
     try:
-      m = re.match(r'(-?[0-9.]+)\s?(.*)?$', value)
+      m = re.match(r'(-?[0-9.]+(?:[eE]-?[0-9]+)?)\s?(.*)?$', value)
 
       if m:
         value = m.group(1)
@@ -466,16 +469,20 @@ class NumberItem(Item):
 
     raise ValueError(f'{self.__class__}: unable to parse value "{value}"')
 
-  def _rest_format(self, value: float) -> str:  # type: ignore[override]
+  def _rest_format(self, value: typing.Union[float, typing.Tuple[float, str], str]) -> typing.Union[str, bytes]:
     """Format a value before submitting to openHAB.
 
     Args:
-      value (float): A float argument to be converted into a string.
+      value: Either a float, a tuple of (float, str), or string; in the first two cases we have to cast it to a string.
 
     Returns:
-      str: The string as converted from the float parameter.
+      str or bytes: A string or bytes as converted from the value parameter.
     """
-    return str(value)
+    if isinstance(value, tuple) and len(value) == 2:
+        return super()._rest_format(f'{value[0]:G} {value[1]}')
+    if not isinstance(value, str):
+        return super()._rest_format(f'{value:G}')
+    return super()._rest_format(value)
 
 
 class ContactItem(Item):

@@ -1,6 +1,7 @@
 import datetime
 import os
 import pathlib
+import time
 
 import openhab.oauth2_helper
 
@@ -59,11 +60,22 @@ def test_float():
   assert float_obj.state == 1.0
 
 
-def test_non_latin1_string():
+def test_scientific_notation():
+  float_obj = oh.get_item('floattest')
+
+  float_obj.state = 1e-10
+  time.sleep(1)  # Allow time for OpenHAB test instance to process state update
+  assert float_obj.state == 1e-10
+
+
+def test_non_ascii_string():
   string_obj = oh.get_item('stringtest')
 
   string_obj.state = 'שלום'
   assert string_obj.state == 'שלום'
+
+  string_obj.state = '°F'
+  assert string_obj.state == '°F'
 
 
 def test_color_item():
@@ -83,6 +95,35 @@ def test_color_item():
 
   coloritem.state = 'ON'
   assert coloritem.state == (1.1, 1.2, 100.0)
+
+
+def test_number_temperature():
+  # Tests below require the OpenHAB test instance to be configured with '°C' as
+  # the unit of measure for the 'Dining_Temperature' item
+  temperature_item = oh.get_item('Dining_Temperature')
+
+  temperature_item.state = 1.0
+  time.sleep(1)  # Allow time for OpenHAB test instance to process state update
+  assert temperature_item.state == 1.0
+  assert temperature_item.unit_of_measure == '°C'
+
+  temperature_item.state = '2 °C'
+  time.sleep(1)
+  assert temperature_item.state == 2
+  assert temperature_item.unit_of_measure == '°C'
+
+  temperature_item.state = (3, '°C')
+  time.sleep(1)
+  assert temperature_item.state == 3
+  assert temperature_item.unit_of_measure == '°C'
+
+  # Unit of measure conversion (performed by OpenHAB server)
+  temperature_item.state = (32, '°F')
+  assert round(temperature_item.state, 2) == 0
+  temperature_item.state = (212, '°F')
+  time.sleep(1)
+  assert temperature_item.state == 100
+  assert temperature_item.unit_of_measure == '°C'
 
 
 def test_session_logout():
