@@ -565,7 +565,7 @@ class ColorItem(DimmerItem):
   types = [openhab.command_types.OnOffType, openhab.command_types.PercentType, openhab.command_types.IncreaseDecreaseType, openhab.command_types.ColorType]
   state_types = [openhab.command_types.ColorType]  # type: ignore
 
-  def _parse_rest(self, value: str) -> typing.Tuple[typing.Optional[typing.Tuple[int, int, float]], str]:  # type: ignore[override]
+  def _parse_rest(self, value: str) -> typing.Tuple[typing.Optional[typing.Tuple[float, float, float]], str]:  # type: ignore[override]
     """Parse a REST result into a native object.
 
     Args:
