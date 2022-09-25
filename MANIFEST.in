@@ -1,0 +1,11 @@
+exclude .editorconfig
+exclude .gitignore
+exclude .pylintrc
+exclude .readthedocs.yaml
+exclude .travis.yml
+exclude mkdocs.yml
+
+
+prune .github
+prune docker
+prune docs
