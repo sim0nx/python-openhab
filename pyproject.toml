@@ -38,7 +38,7 @@ Source = "https://github.com/sim0nx/python-openhab"
 [project.optional-dependencies]
 docs = [
     "mkdocs-material",
-    "mkdocstrings",
+    "mkdocstrings[crystal,python]",
 ]
 dev = [
     "pylint",
