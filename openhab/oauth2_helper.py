@@ -44,7 +44,7 @@ def get_oauth2_token(base_url: str,
   oauth2_auth_endpoint = f'{base_url}/rest/auth/token'
   url_generate_token = f'{base_url}/auth?response_type=code&redirect_uri={oauth2_redirect_url}&client_id={oauth2_client_id}&scope={oauth2_scope}'
 
-  res = requests.get(url_generate_token)
+  res = requests.get(url_generate_token, timeout=30)
   res.raise_for_status()
 
   soup = bs4.BeautifulSoup(res.content, 'html.parser')
@@ -68,10 +68,11 @@ def get_oauth2_token(base_url: str,
   data['username'] = username
   data['password'] = password
 
-  res = requests.post(url_submit_generate_token, data=data, allow_redirects=False)
+  res = requests.post(url_submit_generate_token, data=data, allow_redirects=False, timeout=30)
   res.raise_for_status()
 
   if 'location' not in res.headers:
+    print(res.text, res.status_code)
     raise KeyError('Token generation failed!')
 
   oauth_redirect_location = res.headers['location']
@@ -89,7 +90,7 @@ def get_oauth2_token(base_url: str,
           'code_verifier': None
           }
 
-  res = requests.post(oauth2_auth_endpoint, data=data)
+  res = requests.post(oauth2_auth_endpoint, data=data, timeout=30)
   res.raise_for_status()
 
   oauth2_token = res.json()
