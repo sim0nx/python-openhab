@@ -181,12 +181,10 @@ class Item:
 
   def _parse_rest(self, value: str) -> typing.Tuple[str, str]:
     """Parse a REST result into a native object."""
-    # pylint: disable=no-self-use
     return value, ''
 
   def _rest_format(self, value: str) -> typing.Union[str, bytes]:
     """Format a value before submitting to openHAB."""
-    # pylint: disable=no-self-use
     _value = value  # type: typing.Union[str, bytes]
 
     # Only ascii encoding is supported by default. If non-ascii characters were provided, convert them to bytes.
