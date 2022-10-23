@@ -39,7 +39,7 @@ jobs:
 
       - name: Create openhab admin
         run: |
-          docker exec -i openhab /openhab/runtime/bin/client -h
+          docker exec -i openhab /openhab/runtime/bin/client --help
           docker exec -i openhab /openhab/runtime/bin/client -v -p habopen users add admin admin administrator
         continue-on-error: true
 
