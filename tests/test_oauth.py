@@ -3,10 +3,14 @@ import os
 import pathlib
 import time
 
+import pytest
+
 import openhab.oauth2_helper
 
 url_base = 'http://localhost:8080'
 url_rest = f'{url_base}/rest'
+
+pytestmark = pytest.mark.skipif('CI' in os.environ, reason="oauth2 tests currently not working in github CI")
 
 # this must be set for oauthlib to work on http
 os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = '1'
