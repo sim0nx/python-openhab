@@ -18,7 +18,7 @@ jobs:
         ports:
           - 8080:8080
         volumes:
-          - docker/openhab_conf:/openhab/conf
+          - ${GITHUB_WORKSPACE}/docker/openhab_conf:/openhab/conf
 
     strategy:
       matrix:
