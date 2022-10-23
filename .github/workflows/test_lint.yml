@@ -12,20 +12,6 @@ jobs:
   tests:
     runs-on: ubuntu-latest
 
-    services:
-      openhab:
-        image: openhab/openhab:latest-alpine
-        ports:
-          - 8080:8080
-        volumes:
-          - ${{ github.workspace }}/docker/openhab_conf:/openhab/conf
-        options: >-
-          --health-cmd "curl -f http://localhost:8080/rest"
-          --health-interval 10s
-          --health-timeout 30s
-          --health-retries 5
-          --health-start-period 10s
-
     strategy:
       matrix:
         python-version: ["3.7", "3.8", "3.9", "3.10"]
@@ -44,6 +30,9 @@ jobs:
 
       - name: Test with pytest
         run: |
+          docker run -d --name openhab -p 8080:8080 -e OPENHAB_HTTP_PORT=8080 -v $TRAVIS_BUILD_DIR/docker/openhab_conf:/openhab/conf "openhab/openhab:latest-alpine"
+          python docker/test_connectivity.py
+          docker exec -it openhab /openhab/runtime/bin/client -p habopen users add admin admin administrator
           python -m coverage run --omit tests --parallel-mode -m pytest -vv tests
 
       - name: Upload coverage data
