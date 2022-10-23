@@ -35,13 +35,13 @@ jobs:
       - name: Wait for openhab
         run: |
           python3 docker/test_connectivity.py
-        timeout-minutes: 2
+        continue-on-error: true
 
       - name: Create openhab admin
         run: |
           docker exec -d openhab /openhab/runtime/bin/client -p habopen users add admin admin administrator
           sleep 4
-        timeout-minutes: 2
+        continue-on-error: true
 
       - name: Test with pytest
         run: |
