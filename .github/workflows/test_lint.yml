@@ -23,7 +23,7 @@ jobs:
           - 8080:8080
         volumes:
           - ${{ github.workspace }}/docker/openhab_conf:/openhab/conf
-        options: --name openhab
+        options: --name openhab --health-cmd "curl -f http://localhost:8080/rest"
 
     steps:
       - uses: actions/checkout@v3
