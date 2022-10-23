@@ -23,7 +23,7 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
 
-      - name: Create openhab admin
+      - name: Run tests
         run: |
           python3 -m pip install --upgrade pip
           python3 -m pip install --upgrade-strategy eager .[test]
@@ -32,12 +32,10 @@ jobs:
 
           python3 docker/test_connectivity.py
 
-          docker exec -i openhab /openhab/runtime/bin/client -v -p habopen users add admin admin administrator || true
-          docker exec -i openhab /openhab/runtime/bin/client -v -p habopen users add admin admin administrator || true
-          docker exec -i openhab /openhab/runtime/bin/client -v -p habopen users add admin admin administrator || true
+          docker exec -i openhab /openhab/runtime/bin/client -v -p habopen users add admin admin administrator
 
           python3 -m coverage run --omit tests --parallel-mode -m pytest -vv tests
-        continue-on-error: true
+        #continue-on-error: true
 
       - name: Upload coverage data
         uses: actions/upload-artifact@v3
