@@ -25,15 +25,25 @@ jobs:
 
       - name: Install dependencies
         run: |
-          python -m pip install --upgrade pip
-          python -m pip install --upgrade-strategy eager .[test]
+          python3 -m pip install --upgrade pip
+          python3 -m pip install --upgrade-strategy eager .[test]
+
+      - name: Start openhab
+        run: |
+          docker run -d --name openhab -p 8080:8080 -e OPENHAB_HTTP_PORT=8080 -v $TRAVIS_BUILD_DIR/docker/openhab_conf:/openhab/conf "openhab/openhab:latest-alpine"
+
+      - name: Wait for openhab
+        run: |
+          python3 docker/test_connectivity.py
+
+      - name: Create openhab admin
+        run: |
+          docker ps
+          docker exec openhab /openhab/runtime/bin/client -p habopen users add admin admin administrator
 
       - name: Test with pytest
         run: |
-          docker run -d --name openhab -p 8080:8080 -e OPENHAB_HTTP_PORT=8080 -v $TRAVIS_BUILD_DIR/docker/openhab_conf:/openhab/conf "openhab/openhab:latest-alpine"
-          python docker/test_connectivity.py
-          docker exec -i openhab /openhab/runtime/bin/client -p habopen users add admin admin administrator
-          python -m coverage run --omit tests --parallel-mode -m pytest -vv tests
+          python3 -m coverage run --omit tests --parallel-mode -m pytest -vv tests
 
       - name: Upload coverage data
         uses: actions/upload-artifact@v3
