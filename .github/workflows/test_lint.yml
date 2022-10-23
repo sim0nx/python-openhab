@@ -17,15 +17,15 @@ jobs:
         python-version: ["3.7", "3.8", "3.9", "3.10"]
 
     steps:
-      - name: Start openhab
-        run: |
-          docker run -d --name openhab -p 8080:8080 -e OPENHAB_HTTP_PORT=8080 -v ${{ github.workspace }}/docker/openhab_conf:/openhab/conf "openhab/openhab:latest"
-
       - uses: actions/checkout@v3
       - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v3
         with:
           python-version: ${{ matrix.python-version }}
+
+      - name: Start openhab
+        run: |
+          docker run -d --name openhab -p 8080:8080 -e OPENHAB_HTTP_PORT=8080 -v ${{ github.workspace }}/docker/openhab_conf:/openhab/conf "openhab/openhab:latest"
 
       - name: Install dependencies
         run: |
