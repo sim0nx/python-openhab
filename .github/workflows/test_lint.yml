@@ -34,13 +34,12 @@ jobs:
 
       - name: Wait for openhab
         run: |
-          ls -l docker
           python3 docker/test_connectivity.py
 
       - name: Create openhab admin
         run: |
-          docker ps
-          docker exec openhab /openhab/runtime/bin/client -p habopen users add admin admin administrator
+          docker exec -d openhab /openhab/runtime/bin/client -p habopen users add admin admin administrator
+          sleep 4
 
       - name: Test with pytest
         run: |
