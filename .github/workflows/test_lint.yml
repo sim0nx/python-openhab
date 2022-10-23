@@ -33,9 +33,8 @@ jobs:
           python3 docker/test_connectivity.py
           sleep 10
 
-          docker exec -i openhab /openhab/runtime/bin/client -v -p habopen users add admin admin administrator || true
-          docker exec -i openhab /openhab/runtime/bin/client -v -p habopen users add admin admin administrator || true
-          docker exec -i openhab /openhab/runtime/bin/client -v -p habopen users add admin admin administrator || true
+          docker exec -i openhab /openhab/runtime/bin/client -v -p habopen users add admin admin administrator 2>&1 || true
+          docker exec -i openhab /openhab/runtime/bin/client -v -p habopen users list || true
 
           python3 -m coverage run --omit tests --parallel-mode -m pytest -vv tests
 
