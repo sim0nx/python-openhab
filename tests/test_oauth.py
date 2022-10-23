@@ -1,54 +1,38 @@
 import datetime
 import os
-import pathlib
 import time
 
 import pytest
 
 import openhab.oauth2_helper
 
-url_base = 'http://localhost:8080'
-url_rest = f'{url_base}/rest'
-
 pytestmark = pytest.mark.skipif('CI' in os.environ, reason="oauth2 tests currently not working in github CI")
 
-# this must be set for oauthlib to work on http
-os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = '1'
 
-oauth2_token = openhab.oauth2_helper.get_oauth2_token(url_base, username='admin', password='admin')
-
-oauth2_config = {'client_id': r'http://127.0.0.1/auth',
-                 'token_cache': str(pathlib.Path(__file__).resolve().parent.parent / '.oauth2_token_test'),
-                 'token': oauth2_token
-                 }
-
-oh = openhab.OpenHAB(url_rest, oauth2_config=oauth2_config)
-
-
-def test_fetch_all_items():
-  items = oh.fetch_all_items()
+def test_fetch_all_items(oh_oauth2: openhab.OpenHAB):
+  items = oh_oauth2.fetch_all_items()
 
   assert len(items)
 
 
-def test_datetime_update():
-  dt_obj = oh.get_item('TheDateTime')
+def test_datetime_update(oh_oauth2: openhab.OpenHAB):
+  dt_obj = oh_oauth2.get_item('TheDateTime')
   dt_utc_now = datetime.datetime.utcnow().replace(tzinfo=datetime.timezone.utc)
   dt_obj.state = dt_utc_now
 
   assert dt_obj.state.isoformat(timespec='seconds') == dt_utc_now.isoformat(timespec='seconds')
 
 
-def test_datetime_command():
-  dt_obj = oh.get_item('TheDateTime')
+def test_datetime_command(oh_oauth2: openhab.OpenHAB):
+  dt_obj = oh_oauth2.get_item('TheDateTime')
   dt_utc_now = datetime.datetime.utcnow().replace(tzinfo=datetime.timezone.utc)
   dt_obj.command(dt_utc_now)
 
   assert dt_obj.state.isoformat(timespec='seconds') == dt_utc_now.isoformat(timespec='seconds')
 
 
-def test_null_undef():
-  float_obj = oh.get_item('floattest')
+def test_null_undef(oh_oauth2: openhab.OpenHAB):
+  float_obj = oh_oauth2.get_item('floattest')
 
   float_obj.update_state_null()
   assert float_obj.is_state_null()
@@ -57,23 +41,23 @@ def test_null_undef():
   assert float_obj.is_state_undef()
 
 
-def test_float():
-  float_obj = oh.get_item('floattest')
+def test_float(oh_oauth2: openhab.OpenHAB):
+  float_obj = oh_oauth2.get_item('floattest')
 
   float_obj.state = 1.0
   assert float_obj.state == 1.0
 
 
-def test_scientific_notation():
-  float_obj = oh.get_item('floattest')
+def test_scientific_notation(oh_oauth2: openhab.OpenHAB):
+  float_obj = oh_oauth2.get_item('floattest')
 
   float_obj.state = 1e-10
   time.sleep(1)  # Allow time for OpenHAB test instance to process state update
   assert float_obj.state == 1e-10
 
 
-def test_non_ascii_string():
-  string_obj = oh.get_item('stringtest')
+def test_non_ascii_string(oh_oauth2: openhab.OpenHAB):
+  string_obj = oh_oauth2.get_item('stringtest')
 
   string_obj.state = 'שלום'
   assert string_obj.state == 'שלום'
@@ -82,8 +66,8 @@ def test_non_ascii_string():
   assert string_obj.state == '°F'
 
 
-def test_color_item():
-  coloritem = oh.get_item('color_item')
+def test_color_item(oh_oauth2: openhab.OpenHAB):
+  coloritem = oh_oauth2.get_item('color_item')
 
   coloritem.update_state_null()
   assert coloritem.is_state_null()
@@ -101,10 +85,10 @@ def test_color_item():
   assert coloritem.state == (1.1, 1.2, 100.0)
 
 
-def test_number_temperature():
+def test_number_temperature(oh_oauth2: openhab.OpenHAB):
   # Tests below require the OpenHAB test instance to be configured with '°C' as
   # the unit of measure for the 'Dining_Temperature' item
-  temperature_item = oh.get_item('Dining_Temperature')
+  temperature_item = oh_oauth2.get_item('Dining_Temperature')
 
   temperature_item.state = 1.0
   time.sleep(1)  # Allow time for OpenHAB test instance to process state update
@@ -130,5 +114,5 @@ def test_number_temperature():
   assert temperature_item.unit_of_measure == '°C'
 
 
-def test_session_logout():
-  assert oh.logout()
+def test_session_logout(oh_oauth2: openhab.OpenHAB):
+  assert oh_oauth2.logout()

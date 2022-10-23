@@ -3,17 +3,14 @@ import time
 
 import openhab
 
-base_url = 'http://localhost:8080/rest'
-oh = openhab.OpenHAB(base_url)
 
-
-def test_fetch_all_items():
+def test_fetch_all_items(oh: openhab.OpenHAB):
   items = oh.fetch_all_items()
 
   assert len(items)
 
 
-def test_datetime_update():
+def test_datetime_update(oh: openhab.OpenHAB):
   dt_obj = oh.get_item('TheDateTime')
   dt_utc_now = datetime.datetime.utcnow().replace(tzinfo=datetime.timezone.utc)
   dt_obj.state = dt_utc_now
@@ -22,7 +19,7 @@ def test_datetime_update():
   assert dt_obj.state.isoformat(timespec='seconds') == dt_utc_now.isoformat(timespec='seconds')
 
 
-def test_datetime_command():
+def test_datetime_command(oh: openhab.OpenHAB):
   dt_obj = oh.get_item('TheDateTime')
   dt_utc_now = datetime.datetime.utcnow().replace(tzinfo=datetime.timezone.utc)
   dt_obj.command(dt_utc_now)
@@ -30,7 +27,7 @@ def test_datetime_command():
   assert dt_obj.state.isoformat(timespec='seconds') == dt_utc_now.isoformat(timespec='seconds')
 
 
-def test_null_undef():
+def test_null_undef(oh: openhab.OpenHAB):
   float_obj = oh.get_item('floattest')
 
   float_obj.update_state_null()
@@ -40,14 +37,14 @@ def test_null_undef():
   assert float_obj.is_state_undef()
 
 
-def test_float():
+def test_float(oh: openhab.OpenHAB):
   float_obj = oh.get_item('floattest')
 
   float_obj.state = 1.0
   assert float_obj.state == 1.0
 
 
-def test_scientific_notation():
+def test_scientific_notation(oh: openhab.OpenHAB):
   float_obj = oh.get_item('floattest')
 
   float_obj.state = 1e-10
@@ -55,7 +52,7 @@ def test_scientific_notation():
   assert float_obj.state == 1e-10
 
 
-def test_non_ascii_string():
+def test_non_ascii_string(oh: openhab.OpenHAB):
   string_obj = oh.get_item('stringtest')
 
   string_obj.state = 'שלום'
@@ -65,7 +62,7 @@ def test_non_ascii_string():
   assert string_obj.state == '°F'
 
 
-def test_color_item():
+def test_color_item(oh: openhab.OpenHAB):
   coloritem = oh.get_item('color_item')
 
   coloritem.update_state_null()
@@ -84,7 +81,7 @@ def test_color_item():
   assert coloritem.state == (1.1, 1.2, 100.0)
 
 
-def test_number_temperature():
+def test_number_temperature(oh: openhab.OpenHAB):
   # Tests below require the OpenHAB test instance to be configured with '°C' as
   # the unit of measure for the 'Dining_Temperature' item
   temperature_item = oh.get_item('Dining_Temperature')
