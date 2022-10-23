@@ -14,7 +14,7 @@ jobs:
 
     strategy:
       matrix:
-        python-version: ["3.7", "3.8", "3.9", "3.10"]
+        python-version: ["3.8", "3.9", "3.10"]
 
     steps:
       - uses: actions/checkout@v3
@@ -32,10 +32,9 @@ jobs:
 
           python3 docker/test_connectivity.py
 
-          docker exec -i openhab /openhab/runtime/bin/client -v -p habopen users add admin admin administrator
+          docker exec -i openhab /openhab/runtime/bin/client -v -p habopen users add admin admin administrator || true
 
           python3 -m coverage run --omit tests --parallel-mode -m pytest -vv tests
-        #continue-on-error: true
 
       - name: Upload coverage data
         uses: actions/upload-artifact@v3
