@@ -136,7 +136,7 @@ class OpenHAB:
       req (requests.Response): A requests Response object.
 
     Returns:
-      None: Returns None if no error occured; else raises an exception.
+      None: Returns None if no error occurred; else raises an exception.
 
     Raises:
       ValueError: Raises a ValueError exception in case of a non-successful
