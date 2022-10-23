@@ -39,8 +39,7 @@ jobs:
 
       - name: Create openhab admin
         run: |
-          docker exec openhab /openhab/runtime/bin/client -p habopen users add admin admin administrator
-          sleep 4
+          docker exec -i openhab /openhab/runtime/bin/client -p habopen users add admin admin administrator
         continue-on-error: true
 
       - name: Test with pytest
