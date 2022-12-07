@@ -48,6 +48,7 @@ dev = [
     "flake8-docstrings",
     "types-python-dateutil",
     "types-requests",
+    "typeguard",
 ]
 test = [
     "pytest",
