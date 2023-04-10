@@ -43,9 +43,7 @@ docs = [
 dev = [
     "pylint",
     "mypy",
-    "flake8",
-    "flake8-comprehensions",
-    "flake8-docstrings",
+    "ruff",
     "types-python-dateutil",
     "types-requests",
     "typeguard",
@@ -79,3 +77,9 @@ warn_redundant_casts = true
 warn_unused_ignores = true
 strict_optional = true
 check_untyped_defs = false
+
+[tool.ruff]
+line-length = 240
+extend-select = ['Q', 'RUF100', 'C90', 'I']
+flake8-quotes = {inline-quotes = 'single', multiline-quotes = 'double'}
+mccabe = { max-complexity = 16 }

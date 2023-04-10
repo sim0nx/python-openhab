@@ -217,7 +217,7 @@ class OpenHAB:
     res = self.req_get('/items/')
 
     for i in res:
-      if not i['name'] in items:
+      if i['name'] not in items:
         items[i['name']] = self.json_to_item(i)
 
     return items
@@ -250,7 +250,7 @@ class OpenHAB:
     _type = json_data['type']
 
     if _type == 'Group' and 'groupType' in json_data:
-      _type = json_data["groupType"]
+      _type = json_data['groupType']
 
     if _type == 'Group' and 'groupType' not in json_data:
       return openhab.items.GroupItem(self, json_data)

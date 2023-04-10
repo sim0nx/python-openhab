@@ -34,7 +34,7 @@ __license__ = 'AGPLv3+'
 class CommandType(metaclass=abc.ABCMeta):
   """Base command type class."""
 
-  TYPENAME = ""
+  TYPENAME = ''
   SUPPORTED_TYPENAMES: typing.List[str] = []
   UNDEF = 'UNDEF'
   NULL = 'NULL'
@@ -88,7 +88,7 @@ class CommandType(metaclass=abc.ABCMeta):
 
 class UndefType(CommandType):
   """Undefined type."""
-  TYPENAME = "UnDef"
+  TYPENAME = 'UnDef'
   SUPPORTED_TYPENAMES = [TYPENAME]
 
   @classmethod
@@ -105,7 +105,7 @@ class UndefType(CommandType):
 
 class GroupType(CommandType):
   """Group type."""
-  TYPENAME = "Group"
+  TYPENAME = 'Group'
   SUPPORTED_TYPENAMES = [TYPENAME]
 
   @classmethod
@@ -123,7 +123,7 @@ class GroupType(CommandType):
 class StringType(CommandType):
   """StringType data_type class."""
 
-  TYPENAME = "String"
+  TYPENAME = 'String'
   SUPPORTED_TYPENAMES = [TYPENAME]
 
   @classmethod
@@ -152,10 +152,10 @@ class StringType(CommandType):
 
 class OnOffType(StringType):
   """OnOffType data_type class."""
-  TYPENAME = "OnOff"
+  TYPENAME = 'OnOff'
   SUPPORTED_TYPENAMES = [TYPENAME]
-  ON = "ON"
-  OFF = "OFF"
+  ON = 'ON'
+  OFF = 'OFF'
   POSSIBLE_VALUES = [ON, OFF]
 
   @classmethod
@@ -185,10 +185,10 @@ class OnOffType(StringType):
 
 class OpenCloseType(StringType):
   """OpenCloseType data_type class."""
-  TYPENAME = "OpenClosed"
+  TYPENAME = 'OpenClosed'
   SUPPORTED_TYPENAMES = [TYPENAME]
-  OPEN = "OPEN"
-  CLOSED = "CLOSED"
+  OPEN = 'OPEN'
+  CLOSED = 'CLOSED'
   POSSIBLE_VALUES = [OPEN, CLOSED]
 
   @classmethod
@@ -218,7 +218,7 @@ class OpenCloseType(StringType):
 
 class ColorType(CommandType):
   """ColorType data_type class."""
-  TYPENAME = "HSB"
+  TYPENAME = 'HSB'
   SUPPORTED_TYPENAMES = [TYPENAME]
 
   @classmethod
@@ -270,8 +270,8 @@ class ColorType(CommandType):
 
 class DecimalType(CommandType):
   """DecimalType data_type class."""
-  TYPENAME = "Decimal"
-  SUPPORTED_TYPENAMES = [TYPENAME, "Quantity"]
+  TYPENAME = 'Decimal'
+  SUPPORTED_TYPENAMES = [TYPENAME, 'Quantity']
 
   @classmethod
   def parse(cls, value: str) -> typing.Union[None, typing.Tuple[typing.Union[int, float], str]]:
@@ -313,16 +313,16 @@ class DecimalType(CommandType):
       ValueError: Raises ValueError if an invalid value has been specified.
     """
     if isinstance(value, str):
-        DecimalType.parse(value)
+      DecimalType.parse(value)
     elif isinstance(value, tuple) and len(value) == 2:
-        DecimalType.parse(f'{value[0]} {value[1]}')
+      DecimalType.parse(f'{value[0]} {value[1]}')
     elif not isinstance(value, (int, float)):
-        raise ValueError()
+      raise ValueError()
 
 
 class PercentType(CommandType):
   """PercentType data_type class."""
-  TYPENAME = "Percent"
+  TYPENAME = 'Percent'
   SUPPORTED_TYPENAMES = [TYPENAME]
 
   @classmethod
@@ -357,11 +357,11 @@ class PercentType(CommandType):
 
 class IncreaseDecreaseType(StringType):
   """IncreaseDecreaseType data_type class."""
-  TYPENAME = "IncreaseDecrease"
+  TYPENAME = 'IncreaseDecrease'
   SUPPORTED_TYPENAMES = [TYPENAME]
 
-  INCREASE = "INCREASE"
-  DECREASE = "DECREASE"
+  INCREASE = 'INCREASE'
+  DECREASE = 'DECREASE'
 
   POSSIBLE_VALUES = [INCREASE, DECREASE]
 
@@ -392,7 +392,7 @@ class IncreaseDecreaseType(StringType):
 
 class DateTimeType(CommandType):
   """DateTimeType data_type class."""
-  TYPENAME = "DateTime"
+  TYPENAME = 'DateTime'
   SUPPORTED_TYPENAMES = [TYPENAME]
 
   @classmethod
@@ -421,10 +421,10 @@ class DateTimeType(CommandType):
 class UpDownType(StringType):
   """UpDownType data_type class."""
 
-  TYPENAME = "UpDown"
+  TYPENAME = 'UpDown'
   SUPPORTED_TYPENAMES = [TYPENAME]
-  UP = "UP"
-  DOWN = "DOWN"
+  UP = 'UP'
+  DOWN = 'DOWN'
   POSSIBLE_VALUES = [UP, DOWN]
 
   @classmethod
@@ -456,9 +456,9 @@ class UpDownType(StringType):
 class StopMoveType(StringType):
   """UpDownType data_type class."""
 
-  TYPENAME = "StopMove"
+  TYPENAME = 'StopMove'
   SUPPORTED_TYPENAMES = [TYPENAME]
-  STOP = "STOP"
+  STOP = 'STOP'
   POSSIBLE_VALUES = [STOP]
 
   @classmethod
@@ -490,10 +490,10 @@ class StopMoveType(StringType):
 class PlayPauseType(StringType):
   """PlayPauseType data_type class."""
 
-  TYPENAME = "PlayPause"
+  TYPENAME = 'PlayPause'
   SUPPORTED_TYPENAMES = [TYPENAME]
-  PLAY = "PLAY"
-  PAUSE = "PAUSE"
+  PLAY = 'PLAY'
+  PAUSE = 'PAUSE'
   POSSIBLE_VALUES = [PLAY, PAUSE]
 
   @classmethod
@@ -525,10 +525,10 @@ class PlayPauseType(StringType):
 class NextPrevious(StringType):
   """NextPrevious data_type class."""
 
-  TYPENAME = "NextPrevious"
+  TYPENAME = 'NextPrevious'
   SUPPORTED_TYPENAMES = [TYPENAME]
-  NEXT = "NEXT"
-  PREVIOUS = "PREVIOUS"
+  NEXT = 'NEXT'
+  PREVIOUS = 'PREVIOUS'
   POSSIBLE_VALUES = [NEXT, PREVIOUS]
 
   @classmethod
@@ -560,10 +560,10 @@ class NextPrevious(StringType):
 class RewindFastforward(StringType):
   """RewindFastforward data_type class."""
 
-  TYPENAME = "RewindFastforward"
+  TYPENAME = 'RewindFastforward'
   SUPPORTED_TYPENAMES = [TYPENAME]
-  REWIND = "REWIND"
-  FASTFORWARD = "FASTFORWARD"
+  REWIND = 'REWIND'
+  FASTFORWARD = 'FASTFORWARD'
   POSSIBLE_VALUES = [REWIND, FASTFORWARD]
 
   @classmethod
