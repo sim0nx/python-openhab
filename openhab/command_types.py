@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """python library for accessing the openHAB REST API."""
 
 #
@@ -48,7 +47,7 @@ class CommandType(metaclass=abc.ABCMeta):
   @classmethod
   def get_type_for(cls,
                    typename: str,
-                   parent_cls: typing.Optional[typing.Type['CommandType']] = None
+                   parent_cls: typing.Optional[typing.Type['CommandType']] = None,
                    ) -> typing.Union[typing.Type['CommandType'], None]:
     """Get a class type for a given typename."""
     if parent_cls is None:
@@ -68,7 +67,7 @@ class CommandType(metaclass=abc.ABCMeta):
   @abc.abstractmethod
   def parse(cls, value: str) -> typing.Optional[typing.Any]:
     """Parse a given value."""
-    raise NotImplementedError()
+    raise NotImplementedError
 
   @classmethod
   @abc.abstractmethod
@@ -83,7 +82,7 @@ class CommandType(metaclass=abc.ABCMeta):
       NotImplementedError: Raises NotImplementedError as the base class should never
                            be used directly.
     """
-    raise NotImplementedError()
+    raise NotImplementedError
 
 
 class UndefType(CommandType):
@@ -132,7 +131,7 @@ class StringType(CommandType):
     if value in StringType.UNDEFINED_STATES:
       return None
     if not isinstance(value, str):
-      raise ValueError()
+      raise ValueError
     return value
 
   @classmethod
@@ -164,7 +163,7 @@ class OnOffType(StringType):
     if value in OnOffType.UNDEFINED_STATES:
       return None
     if value not in OnOffType.POSSIBLE_VALUES:
-      raise ValueError()
+      raise ValueError
     return value
 
   @classmethod
@@ -197,7 +196,7 @@ class OpenCloseType(StringType):
     if value in OpenCloseType.UNDEFINED_STATES:
       return None
     if value not in OpenCloseType.POSSIBLE_VALUES:
-      raise ValueError()
+      raise ValueError
     return value
 
   @classmethod
@@ -228,18 +227,18 @@ class ColorType(CommandType):
       return None
 
     if not isinstance(value, str):
-      raise ValueError()
+      raise ValueError
 
     str_split = value.split(',')
     if len(str_split) != 3:
-      raise ValueError()
+      raise ValueError
 
     hs, ss, bs = value.split(',', 3)
     h = float(hs)
     s = float(ss)
     b = float(bs)
     if not ((0 <= h <= 360) and (0 <= s <= 100) and (0 <= b <= 100)):
-      raise ValueError()
+      raise ValueError
     return h, s, b
 
   @classmethod
@@ -263,7 +262,7 @@ class ColorType(CommandType):
     elif isinstance(value, tuple) and len(value) == 3:
       str_value = f'{value[0]},{value[1]},{value[2]}'
     else:
-      raise ValueError()
+      raise ValueError
 
     ColorType.parse(str_value)
 
@@ -294,7 +293,7 @@ class DecimalType(CommandType):
 
       return return_value, value_unit_of_measure
 
-    raise ValueError()
+    raise ValueError
 
   @classmethod
   def validate(cls, value: typing.Union[int, float, typing.Tuple[typing.Union[int, float], str], str]) -> None:
@@ -317,7 +316,7 @@ class DecimalType(CommandType):
     elif isinstance(value, tuple) and len(value) == 2:
       DecimalType.parse(f'{value[0]} {value[1]}')
     elif not isinstance(value, (int, float)):
-      raise ValueError()
+      raise ValueError
 
 
 class PercentType(CommandType):
@@ -333,7 +332,7 @@ class PercentType(CommandType):
     try:
       f = float(value)
       if not 0 <= f <= 100:
-        raise ValueError()
+        raise ValueError
       return f
     except Exception as e:
       raise ValueError(e) from e
@@ -352,7 +351,7 @@ class PercentType(CommandType):
       ValueError: Raises ValueError if an invalid value has been specified.
     """
     if not (isinstance(value, (float, int)) and 0 <= value <= 100):
-      raise ValueError()
+      raise ValueError
 
 
 class IncreaseDecreaseType(StringType):
@@ -371,7 +370,7 @@ class IncreaseDecreaseType(StringType):
     if value in IncreaseDecreaseType.UNDEFINED_STATES:
       return None
     if value not in IncreaseDecreaseType.POSSIBLE_VALUES:
-      raise ValueError()
+      raise ValueError
     return value
 
   @classmethod
@@ -415,7 +414,7 @@ class DateTimeType(CommandType):
       ValueError: Raises ValueError if an invalid value has been specified.
     """
     if not isinstance(value, datetime.datetime):
-      raise ValueError()
+      raise ValueError
 
 
 class UpDownType(StringType):
@@ -433,7 +432,7 @@ class UpDownType(StringType):
     if value in UpDownType.UNDEFINED_STATES:
       return None
     if value not in UpDownType.POSSIBLE_VALUES:
-      raise ValueError()
+      raise ValueError
     return value
 
   @classmethod
@@ -467,7 +466,7 @@ class StopMoveType(StringType):
     if value in StopMoveType.UNDEFINED_STATES:
       return None
     if value not in StopMoveType.POSSIBLE_VALUES:
-      raise ValueError()
+      raise ValueError
     return value
 
   @classmethod
@@ -502,7 +501,7 @@ class PlayPauseType(StringType):
     if value in PlayPauseType.UNDEFINED_STATES:
       return None
     if value not in PlayPauseType.POSSIBLE_VALUES:
-      raise ValueError()
+      raise ValueError
     return value
 
   @classmethod
@@ -537,7 +536,7 @@ class NextPrevious(StringType):
     if value in NextPrevious.UNDEFINED_STATES:
       return None
     if value not in NextPrevious.POSSIBLE_VALUES:
-      raise ValueError()
+      raise ValueError
     return value
 
   @classmethod
@@ -572,7 +571,7 @@ class RewindFastforward(StringType):
     if value in RewindFastforward.UNDEFINED_STATES:
       return None
     if value not in RewindFastforward.POSSIBLE_VALUES:
-      raise ValueError()
+      raise ValueError
     return value
 
   @classmethod

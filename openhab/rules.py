@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """python library for accessing the openHAB REST API."""
 
 #

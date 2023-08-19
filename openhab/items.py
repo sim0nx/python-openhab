@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """python library for accessing the openHAB REST API."""
 
 #
@@ -162,7 +161,7 @@ class Item:
     """Private method for verifying the new value before modifying the state of the item."""
     if self.type_ == 'String':
       if not isinstance(value, (str, bytes)):
-        raise ValueError()
+        raise ValueError
     elif self.types:
       validation = False
 
@@ -177,7 +176,7 @@ class Item:
       if not validation:
         raise ValueError(f'Invalid value "{value}"')
     else:
-      raise ValueError()
+      raise ValueError
 
   def _parse_rest(self, value: str) -> typing.Tuple[str, str]:
     """Parse a REST result into a native object."""

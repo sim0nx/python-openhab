@@ -11,7 +11,7 @@ def get_oauth2_token(base_url: str,
                      password: str,
                      client_id: typing.Optional[str] = None,
                      redirect_url: typing.Optional[str] = None,
-                     scope: typing.Optional[str] = None
+                     scope: typing.Optional[str] = None,
                      ) -> dict:
   """Method for generating an OAuth2 token.
 
@@ -87,12 +87,11 @@ def get_oauth2_token(base_url: str,
           'redirect_uri': oauth2_redirect_url,
           'client_id': oauth2_client_id,
           'refresh_token': None,
-          'code_verifier': None
+          'code_verifier': None,
           }
 
   res = requests.post(oauth2_auth_endpoint, data=data, timeout=30)
   res.raise_for_status()
 
-  oauth2_token = res.json()
+  return res.json()
 
-  return oauth2_token

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """python library for accessing the openHAB REST API."""
 
 #
@@ -45,7 +44,7 @@ class OpenHAB:
                password: typing.Optional[str] = None,
                http_auth: typing.Optional[requests.auth.AuthBase] = None,
                timeout: typing.Optional[float] = None,
-               oauth2_config: typing.Optional[typing.Dict[str, typing.Any]] = None
+               oauth2_config: typing.Optional[typing.Dict[str, typing.Any]] = None,
                ) -> None:
     """Class constructor.
 
@@ -97,7 +96,7 @@ class OpenHAB:
                                    token=self.oauth2_config['token'],
                                    auto_refresh_url=f'{self.url_rest}/auth/token',
                                    auto_refresh_kwargs={'client_id': self.oauth2_config['client_id']},
-                                   token_updater=self._oauth2_token_updater
+                                   token_updater=self._oauth2_token_updater,
                                    )
 
       token_cache_path = pathlib.Path(self.oauth2_config['token_cache'])
@@ -163,7 +162,7 @@ class OpenHAB:
 
   def req_post(self,
                uri_path: str,
-               data: typing.Optional[typing.Union[str, bytes, typing.Mapping[str, typing.Any], typing.Iterable[typing.Tuple[str, typing.Optional[str]]]]] = None
+               data: typing.Optional[typing.Union[str, bytes, typing.Mapping[str, typing.Any], typing.Iterable[typing.Tuple[str, typing.Optional[str]]]]] = None,
                ) -> None:
     """Helper method for initiating a HTTP POST request.
 
@@ -184,7 +183,7 @@ class OpenHAB:
               uri_path: str,
               data: typing.Optional[dict] = None,
               json_data: typing.Optional[dict] = None,
-              headers: typing.Optional[dict] = None
+              headers: typing.Optional[dict] = None,
               ) -> None:
     """Helper method for initiating a HTTP PUT request.
 
@@ -305,7 +304,7 @@ class OpenHAB:
       raise ValueError('You are trying to logout from a non-OAuth2 session. This is not supported!')
 
     data = {'refresh_token': self.oauth2_config['token']['refresh_token'],
-            'id': self.oauth2_config['client_id']
+            'id': self.oauth2_config['client_id'],
             }
     url_logout = f'{self.url_rest}/auth/logout'
 
@@ -349,7 +348,7 @@ class OpenHAB:
                             group_names: typing.Optional[typing.List[str]] = None,
                             group_type: typing.Optional[typing.Union[str, typing.Type[openhab.items.Item]]] = None,
                             function_name: typing.Optional[str] = None,
-                            function_params: typing.Optional[typing.List[str]] = None
+                            function_params: typing.Optional[typing.List[str]] = None,
                             ) -> None:
     """Creates a new item in openHAB if there is no item with name 'name' yet.
 
