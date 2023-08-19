@@ -27,7 +27,6 @@ from requests_oauthlib import OAuth2Session
 
 import openhab.items
 import openhab.rules
-
 from .config import Oauth2Config, Oauth2Token
 
 __author__ = 'Georges Toth <georges@trypill.org>'
@@ -95,7 +94,7 @@ class OpenHAB:
                                    )
 
       if not self.oauth2_config.token_cache.is_file():
-        self._oauth2_token_updater()
+        self._oauth2_token_updater(self.oauth2_config.token.model_dump())
 
     else:
       self.session = requests.Session()
