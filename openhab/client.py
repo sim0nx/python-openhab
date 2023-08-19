@@ -312,7 +312,7 @@ class OpenHAB:
     self.oauth2_config.token = Oauth2Token(**token)
 
     with self.oauth2_config.token_cache.open('w', encoding='utf-8') as fhdl:
-      fhdl.write(self.oauth2_config.model_dump_json())
+      fhdl.write(self.oauth2_config.token.model_dump_json())
 
   def create_or_update_item(self,
                             name: str,
