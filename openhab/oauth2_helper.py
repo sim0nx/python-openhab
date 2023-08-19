@@ -3,7 +3,7 @@
 import typing
 
 import bs4
-import requests
+import httpx
 
 
 def get_oauth2_token(base_url: str,
@@ -44,7 +44,7 @@ def get_oauth2_token(base_url: str,
   oauth2_auth_endpoint = f'{base_url}/rest/auth/token'
   url_generate_token = f'{base_url}/auth?response_type=code&redirect_uri={oauth2_redirect_url}&client_id={oauth2_client_id}&scope={oauth2_scope}'
 
-  res = requests.get(url_generate_token, timeout=30)
+  res = httpx.get(url_generate_token, timeout=30)
   res.raise_for_status()
 
   soup = bs4.BeautifulSoup(res.content, 'html.parser')
@@ -68,8 +68,9 @@ def get_oauth2_token(base_url: str,
   data['username'] = username
   data['password'] = password
 
-  res = requests.post(url_submit_generate_token, data=data, allow_redirects=False, timeout=30)
-  res.raise_for_status()
+  res = httpx.post(url_submit_generate_token, data=data, timeout=30)
+  if not 200 < res.status_code <= 302:
+    res.raise_for_status()
 
   if 'location' not in res.headers:
     print(res.text, res.status_code)
@@ -90,8 +91,7 @@ def get_oauth2_token(base_url: str,
           'code_verifier': None,
           }
 
-  res = requests.post(oauth2_auth_endpoint, data=data, timeout=30)
+  res = httpx.post(oauth2_auth_endpoint, data=data, timeout=30)
   res.raise_for_status()
 
   return res.json()
-

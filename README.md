@@ -12,7 +12,8 @@ work in progress.
 
 - python >= 3.8
 - python :: dateutil
-- python :: requests
+- python :: httpx
+- python :: authlib
 - openHAB version 3 / 4
 
 # Installation
