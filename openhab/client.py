@@ -18,10 +18,7 @@
 #
 
 # pylint: disable=bad-indentation
-import json
 import logging
-import pathlib
-import time
 import typing
 import warnings
 
@@ -31,6 +28,8 @@ from requests_oauthlib import OAuth2Session
 
 import openhab.items
 import openhab.rules
+
+from .config import Oauth2Config, Oauth2Token
 
 __author__ = 'Georges Toth <georges@trypill.org>'
 __license__ = 'AGPLv3+'
@@ -84,24 +83,20 @@ class OpenHAB:
     self.url_rest = base_url
     self.url_base = base_url.rsplit('/', 1)[0]
 
-    self.oauth2_config = oauth2_config
+    self.oauth2_config: typing.Optional[Oauth2Config] = None
 
-    if self.oauth2_config is not None:
-      self._validate_oauth2_config(self.oauth2_config)
+    if oauth2_config is not None:
+      self.oauth2_config = Oauth2Config(**oauth2_config)
 
-      if 'expires_at' not in self.oauth2_config['token']:
-        self.oauth2_config['token']['expires_at'] = time.time() - 10
-
-      self.session = OAuth2Session(self.oauth2_config['client_id'],
-                                   token=self.oauth2_config['token'],
+      self.session = OAuth2Session(self.oauth2_config.client_id,
+                                   token=self.oauth2_config.token.model_dump(),
                                    auto_refresh_url=f'{self.url_rest}/auth/token',
-                                   auto_refresh_kwargs={'client_id': self.oauth2_config['client_id']},
+                                   auto_refresh_kwargs={'client_id': self.oauth2_config.client_id},
                                    token_updater=self._oauth2_token_updater,
                                    )
 
-      token_cache_path = pathlib.Path(self.oauth2_config['token_cache'])
-      if not token_cache_path.is_file():
-        self._oauth2_token_updater(self.oauth2_config['token'])
+      if not self.oauth2_config.token_cache.is_file():
+        self._oauth2_token_updater()
 
     else:
       self.session = requests.Session()
@@ -303,8 +298,8 @@ class OpenHAB:
     if self.oauth2_config is None or not isinstance(self.session, OAuth2Session):
       raise ValueError('You are trying to logout from a non-OAuth2 session. This is not supported!')
 
-    data = {'refresh_token': self.oauth2_config['token']['refresh_token'],
-            'id': self.oauth2_config['client_id'],
+    data = {'refresh_token': self.oauth2_config.token.refresh_token,
+            'id': self.oauth2_config.client_id,
             }
     url_logout = f'{self.url_rest}/auth/logout'
 
@@ -312,31 +307,14 @@ class OpenHAB:
 
     return res.status_code == 200
 
-  @staticmethod
-  def _validate_oauth2_config(oauth2_config: typing.Dict[str, typing.Any]) -> bool:
-    """Validate OAuth2 configuration."""
-    if not ('client_id' in oauth2_config and 'token_cache' in oauth2_config and 'token' in oauth2_config):
-      return False
-
-    # pylint: disable=too-many-boolean-expressions
-    if 'access_token' not in oauth2_config['token'] or \
-      'expires_in' not in oauth2_config['token'] or \
-      'refresh_token' not in oauth2_config['token'] or \
-      'scope' not in oauth2_config['token'] or \
-      'token_type' not in oauth2_config['token'] or \
-      'user' not in oauth2_config['token'] or \
-      'name' not in oauth2_config['token']['user'] or \
-      'roles' not in oauth2_config['token']['user']:
-      return False
-
-    return True
-
   def _oauth2_token_updater(self, token: typing.Dict[str, typing.Any]) -> None:
     if self.oauth2_config is None:
       raise ValueError('OAuth2 configuration is not set; invalid action!')
 
-    with open(self.oauth2_config['token_cache'], 'w', encoding='utf-8') as fhdl:
-      json.dump(token, fhdl)
+    self.oauth2_config.token = Oauth2Token(**token)
+
+    with self.oauth2_config.token_cache.open('w', encoding='utf-8') as fhdl:
+      fhdl.write(self.oauth2_config.model_dump_json())
 
   def create_or_update_item(self,
                             name: str,
