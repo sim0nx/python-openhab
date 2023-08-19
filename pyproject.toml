@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools>=61.2", "setuptools_scm[toml]>=6.2"]
+requires = ["setuptools>=68", "setuptools_scm[toml]>=7.1"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -16,7 +16,7 @@ classifiers = [
     "Programming Language :: Python :: 3 :: Only",
 ]
 keywords = ["openHAB"]
-requires-python = ">=3.5"
+requires-python = ">=3.8"
 dependencies = [
     "requests~=2.26",
     "python-dateutil~=2.8",
@@ -41,7 +41,6 @@ docs = [
     "mkdocstrings[crystal,python]",
 ]
 dev = [
-    "pylint",
     "mypy",
     "ruff",
     "types-python-dateutil",
