@@ -34,6 +34,8 @@ jobs:
 
           docker exec -i openhab /openhab/runtime/bin/client -v -p habopen users add admin admin administrator || true
 
+          sleep 2
+
           python3 -m coverage run --omit tests --parallel-mode -m pytest -vv tests
 
       - name: Upload coverage data
