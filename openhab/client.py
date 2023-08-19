@@ -20,7 +20,6 @@
 # pylint: disable=bad-indentation
 import logging
 import typing
-import warnings
 
 import requests
 from requests.auth import HTTPBasicAuth
