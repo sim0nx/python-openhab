@@ -405,14 +405,3 @@ class OpenHAB:
     self.logger.debug('About to create item with PUT request:\n%s', str(paramdict))
 
     self.req_put(f'/items/{name}', json_data=paramdict, headers={'Content-Type': 'application/json'})
-
-
-# noinspection PyPep8Naming
-class openHAB(OpenHAB):
-  """Legacy class wrapper, **do not** use."""
-
-  def __init__(self, *args: typing.Any, **kwargs: typing.Any) -> None:
-    """Constructor."""
-    super().__init__(*args, **kwargs)
-
-    warnings.warn('The use of the "openHAB" class is deprecated, please use "OpenHAB" instead.', DeprecationWarning)

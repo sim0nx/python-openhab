@@ -1,5 +1,5 @@
 """Module entry point."""
 
-from .client import OpenHAB, openHAB
+from .client import OpenHAB
 
-__all__ = ['openHAB', 'OpenHAB']
+__all__ = ['OpenHAB']
