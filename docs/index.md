@@ -1,6 +1,6 @@
-[![Travis CI](https://travis-ci.com/sim0nx/python-openhab.svg?branch=master)](https://travis-ci.com/sim0nx/python-openhab)
 [![Documentation Status](https://readthedocs.org/projects/python-openhab/badge/?version=latest)](http://python-openhab.readthedocs.io/en/latest/?badge=latest)
-[![PyPI](https://badge.fury.io/py/python-openhab.svg)](https://badge.fury.io/py/python-openhab)
+![PyPI](https://img.shields.io/pypi/v/python-openhab)
+![PyPI - Python Version](https://img.shields.io/pypi/pyversions/python-openhab)
 
 # python library for accessing the openHAB REST API
 
@@ -9,13 +9,12 @@ work in progress.
 
 # Requirements
 
-- python >= 3.5
+- python >= 3.8
 - python :: dateutil
 - python :: requests
 - openHAB version 3
 
-Installation
-------------
+# Installation
 
 Install the latest version using pip:
 
