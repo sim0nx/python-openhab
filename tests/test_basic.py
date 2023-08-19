@@ -3,6 +3,8 @@ import time
 
 import openhab
 
+# ruff: noqa: S101, ANN201, T201
+
 
 def test_fetch_all_items(oh: openhab.OpenHAB):
   items = oh.fetch_all_items()
@@ -12,18 +14,19 @@ def test_fetch_all_items(oh: openhab.OpenHAB):
 
 def test_datetime_update(oh: openhab.OpenHAB):
   dt_obj = oh.get_item('TheDateTime')
-  dt_utc_now = datetime.datetime.utcnow().replace(tzinfo=datetime.timezone.utc)
+  dt_utc_now = datetime.datetime.now(tz=datetime.timezone.utc)
   dt_obj.state = dt_utc_now
 
-  print(dt_obj.state)
+  time.sleep(0.5)
   assert dt_obj.state.isoformat(timespec='seconds') == dt_utc_now.isoformat(timespec='seconds')
 
 
 def test_datetime_command(oh: openhab.OpenHAB):
   dt_obj = oh.get_item('TheDateTime')
-  dt_utc_now = datetime.datetime.utcnow().replace(tzinfo=datetime.timezone.utc)
+  dt_utc_now = datetime.datetime.now(tz=datetime.timezone.utc)
   dt_obj.command(dt_utc_now)
 
+  time.sleep(0.5)
   assert dt_obj.state.isoformat(timespec='seconds') == dt_utc_now.isoformat(timespec='seconds')
 
 

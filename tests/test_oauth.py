@@ -6,7 +6,9 @@ import pytest
 
 import openhab.oauth2_helper
 
-pytestmark = pytest.mark.skipif('CI' in os.environ, reason="oauth2 tests currently not working in github CI")
+# ruff: noqa: S101, ANN201, T201
+
+pytestmark = pytest.mark.skipif('CI' in os.environ, reason='oauth2 tests currently not working in github CI')
 
 
 def test_fetch_all_items(oh_oauth2: openhab.OpenHAB):
@@ -17,7 +19,7 @@ def test_fetch_all_items(oh_oauth2: openhab.OpenHAB):
 
 def test_datetime_update(oh_oauth2: openhab.OpenHAB):
   dt_obj = oh_oauth2.get_item('TheDateTime')
-  dt_utc_now = datetime.datetime.utcnow().replace(tzinfo=datetime.timezone.utc)
+  dt_utc_now = datetime.datetime.now(tz=datetime.timezone.utc)
   dt_obj.state = dt_utc_now
 
   assert dt_obj.state.isoformat(timespec='seconds') == dt_utc_now.isoformat(timespec='seconds')
@@ -25,7 +27,7 @@ def test_datetime_update(oh_oauth2: openhab.OpenHAB):
 
 def test_datetime_command(oh_oauth2: openhab.OpenHAB):
   dt_obj = oh_oauth2.get_item('TheDateTime')
-  dt_utc_now = datetime.datetime.utcnow().replace(tzinfo=datetime.timezone.utc)
+  dt_utc_now = datetime.datetime.now(tz=datetime.timezone.utc)
   dt_obj.command(dt_utc_now)
 
   assert dt_obj.state.isoformat(timespec='seconds') == dt_utc_now.isoformat(timespec='seconds')
