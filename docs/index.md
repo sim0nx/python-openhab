@@ -1,5 +1,5 @@
 [![Documentation Status](https://readthedocs.org/projects/python-openhab/badge/?version=latest)](http://python-openhab.readthedocs.io/en/latest/?badge=latest)
-![PyPI](https://img.shields.io/pypi/v/python-openhab)
+[![PyPI](https://img.shields.io/pypi/v/python-openhab)](https://pypi.org/project/python-openhab/)
 ![PyPI - Python Version](https://img.shields.io/pypi/pyversions/python-openhab)
 
 # python library for accessing the openHAB REST API
