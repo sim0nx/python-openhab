@@ -5,15 +5,15 @@
 import json
 import time
 
-import requests
+import httpx
 
 base_url = 'http://localhost:8080/rest'
 
 while True:
   try:
-    req = requests.get(base_url + '/items')
+    req = httpx.get(base_url + '/items')
     items = req.json()
-  except (requests.exceptions.RequestException, json.JSONDecodeError) as exc:
+  except (httpx.RequestError, json.JSONDecodeError) as exc:
     print(str(exc))
   else:
     if req.status_code == 200:
