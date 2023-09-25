@@ -117,4 +117,4 @@ def test_number_temperature(oh_oauth2: openhab.OpenHAB):
 
 
 def test_session_logout(oh_oauth2: openhab.OpenHAB):
-  assert oh_oauth2.logout()
+  assert oh_oauth2.logout() is True

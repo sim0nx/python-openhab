@@ -73,7 +73,6 @@ def get_oauth2_token(base_url: str,
     res.raise_for_status()
 
   if 'location' not in res.headers:
-    print(res.text, res.status_code)
     raise KeyError('Token generation failed!')
 
   oauth_redirect_location = res.headers['location']

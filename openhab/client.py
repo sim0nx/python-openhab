@@ -91,8 +91,6 @@ class OpenHAB:
                                                                     update_token=self._oauth2_token_updater,
                                                                     )
 
-      print('>>>>', self.oauth2_config.token.refresh_token)
-
       self.session.metadata['token_endpoint'] = f'{self.url_rest}/auth/token'
 
       if not self.oauth2_config.token_cache.is_file():
@@ -319,8 +317,6 @@ class OpenHAB:
 
     self.oauth2_config.token = Oauth2Token(**token)
 
-    print('>SSS>>>', self.oauth2_config.token.refresh_token)
-
     with self.oauth2_config.token_cache.open('w', encoding='utf-8') as fhdl:
       fhdl.write(self.oauth2_config.token.model_dump_json())
 
@@ -391,7 +387,6 @@ class OpenHAB:
       if isinstance(group_type, type):
         if issubclass(group_type, openhab.items.Item):
           paramdict['groupType'] = group_type.TYPENAME
-          # paramdict['function'] = {'name': 'AVG'}
         else:
           raise ValueError(
             f'group_type parameter must be a valid subclass of type *Item* or a string name of such a class; given value is "{str(group_type)}"')

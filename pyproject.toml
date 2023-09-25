@@ -52,6 +52,7 @@ dev = [
 ]
 test = [
     "pytest",
+    "pytest-sugar",
     "coverage",
     "beautifulsoup4",
 ]
