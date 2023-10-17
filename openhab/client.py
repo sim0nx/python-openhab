@@ -239,7 +239,7 @@ class OpenHAB:
       Item: A corresponding Item class instance with the state of the requested item.
     """
     json_data = self.get_item_raw(name)
-    json_data['persistence'] = self.get_item_persistence_raw(name,start_time)
+    json_data['persistence'] = self.get_item_persistence_raw(name,start_time)['data'][0]['state']
     return self.json_to_item(json_data)
 
   def json_to_item(self, json_data: dict) -> openhab.items.Item:
@@ -313,8 +313,7 @@ class OpenHAB:
       dict: A JSON decoded dict.
     """
     end_time = start_time + 1
-    json = self.req_get(f'/persistence/items/{name}/?starttime={start_time}&endtime={end_time}')
-    return json['data'][0]['state']
+    return self.req_get(f'/persistence/items/{name}/?starttime={start_time}&endtime={end_time}')
 
   def logout(self) -> bool:
     """OAuth2 session logout method.
