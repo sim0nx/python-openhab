@@ -223,7 +223,6 @@ class OpenHAB:
 
     Args:
       name (str): The name of the item to fetch from openHAB.
-      start_time (int): Number for persistance load
     Returns:
       Item: A corresponding Item class instance with the state of the requested item.
     """
