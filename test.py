@@ -22,10 +22,10 @@
 import datetime
 import openhab
 
-base_url = 'http://192.168.2.11:8080/rest'
+base_url = 'http://localhost:8080/rest'
 openhab = openhab.OpenHAB(base_url)
 
 # fetch all items
-item_state_persistent = openhab.get_item('actual_price',start_time=1697497200).persistence
+item_state_persistent = openhab.get_item_persistence('actual_price',1697497200).persistence
 
 print(item_state_persistent)

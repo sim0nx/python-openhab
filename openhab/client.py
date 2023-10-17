@@ -218,7 +218,7 @@ class OpenHAB:
 
     return items
 
-  def get_item(self, name: str,start_time: int = None) -> openhab.items.Item:
+  def get_item(self, name: str) -> openhab.items.Item:
     """Returns an item with its state and type as fetched from openHAB.
 
     Args:
@@ -228,8 +228,19 @@ class OpenHAB:
       Item: A corresponding Item class instance with the state of the requested item.
     """
     json_data = self.get_item_raw(name)
-    if start_time:
-      json_data['persistence'] = self.get_item_persistence_raw(name,start_time)
+    return self.json_to_item(json_data)
+
+  def get_item_persistence(self, name: str,start_time: int) -> openhab.items.Item:
+    """Returns an item with its state and type as fetched from openHAB.
+
+    Args:
+      name (str): The name of the item to fetch from openHAB.
+      start_time (int): Number for persistance load
+    Returns:
+      Item: A corresponding Item class instance with the state of the requested item.
+    """
+    json_data = self.get_item_raw(name)
+    json_data['persistence'] = self.get_item_persistence_raw(name,start_time)
     return self.json_to_item(json_data)
 
   def json_to_item(self, json_data: dict) -> openhab.items.Item:
