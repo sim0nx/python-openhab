@@ -63,6 +63,7 @@ class Item:
     self.group = False
     self.name = ''
     self._state = None  # type: typing.Optional[typing.Any]
+    self.persistence = ''
     self._unitOfMeasure = ''
     self._raw_state = None  # type: typing.Optional[typing.Any]  # raw state as returned by the server
     self._members = {}  # type: typing.Dict[str, typing.Any] #  group members (key = item name), for none-group items it's empty
@@ -81,6 +82,7 @@ class Item:
                         server.
     """
     self.name = json_data['name']
+    self.persistence = json_data['persistence']
     if json_data['type'] == 'Group':
       self.group = True
       if 'groupType' in json_data:
@@ -135,7 +137,7 @@ class Item:
     self.init_from_json(json_data)
 
     return self._state
-
+  
   @state.setter
   def state(self, value: typing.Any) -> None:
     self.update(value)

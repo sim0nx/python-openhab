@@ -218,17 +218,18 @@ class OpenHAB:
 
     return items
 
-  def get_item(self, name: str) -> openhab.items.Item:
+  def get_item(self, name: str,start_time: int = None) -> openhab.items.Item:
     """Returns an item with its state and type as fetched from openHAB.
 
     Args:
       name (str): The name of the item to fetch from openHAB.
-
+      start_time (int): Number for persistance load
     Returns:
       Item: A corresponding Item class instance with the state of the requested item.
     """
     json_data = self.get_item_raw(name)
-
+    if start_time:
+      json_data['persistence'] = self.get_item_persistence_raw(name,start_time)
     return self.json_to_item(json_data)
 
   def json_to_item(self, json_data: dict) -> openhab.items.Item:
@@ -290,6 +291,20 @@ class OpenHAB:
       dict: A JSON decoded dict.
     """
     return self.req_get(f'/items/{name}')
+
+  def get_item_persistence_raw(self, name: str, start_time: int) -> typing.Any:
+    """Private method for fetching a json item data based on persistence. 
+       End_time is calculated because we need to have only one record.
+
+    Args:
+      name (str): The item name to be fetched.
+      start_time (str): Number of datetime.
+    Returns:
+      dict: A JSON decoded dict.
+    """
+    end_time = start_time + 1
+    json = self.req_get(f'/persistence/items/{name}/?starttime={start_time}&endtime={end_time}')
+    return json['data'][0]['state']
 
   def logout(self) -> bool:
     """OAuth2 session logout method.

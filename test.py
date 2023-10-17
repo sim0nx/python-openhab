@@ -22,22 +22,10 @@
 import datetime
 import openhab
 
-base_url = 'http://localhost:8080/rest'
+base_url = 'http://192.168.2.11:8080/rest'
 openhab = openhab.OpenHAB(base_url)
 
 # fetch all items
-items = openhab.fetch_all_items()
+item_state_persistent = openhab.get_item('actual_price',start_time=1697497200).persistence
 
-# fetch other items, show how to toggle a switch
-sunset = items.get('Sunset')
-sunrise = items.get('Sunrise')
-knx_day_night = items.get('KNX_day_night')
-
-now = datetime.datetime.now(datetime.timezone.utc)
-
-if now > sunrise.state and now < sunset.state:
-  knx_day_night.on()
-else:
-  knx_day_night.off()
-
-print(knx_day_night.state)
+print(item_state_persistent)
