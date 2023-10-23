@@ -13,7 +13,7 @@ work in progress.
 - python :: dateutil
 - python :: httpx
 - python :: authlib
-- openHAB version 3
+- openHAB version 3 / 4
 
 # Installation
 
@@ -28,6 +28,9 @@ pip install python-openhab
 Example usage of the library:
 
 ```python
+
+import datetime
+import json
 
 from openhab import OpenHAB
 
@@ -69,6 +72,22 @@ lights_group.on()
 # send update to each member
 for v in lights_group.members.values():
     v.update('OFF')
+
+# start_time for fetching persistence data
+start_time = datetime.datetime.fromtimestamp(1695504300123 / 1000, tz=datetime.UTC)
+
+# fetch persistence data using the OpenHAB client object
+for k in openhab.get_item_persistence(knx_day_night.name,
+                                      page_length=20,
+                                      start_time=start_time
+                                      ):
+  print(json.dumps(k, indent=4))
+
+# fetch persistence data using the item directly
+for k in item.persistence(page_length=20,
+                                   start_time=start_time
+                                   ):
+  print(json.dumps(k, indent=4))
 ```
 
 # Note on NULL and UNDEF
