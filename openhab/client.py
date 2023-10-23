@@ -439,7 +439,7 @@ class OpenHAB:
          "state": "23"
         }
     """
-    params = {'boundary': str(boundary).lower(),
+    params: typing.Dict[str, typing.Any] = {'boundary': str(boundary).lower(),
               'page': page,
               'pagelength': page_length,
               }
