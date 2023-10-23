@@ -17,7 +17,6 @@
 # along with python-openhab.  If not, see <http://www.gnu.org/licenses/>.
 #
 
-# pylint: disable=bad-indentation
 
 import datetime
 import logging
@@ -206,7 +205,7 @@ class Item:
     """String representation."""
     state = self._state
     if self._unitOfMeasure and not isinstance(self._state, tuple):
-        state = f'{self._state} {self._unitOfMeasure}'
+      state = f'{self._state} {self._unitOfMeasure}'
     return f'<{self.type_} - {self.name} : {state}>'
 
   def _update(self, value: typing.Any) -> None:
@@ -282,6 +281,39 @@ class Item:
       return self._raw_state == 'UNDEF'
 
     return False
+
+  def persistence(self,
+                  service_id: typing.Optional[str] = None,
+                  start_time: typing.Optional[datetime.datetime] = None,
+                  end_time: typing.Optional[datetime.datetime] = None,
+                  page: int = 0,
+                  page_length: int = 0,
+                  boundary: bool = False,
+                  ) -> typing.Iterator[typing.Dict[str, typing.Union[str, int]]]:
+    """Method for fetching persistence data for a given item.
+
+    Args:
+      service_id: ID of the persistence service. If not provided the default service will be used.
+      start_time: Start time of the data to return. Will default to 1 day before end_time.
+      end_time: End time of the data to return. Will default to current time.
+      page: Page number of data to return. Defaults to 0 if not provided.
+      page_length: The length of each page. Defaults to 0 which disabled paging.
+      boundary: Gets one value before and after the requested period.
+
+    Returns:
+      Iterator over dict values containing time and state value, e.g.
+        {"time": 1695588900122,
+         "state": "23"
+        }
+    """
+    yield from self.openhab.get_item_persistence(name=self.name,
+                                                 service_id=service_id,
+                                                 start_time=start_time,
+                                                 end_time=end_time,
+                                                 page=page,
+                                                 page_length=page_length,
+                                                 boundary=boundary,
+                                                 )
 
 
 class GroupItem(Item):
@@ -476,9 +508,9 @@ class NumberItem(Item):
       str or bytes: A string or bytes as converted from the value parameter.
     """
     if isinstance(value, tuple) and len(value) == 2:
-        return super()._rest_format(f'{value[0]:G} {value[1]}')
+      return super()._rest_format(f'{value[0]:G} {value[1]}')
     if not isinstance(value, str):
-        return super()._rest_format(f'{value:G}')
+      return super()._rest_format(f'{value:G}')
     return super()._rest_format(value)
 
 

@@ -17,7 +17,7 @@
 # along with python-openhab.  If not, see <http://www.gnu.org/licenses/>.
 #
 
-# pylint: disable=bad-indentation
+import datetime
 import logging
 import typing
 
@@ -133,7 +133,7 @@ class OpenHAB:
     if not 200 <= req.status_code < 300:
       req.raise_for_status()
 
-  def req_get(self, uri_path: str) -> typing.Any:
+  def req_get(self, uri_path: str, params: typing.Optional[typing.Union[typing.Dict[str, typing.Any], list, tuple]] = None) -> typing.Any:
     """Helper method for initiating a HTTP GET request.
 
     Besides doing the actual request, it also checks the return value and returns the resulting decoded
@@ -145,7 +145,7 @@ class OpenHAB:
     Returns:
       dict: Returns a dict containing the data returned by the OpenHAB REST server.
     """
-    r = self.session.get(self.url_rest + uri_path)
+    r = self.session.get(f'{self.url_rest}{uri_path}', params=params)
     self._check_req_return(r)
     return r.json()
 
@@ -395,7 +395,7 @@ class OpenHAB:
 
     if function_name is not None:
       if function_name not in (
-          'EQUALITY', 'AND', 'OR', 'NAND', 'NOR', 'AVG', 'SUM', 'MAX', 'MIN', 'COUNT', 'LATEST', 'EARLIEST'):
+        'EQUALITY', 'AND', 'OR', 'NAND', 'NOR', 'AVG', 'SUM', 'MAX', 'MIN', 'COUNT', 'LATEST', 'EARLIEST'):
         raise ValueError(f'Invalid function name "{function_name}')
 
       if function_name in ('AND', 'OR', 'NAND', 'NOR') and (not function_params or len(function_params) != 2):
@@ -412,3 +412,55 @@ class OpenHAB:
     self.logger.debug('About to create item with PUT request:\n%s', str(paramdict))
 
     self.req_put(f'/items/{name}', json_data=paramdict, headers={'Content-Type': 'application/json'})
+
+  def get_item_persistence(self,
+                           name: str,
+                           service_id: typing.Optional[str] = None,
+                           start_time: typing.Optional[datetime.datetime] = None,
+                           end_time: typing.Optional[datetime.datetime] = None,
+                           page: int = 0,
+                           page_length: int = 0,
+                           boundary: bool = False,
+                           ) -> typing.Iterator[typing.Dict[str, typing.Union[str, int]]]:
+    """Method for fetching persistence data for a given item.
+
+    Args:
+      name: The item name persistence data should be fetched for.
+      service_id: ID of the persistence service. If not provided the default service will be used.
+      start_time: Start time of the data to return. Will default to 1 day before end_time.
+      end_time: End time of the data to return. Will default to current time.
+      page: Page number of data to return. Defaults to 0 if not provided.
+      page_length: The length of each page. Defaults to 0 which disabled paging.
+      boundary: Gets one value before and after the requested period.
+
+    Returns:
+      Iterator over dict values containing time and state value, e.g.
+        {"time": 1695588900122,
+         "state": "23"
+        }
+    """
+    params = {'boundary': str(boundary).lower(),
+              'page': page,
+              'pagelength': page_length,
+              }
+
+    if service_id is not None:
+      params['serviceId'] = service_id
+
+    if start_time is not None:
+      params['starttime'] = start_time.isoformat()
+
+    if end_time is not None:
+      params['endtime'] = end_time.isoformat()
+
+    if start_time == end_time:
+      raise ValueError('start_time must differ from end_time')
+
+    res = self.req_get(f'/persistence/items/{name}', params=params)
+
+    yield from res['data']
+
+    while page_length > 0 and int(res['datapoints']) > 0:
+      params['page'] += 1
+      res = self.req_get(f'/persistence/items/{name}', params=params)
+      yield from res['data']
