@@ -45,10 +45,11 @@ class CommandType(metaclass=abc.ABCMeta):
     return value in CommandType.UNDEFINED_STATES
 
   @classmethod
-  def get_type_for(cls,
-                   typename: str,
-                   parent_cls: typing.Optional[typing.Type['CommandType']] = None,
-                   ) -> typing.Union[typing.Type['CommandType'], None]:
+  def get_type_for(
+    cls,
+    typename: str,
+    parent_cls: typing.Optional[typing.Type['CommandType']] = None,
+  ) -> typing.Union[typing.Type['CommandType'], None]:
     """Get a class type for a given typename."""
     if parent_cls is None:
       parent_cls = CommandType
@@ -87,6 +88,7 @@ class CommandType(metaclass=abc.ABCMeta):
 
 class UndefType(CommandType):
   """Undefined type."""
+
   TYPENAME = 'UnDef'
   SUPPORTED_TYPENAMES = [TYPENAME]
 
@@ -104,6 +106,7 @@ class UndefType(CommandType):
 
 class GroupType(CommandType):
   """Group type."""
+
   TYPENAME = 'Group'
   SUPPORTED_TYPENAMES = [TYPENAME]
 
@@ -151,6 +154,7 @@ class StringType(CommandType):
 
 class OnOffType(StringType):
   """OnOffType data_type class."""
+
   TYPENAME = 'OnOff'
   SUPPORTED_TYPENAMES = [TYPENAME]
   ON = 'ON'
@@ -184,6 +188,7 @@ class OnOffType(StringType):
 
 class OpenCloseType(StringType):
   """OpenCloseType data_type class."""
+
   TYPENAME = 'OpenClosed'
   SUPPORTED_TYPENAMES = [TYPENAME]
   OPEN = 'OPEN'
@@ -217,6 +222,7 @@ class OpenCloseType(StringType):
 
 class ColorType(CommandType):
   """ColorType data_type class."""
+
   TYPENAME = 'HSB'
   SUPPORTED_TYPENAMES = [TYPENAME]
 
@@ -269,6 +275,7 @@ class ColorType(CommandType):
 
 class DecimalType(CommandType):
   """DecimalType data_type class."""
+
   TYPENAME = 'Decimal'
   SUPPORTED_TYPENAMES = [TYPENAME, 'Quantity']
 
@@ -321,6 +328,7 @@ class DecimalType(CommandType):
 
 class PercentType(CommandType):
   """PercentType data_type class."""
+
   TYPENAME = 'Percent'
   SUPPORTED_TYPENAMES = [TYPENAME]
 
@@ -356,6 +364,7 @@ class PercentType(CommandType):
 
 class IncreaseDecreaseType(StringType):
   """IncreaseDecreaseType data_type class."""
+
   TYPENAME = 'IncreaseDecrease'
   SUPPORTED_TYPENAMES = [TYPENAME]
 
@@ -391,6 +400,7 @@ class IncreaseDecreaseType(StringType):
 
 class DateTimeType(CommandType):
   """DateTimeType data_type class."""
+
   TYPENAME = 'DateTime'
   SUPPORTED_TYPENAMES = [TYPENAME]
 

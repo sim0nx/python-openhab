@@ -6,13 +6,14 @@ import bs4
 import httpx
 
 
-def get_oauth2_token(base_url: str,
-                     username: str,
-                     password: str,
-                     client_id: typing.Optional[str] = None,
-                     redirect_url: typing.Optional[str] = None,
-                     scope: typing.Optional[str] = None,
-                     ) -> dict:
+def get_oauth2_token(
+  base_url: str,
+  username: str,
+  password: str,
+  client_id: typing.Optional[str] = None,
+  redirect_url: typing.Optional[str] = None,
+  scope: typing.Optional[str] = None,
+) -> dict:
   """Method for generating an OAuth2 token.
 
   Args:
@@ -82,13 +83,14 @@ def get_oauth2_token(base_url: str,
 
   oauth2_registration_code = oauth_redirect_location.split('?code=', 1)[1]
 
-  data = {'grant_type': 'authorization_code',
-          'code': oauth2_registration_code,
-          'redirect_uri': oauth2_redirect_url,
-          'client_id': oauth2_client_id,
-          'refresh_token': None,
-          'code_verifier': None,
-          }
+  data = {
+    'grant_type': 'authorization_code',
+    'code': oauth2_registration_code,
+    'redirect_uri': oauth2_redirect_url,
+    'client_id': oauth2_client_id,
+    'refresh_token': None,
+    'code_verifier': None,
+  }
 
   res = httpx.post(oauth2_auth_endpoint, data=data, timeout=30)
   res.raise_for_status()

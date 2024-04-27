@@ -36,13 +36,15 @@ __license__ = 'AGPLv3+'
 class OpenHAB:
   """openHAB REST API client."""
 
-  def __init__(self, base_url: str,
-               username: typing.Optional[str] = None,
-               password: typing.Optional[str] = None,
-               http_auth: typing.Optional[httpx.Auth] = None,
-               timeout: typing.Optional[float] = None,
-               oauth2_config: typing.Optional[typing.Dict[str, typing.Any]] = None,
-               ) -> None:
+  def __init__(
+    self,
+    base_url: str,
+    username: typing.Optional[str] = None,
+    password: typing.Optional[str] = None,
+    http_auth: typing.Optional[httpx.Auth] = None,
+    timeout: typing.Optional[float] = None,
+    oauth2_config: typing.Optional[typing.Dict[str, typing.Any]] = None,
+  ) -> None:
     """Class constructor.
 
     The format of the optional *oauth2_config* dictionary is as follows:
@@ -86,10 +88,11 @@ class OpenHAB:
     if oauth2_config is not None:
       self.oauth2_config = Oauth2Config(**oauth2_config)
 
-      self.session = authlib.integrations.httpx_client.OAuth2Client(client_id=self.oauth2_config.client_id,
-                                                                    token=self.oauth2_config.token.model_dump(),
-                                                                    update_token=self._oauth2_token_updater,
-                                                                    )
+      self.session = authlib.integrations.httpx_client.OAuth2Client(
+        client_id=self.oauth2_config.client_id,
+        token=self.oauth2_config.token.model_dump(),
+        update_token=self._oauth2_token_updater,
+      )
 
       self.session.metadata['token_endpoint'] = f'{self.url_rest}/auth/token'
 
@@ -149,11 +152,11 @@ class OpenHAB:
     self._check_req_return(r)
     return r.json()
 
-  def req_post(self,
-               uri_path: str,
-               data: typing.Optional[typing.Union[str, bytes, typing.Mapping[str, typing.Any], typing.Iterable[
-                 typing.Tuple[str, typing.Optional[str]]]]] = None,
-               ) -> None:
+  def req_post(
+    self,
+    uri_path: str,
+    data: typing.Optional[typing.Union[str, bytes, typing.Mapping[str, typing.Any], typing.Iterable[typing.Tuple[str, typing.Optional[str]]]]] = None,
+  ) -> None:
     """Helper method for initiating a HTTP POST request.
 
     Besides doing the actual request, it also checks the return value and returns the resulting decoded
@@ -172,12 +175,13 @@ class OpenHAB:
     r = self.session.post(self.url_rest + uri_path, content=data, headers=headers)
     self._check_req_return(r)
 
-  def req_put(self,
-              uri_path: str,
-              data: typing.Optional[dict] = None,
-              json_data: typing.Optional[dict] = None,
-              headers: typing.Optional[dict] = None,
-              ) -> None:
+  def req_put(
+    self,
+    uri_path: str,
+    data: typing.Optional[dict] = None,
+    json_data: typing.Optional[dict] = None,
+    headers: typing.Optional[dict] = None,
+  ) -> None:
     """Helper method for initiating a HTTP PUT request.
 
     Besides doing the actual request, it also checks the return value and returns the resulting decoded
@@ -300,18 +304,17 @@ class OpenHAB:
     if self.oauth2_config is None or not isinstance(self.session, authlib.integrations.httpx_client.OAuth2Client):
       raise ValueError('You are trying to logout from a non-OAuth2 session. This is not supported!')
 
-    data = {'refresh_token': self.oauth2_config.token.refresh_token,
-            'id': self.oauth2_config.client_id,
-            }
+    data = {
+      'refresh_token': self.oauth2_config.token.refresh_token,
+      'id': self.oauth2_config.client_id,
+    }
     url_logout = f'{self.url_rest}/auth/logout'
 
     res = self.session.post(url_logout, data=data)
 
     return res.status_code == 200
 
-  def _oauth2_token_updater(self, token: typing.Dict[str, typing.Any],
-                            refresh_token: typing.Any = None,
-                            access_token: typing.Any = None) -> None:
+  def _oauth2_token_updater(self, token: typing.Dict[str, typing.Any], refresh_token: typing.Any = None, access_token: typing.Any = None) -> None:
     if self.oauth2_config is None:
       raise ValueError('OAuth2 configuration is not set; invalid action!')
 
@@ -320,18 +323,19 @@ class OpenHAB:
     with self.oauth2_config.token_cache.open('w', encoding='utf-8') as fhdl:
       fhdl.write(self.oauth2_config.token.model_dump_json())
 
-  def create_or_update_item(self,
-                            name: str,
-                            _type: typing.Union[str, typing.Type[openhab.items.Item]],
-                            quantity_type: typing.Optional[str] = None,
-                            label: typing.Optional[str] = None,
-                            category: typing.Optional[str] = None,
-                            tags: typing.Optional[typing.List[str]] = None,
-                            group_names: typing.Optional[typing.List[str]] = None,
-                            group_type: typing.Optional[typing.Union[str, typing.Type[openhab.items.Item]]] = None,
-                            function_name: typing.Optional[str] = None,
-                            function_params: typing.Optional[typing.List[str]] = None,
-                            ) -> None:
+  def create_or_update_item(
+    self,
+    name: str,
+    _type: typing.Union[str, typing.Type[openhab.items.Item]],
+    quantity_type: typing.Optional[str] = None,
+    label: typing.Optional[str] = None,
+    category: typing.Optional[str] = None,
+    tags: typing.Optional[typing.List[str]] = None,
+    group_names: typing.Optional[typing.List[str]] = None,
+    group_type: typing.Optional[typing.Union[str, typing.Type[openhab.items.Item]]] = None,
+    function_name: typing.Optional[str] = None,
+    function_params: typing.Optional[typing.List[str]] = None,
+  ) -> None:
     """Creates a new item in openHAB if there is no item with name 'name' yet.
 
     If there is an item with 'name' already in openHAB, the item gets updated with the infos provided. be aware that not provided fields will be deleted in openHAB.
@@ -352,15 +356,13 @@ class OpenHAB:
                      Can be one of ['EQUALITY', 'AND', 'OR', 'NAND', 'NOR', 'AVG', 'SUM', 'MAX', 'MIN', 'COUNT', 'LATEST', 'EARLIEST']
       function_params: Optional list of function params (no documentation found), depending on function name.
     """
-    paramdict: typing.Dict[
-      str, typing.Union[str, typing.List[str], typing.Dict[str, typing.Union[str, typing.List[str]]]]] = {}
+    paramdict: typing.Dict[str, typing.Union[str, typing.List[str], typing.Dict[str, typing.Union[str, typing.List[str]]]]] = {}
 
     if isinstance(_type, type):
       if issubclass(_type, openhab.items.Item):
         itemtypename = _type.TYPENAME
       else:
-        raise ValueError(
-          f'_type parameter must be a valid subclass of type *Item* or a string name of such a class; given value is "{str(_type)}"')
+        raise ValueError(f'_type parameter must be a valid subclass of type *Item* or a string name of such a class; given value is "{str(_type)}"')
     else:
       itemtypename = _type
 
@@ -388,14 +390,12 @@ class OpenHAB:
         if issubclass(group_type, openhab.items.Item):
           paramdict['groupType'] = group_type.TYPENAME
         else:
-          raise ValueError(
-            f'group_type parameter must be a valid subclass of type *Item* or a string name of such a class; given value is "{str(group_type)}"')
+          raise ValueError(f'group_type parameter must be a valid subclass of type *Item* or a string name of such a class; given value is "{str(group_type)}"')
       else:
         paramdict['groupType'] = group_type
 
     if function_name is not None:
-      if function_name not in (
-        'EQUALITY', 'AND', 'OR', 'NAND', 'NOR', 'AVG', 'SUM', 'MAX', 'MIN', 'COUNT', 'LATEST', 'EARLIEST'):
+      if function_name not in ('EQUALITY', 'AND', 'OR', 'NAND', 'NOR', 'AVG', 'SUM', 'MAX', 'MIN', 'COUNT', 'LATEST', 'EARLIEST'):
         raise ValueError(f'Invalid function name "{function_name}')
 
       if function_name in ('AND', 'OR', 'NAND', 'NOR') and (not function_params or len(function_params) != 2):
@@ -413,15 +413,16 @@ class OpenHAB:
 
     self.req_put(f'/items/{name}', json_data=paramdict, headers={'Content-Type': 'application/json'})
 
-  def get_item_persistence(self,
-                           name: str,
-                           service_id: typing.Optional[str] = None,
-                           start_time: typing.Optional[datetime.datetime] = None,
-                           end_time: typing.Optional[datetime.datetime] = None,
-                           page: int = 0,
-                           page_length: int = 0,
-                           boundary: bool = False,
-                           ) -> typing.Iterator[typing.Dict[str, typing.Union[str, int]]]:
+  def get_item_persistence(
+    self,
+    name: str,
+    service_id: typing.Optional[str] = None,
+    start_time: typing.Optional[datetime.datetime] = None,
+    end_time: typing.Optional[datetime.datetime] = None,
+    page: int = 0,
+    page_length: int = 0,
+    boundary: bool = False,
+  ) -> typing.Iterator[typing.Dict[str, typing.Union[str, int]]]:
     """Method for fetching persistence data for a given item.
 
     Args:
@@ -439,10 +440,11 @@ class OpenHAB:
          "state": "23"
         }
     """
-    params: typing.Dict[str, typing.Any] = {'boundary': str(boundary).lower(),
-              'page': page,
-              'pagelength': page_length,
-              }
+    params: typing.Dict[str, typing.Any] = {
+      'boundary': str(boundary).lower(),
+      'page': page,
+      'pagelength': page_length,
+    }
 
     if service_id is not None:
       params['serviceId'] = service_id

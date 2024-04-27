@@ -23,7 +23,7 @@ import typing
 
 import pydantic
 
-'''Considering a oauth2 token config is expected to look like the following:
+"""Considering a oauth2 token config is expected to look like the following:
 
 ```
 {"client_id": "http://127.0.0.1/auth",
@@ -45,17 +45,19 @@ import pydantic
 ```
 
 , the following classes model that structure for validation.
-'''
+"""
 
 
 class Oauth2User(pydantic.BaseModel):
   """Nested user structure within an oauth2 token."""
+
   name: str
   roles: typing.List[str]
 
 
 class Oauth2Token(pydantic.BaseModel):
   """Structure as returned by openHAB when generating a new oauth2 token."""
+
   access_token: str
   expires_in: int
   expires_at: float = time.time() - 10
@@ -67,6 +69,7 @@ class Oauth2Token(pydantic.BaseModel):
 
 class Oauth2Config(pydantic.BaseModel):
   """Structure expected for a full oauth2 config."""
+
   client_id: str = 'http://127.0.0.1/auth'
   token_cache: pathlib.Path
   token: Oauth2Token

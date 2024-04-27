@@ -17,7 +17,6 @@
 # along with python-openhab.  If not, see <http://www.gnu.org/licenses/>.
 #
 
-
 import datetime
 import logging
 import re
@@ -282,14 +281,15 @@ class Item:
 
     return False
 
-  def persistence(self,
-                  service_id: typing.Optional[str] = None,
-                  start_time: typing.Optional[datetime.datetime] = None,
-                  end_time: typing.Optional[datetime.datetime] = None,
-                  page: int = 0,
-                  page_length: int = 0,
-                  boundary: bool = False,
-                  ) -> typing.Iterator[typing.Dict[str, typing.Union[str, int]]]:
+  def persistence(
+    self,
+    service_id: typing.Optional[str] = None,
+    start_time: typing.Optional[datetime.datetime] = None,
+    end_time: typing.Optional[datetime.datetime] = None,
+    page: int = 0,
+    page_length: int = 0,
+    boundary: bool = False,
+  ) -> typing.Iterator[typing.Dict[str, typing.Union[str, int]]]:
     """Method for fetching persistence data for a given item.
 
     Args:
@@ -306,14 +306,15 @@ class Item:
          "state": "23"
         }
     """
-    yield from self.openhab.get_item_persistence(name=self.name,
-                                                 service_id=service_id,
-                                                 start_time=start_time,
-                                                 end_time=end_time,
-                                                 page=page,
-                                                 page_length=page_length,
-                                                 boundary=boundary,
-                                                 )
+    yield from self.openhab.get_item_persistence(
+      name=self.name,
+      service_id=service_id,
+      start_time=start_time,
+      end_time=end_time,
+      page=page,
+      page_length=page_length,
+      boundary=boundary,
+    )
 
 
 class GroupItem(Item):
