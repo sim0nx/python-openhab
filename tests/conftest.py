@@ -7,6 +7,7 @@ import openhab.oauth2_helper
 
 # ruff: noqa: S106
 
+
 @pytest.fixture(scope='session')
 def oh() -> 'openhab.OpenHAB':
   """Setup a generic connection."""
@@ -25,9 +26,10 @@ def oh_oauth2() -> 'openhab.OpenHAB':
 
   oauth2_token = openhab.oauth2_helper.get_oauth2_token(url_base, username='admin', password='admin')
 
-  oauth2_config = {'client_id': r'http://127.0.0.1/auth',
-                   'token_cache': str(pathlib.Path(__file__).resolve().parent.parent / '.oauth2_token_test'),
-                   'token': oauth2_token,
-                   }
+  oauth2_config = {
+    'client_id': r'http://127.0.0.1/auth',
+    'token_cache': str(pathlib.Path(__file__).resolve().parent.parent / '.oauth2_token_test'),
+    'token': oauth2_token,
+  }
 
   return openhab.OpenHAB(url_rest, oauth2_config=oauth2_config)
