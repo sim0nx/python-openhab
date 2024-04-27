@@ -79,6 +79,7 @@ class CommandType(metaclass=abc.ABCMeta):
     Args:
       value (Object): The value to validate. The data_type of the value depends on the item
                       data_type and is checked accordingly.
+
     Raises:
       NotImplementedError: Raises NotImplementedError as the base class should never
                            be used directly.
