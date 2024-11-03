@@ -25,18 +25,16 @@ jobs:
 
       - name: Run tests
         run: |
-          python3 -m pip install --upgrade pip
-          python3 -m pip install --upgrade-strategy eager .[test]
-
+          python3 -m pip install uv
+          uv sync --extra test
+          
           docker run -d --name openhab -p 8080:8080 -e OPENHAB_HTTP_PORT=8080 -v ${{ github.workspace }}/docker/openhab_conf:/openhab/conf "openhab/openhab:latest"
-
-          python3 docker/test_connectivity.py
-
+          uv run docker/test_connectivity.py
           docker exec -i openhab /openhab/runtime/bin/client -v -p habopen users add admin admin administrator || true
-
           sleep 2
 
-          python3 -m coverage run --omit tests --parallel-mode -m pytest -vv tests
+          uv run coverage run --omit tests --parallel-mode -m pytest -vv tests
+          ls -la
 
       - name: Upload coverage data
         uses: actions/upload-artifact@v4
