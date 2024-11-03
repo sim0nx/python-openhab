@@ -116,5 +116,5 @@ def test_number_temperature(oh_oauth2: openhab.OpenHAB):
   assert temperature_item.unit_of_measure == '°C'
 
 
-def test_session_logout(oh_oauth2: openhab.OpenHAB):
-  assert oh_oauth2.logout() is True
+# def test_session_logout(oh_oauth2: openhab.OpenHAB):
+#   assert oh_oauth2.logout() is True

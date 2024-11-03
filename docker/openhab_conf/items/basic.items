@@ -17,3 +17,5 @@ String stringtest
 Number  floattest
 
 Color color_item  "Color item test"
+
+Location location_item

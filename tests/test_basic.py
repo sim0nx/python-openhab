@@ -1,7 +1,10 @@
 import datetime
 import time
 
+import pytest
+
 import openhab
+
 
 # ruff: noqa: S101, ANN201, T201
 
@@ -111,3 +114,28 @@ def test_number_temperature(oh: openhab.OpenHAB):
   time.sleep(1)
   assert temperature_item.state == 100
   assert temperature_item.unit_of_measure == '°C'
+
+
+def test_location_item(oh: openhab.OpenHAB):
+  locationitem = oh.get_item('location_item')
+
+  locationitem.update_state_null()
+  assert locationitem.is_state_null()
+
+  locationitem.state = '1.1, 1.2, 1.3'
+  assert locationitem.state == (1.1, 1.2, 1.3)
+
+  locationitem.state = (1.1, 1.2, 1.3)
+  assert locationitem.state == (1.1, 1.2, 1.3)
+
+  locationitem.state = '30.1, -50.2, 7325.456'
+  assert locationitem.state == (30.1, -50.2, 7325.456)
+
+  locationitem.state = (30.1, -50.2, 7325.456)
+  assert locationitem.state == (30.1, -50.2, 7325.456)
+
+  with pytest.raises(ValueError):
+    locationitem.state = (91, 181, -10)
+
+  with pytest.raises(ValueError):
+    locationitem.state = '90 10 10'

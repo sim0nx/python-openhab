@@ -73,7 +73,9 @@ class CommandType(metaclass=abc.ABCMeta):
   @classmethod
   @abc.abstractmethod
   def validate(cls, value: typing.Any) -> None:
-    """Value validation method. As this is the base class which should not be used\
+    """Value validation method.
+
+    As this is the base class which should not be used
     directly, we throw a NotImplementedError exception.
 
     Args:
@@ -304,7 +306,7 @@ class DecimalType(CommandType):
     raise ValueError
 
   @classmethod
-  def validate(cls, value: typing.Union[int, float, typing.Tuple[typing.Union[int, float], str], str]) -> None:
+  def validate(cls, value: typing.Union[float, typing.Tuple[float, str], str]) -> None:
     """Value validation method.
 
     Valid values are any of data_type:
@@ -347,7 +349,7 @@ class PercentType(CommandType):
       raise ValueError(e) from e
 
   @classmethod
-  def validate(cls, value: typing.Union[float, int]) -> None:
+  def validate(cls, value: float) -> None:
     """Value validation method.
 
     Valid values are any of data_type ``float`` or ``int`` and must be greater of equal to 0
@@ -600,3 +602,74 @@ class RewindFastforward(StringType):
     super().validate(value)
 
     RewindFastforward.parse(value)
+
+
+class PointType(CommandType):
+  """PointType data_type class."""
+
+  TYPENAME = 'Point'
+  SUPPORTED_TYPENAMES = [TYPENAME]
+
+  @classmethod
+  def parse(cls, value: str) -> typing.Optional[typing.Tuple[float, float, float]]:
+    """Parse a given value."""
+    if value in PercentType.UNDEFINED_STATES:
+      return None
+
+    value_split = value.split(',', maxsplit=2)
+    if not len(value_split) == 3:
+      raise ValueError
+
+    try:
+      latitude = float(value_split[0])
+      longitude = float(value_split[1])
+      altitude = float(value_split[2])
+    except ArithmeticError as exc:
+      raise ValueError(exc) from exc
+
+    return latitude, longitude, altitude
+
+  @classmethod
+  def validate(
+    cls, value: typing.Optional[typing.Union[str, typing.Tuple[typing.Union[float, int], typing.Union[float, int], typing.Union[float, int]]]]
+  ) -> None:
+    """Value validation method.
+
+    A valid PointType is a tuple of three decimal values representing:
+      - latitude
+      - longitude
+      - altitude
+
+    Valid values are:
+      - a tuple of (``int`` or ``float``, ``int`` or ``float``, ``int`` or ``float``)
+      - a ``str`` that can be parsed to one of the above by ``DecimalType.parse``
+
+    Args:
+      value: The value to validate.
+
+    Raises:
+      ValueError: Raises ValueError if an invalid value has been specified.
+    """
+    if isinstance(value, str):
+      result = PointType.parse(value)
+      if result is None:
+        return
+
+      latitude, longitude, altitude = result
+
+    elif not (isinstance(value, tuple) and len(value) == 3):
+      raise ValueError
+
+    elif not (isinstance(value[0], (float, int)) and isinstance(value[1], (float, int)) and isinstance(value[2], (float, int))):
+      raise ValueError
+
+    else:
+      latitude, longitude, altitude = value
+
+    if not (-90 <= latitude <= 90):
+      msg = 'Latitude must be between -90 and 90, inclusive.'
+      raise ValueError(msg)
+
+    if not (-180 <= longitude <= 180):
+      msg = 'Longitude must be between -180 and 180, inclusive.'
+      raise ValueError(msg)

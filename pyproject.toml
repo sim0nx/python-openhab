@@ -159,6 +159,7 @@ ignore = [
     "Q001", # bad-quotes-multiline-string
 ]
 
+
 [tool.ruff.format]
 quote-style = "single"
 

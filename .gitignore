@@ -2,6 +2,7 @@
 __pycache__/
 *.py[cod]
 *$py.class
+uv.lock
 
 # C extensions
 *.so
@@ -68,5 +69,4 @@ target/
 .idea
 .mypy_cache
 .vscode
-venv
 venv

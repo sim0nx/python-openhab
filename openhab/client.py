@@ -235,7 +235,7 @@ class OpenHAB:
 
     return self.json_to_item(json_data)
 
-  def json_to_item(self, json_data: dict) -> openhab.items.Item:
+  def json_to_item(self, json_data: dict) -> openhab.items.Item:  # noqa: PLR0911
     """This method takes as argument the RAW (JSON decoded) response for an openHAB item.
 
     It checks of what type the item is and returns a class instance of the
@@ -281,6 +281,9 @@ class OpenHAB:
 
     if _type == 'Player':
       return openhab.items.PlayerItem(self, json_data)
+
+    if _type == 'Location':
+      return openhab.items.LocationItem(self, json_data)
 
     return openhab.items.Item(self, json_data)
 

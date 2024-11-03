@@ -194,8 +194,8 @@ class Item:
 
   def is_undefined(self, value: str) -> bool:
     """Check if value is undefined."""
-    for aStateType in self.state_types:
-      if not aStateType.is_undefined(value):
+    for a_state_type in self.state_types:
+      if not a_state_type.is_undefined(value):
         return False
 
     return True
@@ -671,3 +671,41 @@ class RollershutterItem(Item):
   def stop(self) -> None:
     """Set the state of the dimmer to OFF."""
     self.command(openhab.command_types.StopMoveType.STOP)
+
+
+class LocationItem(Item):
+  """LocationItem item type."""
+
+  TYPENAME = 'Location'
+  types = [openhab.command_types.PointType]
+  state_types = [openhab.command_types.PointType]
+
+  def _parse_rest(self, value: str) -> typing.Tuple[typing.Optional[typing.Tuple[float, float, float]], str]:  # type: ignore[override]
+    """Parse a REST result into a native object.
+
+    Args:
+      value (str): A string argument to be converted into a str object.
+
+    Returns:
+      Latitude, longitude and altitude components
+      Optional UoM
+    """
+    return openhab.command_types.PointType.parse(value), ''
+
+  def _rest_format(self, value: typing.Union[typing.Tuple[float, float, float], str]) -> str:
+    """Format a value before submitting to openHAB.
+
+    Args:
+      value: Either a string, an integer or a tuple of HSB components (int, int, float); in the latter two cases we have to cast it to a string.
+
+    Returns:
+      str: The string as possibly converted from the parameter.
+    """
+    if isinstance(value, tuple):
+      if len(value) == 3:
+        return f'{value[0]},{value[1]},{value[2]}'
+
+    if not isinstance(value, str):
+      return str(value)
+
+    return value
