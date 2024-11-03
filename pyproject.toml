@@ -85,7 +85,7 @@ check_untyped_defs = false
 [tool.ruff]
 line-length = 160
 indent-width = 2
-target-version = "py38"
+target-version = "py39"
 
 [tool.ruff.lint]
 select = [
