@@ -10,7 +10,7 @@ work in progress.
 
 # Requirements
 
-- python >= 3.8
+- python >= 3.9
 - python :: dateutil
 - python :: httpx
 - python :: authlib
