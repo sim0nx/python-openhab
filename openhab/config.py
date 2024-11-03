@@ -52,7 +52,7 @@ class Oauth2User(pydantic.BaseModel):
   """Nested user structure within an oauth2 token."""
 
   name: str
-  roles: typing.List[str]
+  roles: list[str]
 
 
 class Oauth2Token(pydantic.BaseModel):
@@ -62,7 +62,7 @@ class Oauth2Token(pydantic.BaseModel):
   expires_in: int
   expires_at: float = time.time() - 10
   refresh_token: str
-  scope: typing.Union[str, typing.List[str]] = 'admin'
+  scope: typing.Union[str, list[str]] = 'admin'
   token_type: str
   user: Oauth2User
 

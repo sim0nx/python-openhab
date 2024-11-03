@@ -34,11 +34,11 @@ __license__ = 'AGPLv3+'
 class Item:
   """Base item class."""
 
-  types: typing.Sequence[typing.Type[openhab.command_types.CommandType]] = []
-  state_types: typing.Sequence[typing.Type[openhab.command_types.CommandType]] = []
-  command_event_types: typing.Sequence[typing.Type[openhab.command_types.CommandType]] = []
-  state_event_types: typing.Sequence[typing.Type[openhab.command_types.CommandType]] = []
-  state_changed_event_types: typing.Sequence[typing.Type[openhab.command_types.CommandType]] = []
+  types: typing.Sequence[type[openhab.command_types.CommandType]] = []
+  state_types: typing.Sequence[type[openhab.command_types.CommandType]] = []
+  command_event_types: typing.Sequence[type[openhab.command_types.CommandType]] = []
+  state_event_types: typing.Sequence[type[openhab.command_types.CommandType]] = []
+  state_changed_event_types: typing.Sequence[type[openhab.command_types.CommandType]] = []
 
   TYPENAME = 'unknown'
 
@@ -144,7 +144,7 @@ class Item:
     return self._unitOfMeasure
 
   @property
-  def members(self) -> typing.Dict[str, typing.Any]:
+  def members(self) -> dict[str, typing.Any]:
     """If item is a type of Group, it will return all member items for this group.
 
     For none group item empty dictionary will be returned.
@@ -155,7 +155,7 @@ class Item:
     """
     return self._members
 
-  def _validate_value(self, value: typing.Union[str, typing.Type[openhab.command_types.CommandType]]) -> None:
+  def _validate_value(self, value: typing.Union[str, type[openhab.command_types.CommandType]]) -> None:
     """Private method for verifying the new value before modifying the state of the item."""
     if self.type_ == 'String':
       if not isinstance(value, (str, bytes)):
@@ -176,7 +176,7 @@ class Item:
     else:
       raise ValueError
 
-  def _parse_rest(self, value: str) -> typing.Tuple[str, str]:
+  def _parse_rest(self, value: str) -> tuple[str, str]:
     """Parse a REST result into a native object."""
     return value, ''
 
@@ -289,7 +289,7 @@ class Item:
     page: int = 0,
     page_length: int = 0,
     boundary: bool = False,
-  ) -> typing.Iterator[typing.Dict[str, typing.Union[str, int]]]:
+  ) -> typing.Iterator[dict[str, typing.Union[str, int]]]:
     """Method for fetching persistence data for a given item.
 
     Args:
@@ -321,8 +321,8 @@ class GroupItem(Item):
   """String item type."""
 
   TYPENAME = 'Group'
-  types: typing.List[typing.Type[openhab.command_types.CommandType]] = []
-  state_types: typing.List[typing.Type[openhab.command_types.CommandType]] = []
+  types: list[type[openhab.command_types.CommandType]] = []
+  state_types: list[type[openhab.command_types.CommandType]] = []
 
 
 class StringItem(Item):
@@ -382,7 +382,7 @@ class DateTimeItem(Item):
 
     return not self.__eq__(other)
 
-  def _parse_rest(self, value: str) -> typing.Tuple[datetime.datetime, str]:  # type: ignore[override]
+  def _parse_rest(self, value: str) -> tuple[datetime.datetime, str]:  # type: ignore[override]
     """Parse a REST result into a native object.
 
     Args:
@@ -470,7 +470,7 @@ class NumberItem(Item):
   types = [openhab.command_types.DecimalType]
   state_types = types
 
-  def _parse_rest(self, value: str) -> typing.Tuple[typing.Union[float, None], str]:  # type: ignore[override]
+  def _parse_rest(self, value: str) -> tuple[typing.Union[float, None], str]:  # type: ignore[override]
     """Parse a REST result into a native object.
 
     Args:
@@ -499,7 +499,7 @@ class NumberItem(Item):
 
     raise ValueError(f'{self.__class__}: unable to parse value "{value}"')
 
-  def _rest_format(self, value: typing.Union[float, typing.Tuple[float, str], str]) -> typing.Union[str, bytes]:
+  def _rest_format(self, value: typing.Union[float, tuple[float, str], str]) -> typing.Union[str, bytes]:
     """Format a value before submitting to openHAB.
 
     Args:
@@ -545,7 +545,7 @@ class DimmerItem(Item):
   types = [openhab.command_types.OnOffType, openhab.command_types.PercentType, openhab.command_types.IncreaseDecreaseType]
   state_types = [openhab.command_types.PercentType]
 
-  def _parse_rest(self, value: str) -> typing.Tuple[float, str]:  # type: ignore[override]
+  def _parse_rest(self, value: str) -> tuple[float, str]:  # type: ignore[override]
     """Parse a REST result into a native object.
 
     Args:
@@ -595,7 +595,7 @@ class ColorItem(DimmerItem):
   types = [openhab.command_types.OnOffType, openhab.command_types.PercentType, openhab.command_types.IncreaseDecreaseType, openhab.command_types.ColorType]
   state_types = [openhab.command_types.ColorType]
 
-  def _parse_rest(self, value: str) -> typing.Tuple[typing.Optional[typing.Tuple[float, float, float]], str]:  # type: ignore[override]
+  def _parse_rest(self, value: str) -> tuple[typing.Optional[tuple[float, float, float]], str]:  # type: ignore[override]
     """Parse a REST result into a native object.
 
     Args:
@@ -608,7 +608,7 @@ class ColorItem(DimmerItem):
     result = openhab.command_types.ColorType.parse(value)
     return result, ''
 
-  def _rest_format(self, value: typing.Union[typing.Tuple[int, int, float], str, int]) -> str:
+  def _rest_format(self, value: typing.Union[tuple[int, int, float], str, int]) -> str:
     """Format a value before submitting to openHAB.
 
     Args:
@@ -634,7 +634,7 @@ class RollershutterItem(Item):
   types = [openhab.command_types.UpDownType, openhab.command_types.PercentType, openhab.command_types.StopMoveType]
   state_types = [openhab.command_types.PercentType]
 
-  def _parse_rest(self, value: str) -> typing.Tuple[int, str]:  # type: ignore[override]
+  def _parse_rest(self, value: str) -> tuple[int, str]:  # type: ignore[override]
     """Parse a REST result into a native object.
 
     Args:
@@ -680,7 +680,7 @@ class LocationItem(Item):
   types = [openhab.command_types.PointType]
   state_types = [openhab.command_types.PointType]
 
-  def _parse_rest(self, value: str) -> typing.Tuple[typing.Optional[typing.Tuple[float, float, float]], str]:  # type: ignore[override]
+  def _parse_rest(self, value: str) -> tuple[typing.Optional[tuple[float, float, float]], str]:  # type: ignore[override]
     """Parse a REST result into a native object.
 
     Args:
@@ -692,7 +692,7 @@ class LocationItem(Item):
     """
     return openhab.command_types.PointType.parse(value), ''
 
-  def _rest_format(self, value: typing.Union[typing.Tuple[float, float, float], str]) -> str:
+  def _rest_format(self, value: typing.Union[tuple[float, float, float], str]) -> str:
     """Format a value before submitting to openHAB.
 
     Args:

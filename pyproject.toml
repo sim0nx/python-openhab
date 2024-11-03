@@ -8,24 +8,24 @@ description = "python library for accessing the openHAB REST API"
 authors = [{ name = "Georges Toth", email = "georges@trypill.org" }]
 license = { text = "AGPLv3+" }
 classifiers = [
-    "Development Status :: 5 - Production/Stable",
-    "License :: OSI Approved :: GNU Affero General Public License v3 or later (AGPLv3+)",
-    "Intended Audience :: Developers",
-    "Operating System :: OS Independent",
-    "Programming Language :: Python :: 3 :: Only",
-    "Programming Language :: Python :: 3.9",
-    "Programming Language :: Python :: 3.10",
-    "Programming Language :: Python :: 3.11",
-    "Programming Language :: Python :: 3.12",
-    "Programming Language :: Python :: 3.13",
+  "Development Status :: 5 - Production/Stable",
+  "License :: OSI Approved :: GNU Affero General Public License v3 or later (AGPLv3+)",
+  "Intended Audience :: Developers",
+  "Operating System :: OS Independent",
+  "Programming Language :: Python :: 3 :: Only",
+  "Programming Language :: Python :: 3.9",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
 ]
 keywords = ["openHAB"]
 requires-python = ">=3.9"
 dependencies = [
-    "python-dateutil~=2.8",
-    "pydantic<3",
-    "Authlib~=1.2",
-    "httpx~=0.24",
+  "python-dateutil~=2.8",
+  "pydantic<3",
+  "Authlib~=1.2",
+  "httpx~=0.24",
 ]
 dynamic = ["version"]
 
@@ -42,20 +42,20 @@ Source = "https://github.com/sim0nx/python-openhab"
 
 [project.optional-dependencies]
 docs = [
-    "mkdocs-material",
-    "mkdocstrings[crystal,python]",
+  "mkdocs-material",
+  "mkdocstrings[crystal,python]",
 ]
 dev = [
-    "mypy",
-    "ruff",
-    "types-python-dateutil",
-    "typeguard",
+  "mypy",
+  "ruff",
+  "types-python-dateutil",
+  "typeguard",
 ]
 test = [
-    "pytest",
-    "pytest-sugar",
-    "coverage",
-    "beautifulsoup4",
+  "pytest",
+  "pytest-sugar",
+  "coverage",
+  "beautifulsoup4",
 ]
 
 [tool.setuptools_scm]
@@ -89,77 +89,83 @@ target-version = "py39"
 
 [tool.ruff.lint]
 select = [
-    "E", # pycodestyle errors
-    "W", # pycodestyle warnings
-    "F", # pyflakes
-    "I", # isort
-    "C", # flake8-comprehensions
-    "B", # flake8-bugbear
-    "D", # pydocstyle
-    "N", # pep8-naming
-    "UP", # pyupgrade
-    "YTT", # flake8-2020
-    "ANN", # flake8-annotations
-    "ASYNC", # flake8-async
-    "S", # flake8-bandit
-    "BLE", # flake8-blind-except
-    "B", # flake8-bugbear
-    "A", # flake8-builtins
-    "COM", # flake8-commas
-    "C4", # flake8-comprehensions
-    "DTZ", # flake8-datetimez
-    "EM103", # flake8-errmsg - dot-format-in-exception
-    "EXE", # flake8-executable
-    "ISC", # flake8-implicit-str-concat
-    "ICN", # flake8-import-conventions
-    "G", # flake8-logging-format
-    "INP", # flake8-no-pep420
-    "PIE", # flake8-pie
-    "T20", # flake8-print
-    "PYI", # flake8-pyi
-    "RSE", # flake8-raise
-    "RET", # flake8-return
-    "SLF", # flake8-self
-    "SLOT", # flake8-slots
-    #    "SIM",  # flake8-simplify
-    "TID", # flake8-tidy-imports
-    "TCH", # flake8-type-checking
-    "PTH", # flake8-use-pathlib
-    "TD", # flake8-todos
-    "FIX", # flake8-fixme
-    "ERA", # eradicate
-    "PL", # Pylint
-    "PLC", # Convention
-    "PLE", # Error
-    "PLR", # Refactor
-    "PLW", # Warning
-    "B904", # reraise-no-cause
-    "FLY", # flynt
-    #    "PERF",  # Perflint
-    "RUF013", # implicit-optional
+  "E", # pycodestyle errors
+  "W", # pycodestyle warnings
+  "F", # pyflakes
+  "I", # isort
+  "C", # flake8-comprehensions
+  "B", # flake8-bugbear
+  "D", # pydocstyle
+  "N", # pep8-naming
+  "UP", # pyupgrade
+  "YTT", # flake8-2020
+  "ANN", # flake8-annotations
+  "ASYNC", # flake8-async
+  "S", # flake8-bandit
+  "BLE", # flake8-blind-except
+  "B", # flake8-bugbear
+  "A", # flake8-builtins
+  "COM", # flake8-commas
+  "C4", # flake8-comprehensions
+  "DTZ", # flake8-datetimez
+  "EM103", # flake8-errmsg - dot-format-in-exception
+  "EXE", # flake8-executable
+  "ISC", # flake8-implicit-str-concat
+  "ICN", # flake8-import-conventions
+  "G", # flake8-logging-format
+  "INP", # flake8-no-pep420
+  "PIE", # flake8-pie
+  "T20", # flake8-print
+  "PYI", # flake8-pyi
+  "RSE", # flake8-raise
+  "RET", # flake8-return
+  "SLF", # flake8-self
+  "SLOT", # flake8-slots
+  #    "SIM",  # flake8-simplify
+  "TID", # flake8-tidy-imports
+  "TCH", # flake8-type-checking
+  "PTH", # flake8-use-pathlib
+  "TD", # flake8-todos
+  "FIX", # flake8-fixme
+  "ERA", # eradicate
+  "PL", # Pylint
+  "PLC", # Convention
+  "PLE", # Error
+  "PLR", # Refactor
+  "PLW", # Warning
+  "B904", # reraise-no-cause
+  "FLY", # flynt
+  #    "PERF",  # Perflint
+  "RUF013", # implicit-optional
 ]
 unfixable = ['ERA001']
 extend-select = ['Q', 'RUF100', 'C90']
 flake8-quotes = { inline-quotes = 'single', multiline-quotes = 'single' }
 ignore = [
-    "C901", # too complex
-    "E501", # line too long
-    "B008", # do not perform function call in argument defaults
-    "ANN101", # missing-type-self
-    "ANN401", # any-type
-    "ANN002", # missing-type-args
-    "ANN003", # missing-type-kwargs
-    "ANN102", # missing-type-cls
-    "PLR0913", # Too many arguments to function call
-    "PLR0915", # Too many statements
-    "PLR2004", # Magic value used in comparison
-    "PLW0603", # Using the global statement
-    "PLR0912", # Too many branches
-    "COM812", # missing-trailing-comma
-    "ISC001", # single-line-implicit-string-concatenation
-    "Q001", # bad-quotes-multiline-string
+  "C901", # too complex
+  "E501", # line too long
+  "B008", # do not perform function call in argument defaults
+  "ANN101", # missing-type-self
+  "ANN401", # any-type
+  "ANN002", # missing-type-args
+  "ANN003", # missing-type-kwargs
+  "ANN102", # missing-type-cls
+  "PLR0913", # Too many arguments to function call
+  "PLR0915", # Too many statements
+  "PLR2004", # Magic value used in comparison
+  "PLW0603", # Using the global statement
+  "PLR0912", # Too many branches
+  "COM812", # missing-trailing-comma
+  "ISC001", # single-line-implicit-string-concatenation
+  "Q001", # bad-quotes-multiline-string
 ]
 
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = [
+  "S101", # Use of `assert` detected
+  "D", # docstring
+  "RET504", # Unnecessary assignment before `return` statement
+]
 
 [tool.ruff.format]
 quote-style = "single"

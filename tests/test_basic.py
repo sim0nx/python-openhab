@@ -5,7 +5,6 @@ import pytest
 
 import openhab
 
-
 # ruff: noqa: S101, ANN201, T201
 
 

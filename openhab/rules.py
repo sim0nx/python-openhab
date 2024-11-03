@@ -41,6 +41,6 @@ class Rules:
     self.openhab = openhab_conn
     self.logger = logging.getLogger(__name__)
 
-  def get(self) -> typing.List[typing.Dict[str, typing.Any]]:
+  def get(self) -> list[dict[str, typing.Any]]:
     """Get all rules."""
     return self.openhab.req_get('/rules')

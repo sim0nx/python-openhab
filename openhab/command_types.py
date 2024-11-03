@@ -34,7 +34,7 @@ class CommandType(metaclass=abc.ABCMeta):
   """Base command type class."""
 
   TYPENAME = ''
-  SUPPORTED_TYPENAMES: typing.List[str] = []
+  SUPPORTED_TYPENAMES: list[str] = []
   UNDEF = 'UNDEF'
   NULL = 'NULL'
   UNDEFINED_STATES = [UNDEF, NULL]
@@ -48,8 +48,8 @@ class CommandType(metaclass=abc.ABCMeta):
   def get_type_for(
     cls,
     typename: str,
-    parent_cls: typing.Optional[typing.Type['CommandType']] = None,
-  ) -> typing.Union[typing.Type['CommandType'], None]:
+    parent_cls: typing.Optional[type['CommandType']] = None,
+  ) -> typing.Union[type['CommandType'], None]:
     """Get a class type for a given typename."""
     if parent_cls is None:
       parent_cls = CommandType
@@ -230,7 +230,7 @@ class ColorType(CommandType):
   SUPPORTED_TYPENAMES = [TYPENAME]
 
   @classmethod
-  def parse(cls, value: str) -> typing.Optional[typing.Tuple[float, float, float]]:
+  def parse(cls, value: str) -> typing.Optional[tuple[float, float, float]]:
     """Parse a given value."""
     if value in ColorType.UNDEFINED_STATES:
       return None
@@ -251,7 +251,7 @@ class ColorType(CommandType):
     return h, s, b
 
   @classmethod
-  def validate(cls, value: typing.Union[str, typing.Tuple[float, float, float]]) -> None:
+  def validate(cls, value: typing.Union[str, tuple[float, float, float]]) -> None:
     """Value validation method.
 
     Valid values are in format H,S,B.
@@ -283,7 +283,7 @@ class DecimalType(CommandType):
   SUPPORTED_TYPENAMES = [TYPENAME, 'Quantity']
 
   @classmethod
-  def parse(cls, value: str) -> typing.Union[None, typing.Tuple[typing.Union[int, float], str]]:
+  def parse(cls, value: str) -> typing.Union[None, tuple[typing.Union[int, float], str]]:
     """Parse a given value."""
     if value in DecimalType.UNDEFINED_STATES:
       return None
@@ -306,7 +306,7 @@ class DecimalType(CommandType):
     raise ValueError
 
   @classmethod
-  def validate(cls, value: typing.Union[float, typing.Tuple[float, str], str]) -> None:
+  def validate(cls, value: typing.Union[float, tuple[float, str], str]) -> None:
     """Value validation method.
 
     Valid values are any of data_type:
@@ -611,7 +611,7 @@ class PointType(CommandType):
   SUPPORTED_TYPENAMES = [TYPENAME]
 
   @classmethod
-  def parse(cls, value: str) -> typing.Optional[typing.Tuple[float, float, float]]:
+  def parse(cls, value: str) -> typing.Optional[tuple[float, float, float]]:
     """Parse a given value."""
     if value in PercentType.UNDEFINED_STATES:
       return None
@@ -630,9 +630,7 @@ class PointType(CommandType):
     return latitude, longitude, altitude
 
   @classmethod
-  def validate(
-    cls, value: typing.Optional[typing.Union[str, typing.Tuple[typing.Union[float, int], typing.Union[float, int], typing.Union[float, int]]]]
-  ) -> None:
+  def validate(cls, value: typing.Optional[typing.Union[str, tuple[typing.Union[float, int], typing.Union[float, int], typing.Union[float, int]]]]) -> None:
     """Value validation method.
 
     A valid PointType is a tuple of three decimal values representing:

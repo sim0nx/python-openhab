@@ -43,7 +43,7 @@ class OpenHAB:
     password: typing.Optional[str] = None,
     http_auth: typing.Optional[httpx.Auth] = None,
     timeout: typing.Optional[float] = None,
-    oauth2_config: typing.Optional[typing.Dict[str, typing.Any]] = None,
+    oauth2_config: typing.Optional[dict[str, typing.Any]] = None,
   ) -> None:
     """Class constructor.
 
@@ -136,7 +136,7 @@ class OpenHAB:
     if not 200 <= req.status_code < 300:
       req.raise_for_status()
 
-  def req_get(self, uri_path: str, params: typing.Optional[typing.Union[typing.Dict[str, typing.Any], list, tuple]] = None) -> typing.Any:
+  def req_get(self, uri_path: str, params: typing.Optional[typing.Union[dict[str, typing.Any], list, tuple]] = None) -> typing.Any:
     """Helper method for initiating a HTTP GET request.
 
     Besides doing the actual request, it also checks the return value and returns the resulting decoded
@@ -155,7 +155,7 @@ class OpenHAB:
   def req_post(
     self,
     uri_path: str,
-    data: typing.Optional[typing.Union[str, bytes, typing.Mapping[str, typing.Any], typing.Iterable[typing.Tuple[str, typing.Optional[str]]]]] = None,
+    data: typing.Optional[typing.Union[str, bytes, typing.Mapping[str, typing.Any], typing.Iterable[tuple[str, typing.Optional[str]]]]] = None,
   ) -> None:
     """Helper method for initiating a HTTP POST request.
 
@@ -207,7 +207,7 @@ class OpenHAB:
     self._check_req_return(r)
 
   # fetch all items
-  def fetch_all_items(self) -> typing.Dict[str, openhab.items.Item]:
+  def fetch_all_items(self) -> dict[str, openhab.items.Item]:
     """Returns all items defined in openHAB.
 
     Returns:
@@ -317,7 +317,7 @@ class OpenHAB:
 
     return res.status_code == 200
 
-  def _oauth2_token_updater(self, token: typing.Dict[str, typing.Any], refresh_token: typing.Any = None, access_token: typing.Any = None) -> None:
+  def _oauth2_token_updater(self, token: dict[str, typing.Any], refresh_token: typing.Any = None, access_token: typing.Any = None) -> None:
     if self.oauth2_config is None:
       raise ValueError('OAuth2 configuration is not set; invalid action!')
 
@@ -329,15 +329,15 @@ class OpenHAB:
   def create_or_update_item(
     self,
     name: str,
-    _type: typing.Union[str, typing.Type[openhab.items.Item]],
+    _type: typing.Union[str, type[openhab.items.Item]],
     quantity_type: typing.Optional[str] = None,
     label: typing.Optional[str] = None,
     category: typing.Optional[str] = None,
-    tags: typing.Optional[typing.List[str]] = None,
-    group_names: typing.Optional[typing.List[str]] = None,
-    group_type: typing.Optional[typing.Union[str, typing.Type[openhab.items.Item]]] = None,
+    tags: typing.Optional[list[str]] = None,
+    group_names: typing.Optional[list[str]] = None,
+    group_type: typing.Optional[typing.Union[str, type[openhab.items.Item]]] = None,
     function_name: typing.Optional[str] = None,
-    function_params: typing.Optional[typing.List[str]] = None,
+    function_params: typing.Optional[list[str]] = None,
   ) -> None:
     """Creates a new item in openHAB if there is no item with name 'name' yet.
 
@@ -359,7 +359,7 @@ class OpenHAB:
                      Can be one of ['EQUALITY', 'AND', 'OR', 'NAND', 'NOR', 'AVG', 'SUM', 'MAX', 'MIN', 'COUNT', 'LATEST', 'EARLIEST']
       function_params: Optional list of function params (no documentation found), depending on function name.
     """
-    paramdict: typing.Dict[str, typing.Union[str, typing.List[str], typing.Dict[str, typing.Union[str, typing.List[str]]]]] = {}
+    paramdict: dict[str, typing.Union[str, list[str], dict[str, typing.Union[str, list[str]]]]] = {}
 
     if isinstance(_type, type):
       if issubclass(_type, openhab.items.Item):
@@ -425,7 +425,7 @@ class OpenHAB:
     page: int = 0,
     page_length: int = 0,
     boundary: bool = False,
-  ) -> typing.Iterator[typing.Dict[str, typing.Union[str, int]]]:
+  ) -> typing.Iterator[dict[str, typing.Union[str, int]]]:
     """Method for fetching persistence data for a given item.
 
     Args:
@@ -443,7 +443,7 @@ class OpenHAB:
          "state": "23"
         }
     """
-    params: typing.Dict[str, typing.Any] = {
+    params: dict[str, typing.Any] = {
       'boundary': str(boundary).lower(),
       'page': page,
       'pagelength': page_length,
