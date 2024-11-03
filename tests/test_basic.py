@@ -109,6 +109,7 @@ def test_number_temperature(oh: openhab.OpenHAB):
 
   # Unit of measure conversion (performed by OpenHAB server)
   temperature_item.state = (32, '°F')
+  time.sleep(1)
   assert round(temperature_item.state, 2) == 0
   temperature_item.state = (212, '°F')
   time.sleep(1)
