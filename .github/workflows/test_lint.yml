@@ -12,16 +12,6 @@ jobs:
   tests:
     runs-on: ubuntu-latest
 
-    services:
-      openhab:
-        image: openhab/openhab:latest
-        env:
-          OPENHAB_HTTP_PORT: 8080
-        ports:
-          - 8080:8080
-        volumes:
-          - ${{ github.workspace }}/docker/openhab_conf:/openhab/conf
-
     strategy:
       matrix:
         python-version: ["3.9", "3.10", "3.11", "3.12", "3.13"]
@@ -37,6 +27,8 @@ jobs:
         run: |
           python3 -m pip install --upgrade pip
           python3 -m pip install --upgrade-strategy eager .[test]
+
+          docker run -d --name openhab -p 8080:8080 -e OPENHAB_HTTP_PORT=8080 -v ${{ github.workspace }}/docker/openhab_conf:/openhab/conf "openhab/openhab:latest"
 
           python3 docker/test_connectivity.py
 
