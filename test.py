@@ -47,14 +47,9 @@ print(knx_day_night.state)
 start_time = datetime.datetime.fromtimestamp(1695504300123 / 1000, tz=datetime.UTC)
 
 # fetch persistence data using the OpenHAB client object
-for k in openhab.get_item_persistence(knx_day_night.name,
-                                      page_length=20,
-                                      start_time=start_time
-                                      ):
+for k in openhab.get_item_persistence(knx_day_night.name, page_length=20, start_time=start_time):
   print(json.dumps(k, indent=4))
 
 # fetch persistence data using the item directly
-for k in knx_day_night.persistence(page_length=20,
-                                   start_time=start_time
-                                   ):
+for k in knx_day_night.persistence(page_length=20, start_time=start_time):
   print(json.dumps(k, indent=4))

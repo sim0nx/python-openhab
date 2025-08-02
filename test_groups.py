@@ -24,21 +24,21 @@ base_url = 'http://localhost:8080/rest'
 openhab = openhab.OpenHAB(base_url)
 
 # fetch all items
-print(" - Print all items:")
+print(' - Print all items:')
 all_items = openhab.fetch_all_items()
 for i in all_items.values():
   print(i)
 
 # fetch some group
-lights_group = openhab.get_item("Lights")
+lights_group = openhab.get_item('Lights')
 
-print(" - Send command to group")
+print(' - Send command to group')
 lights_group.on()
 
-print(" - Update all lights to OFF")
+print(' - Update all lights to OFF')
 for v in lights_group.members.values():
   v.update('OFF')
 
-print(" - Print all lights:")
+print(' - Print all lights:')
 for v in lights_group.members.values():
   print(v)
