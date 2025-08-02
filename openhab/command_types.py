@@ -617,13 +617,16 @@ class PointType(CommandType):
       return None
 
     value_split = value.split(',', maxsplit=2)
-    if not len(value_split) == 3:
+    if not (1 < len(value_split) < 4):
       raise ValueError
 
     try:
       latitude = float(value_split[0])
       longitude = float(value_split[1])
-      altitude = float(value_split[2])
+      altitude = 0.0
+
+      if len(value_split) == 3:
+        altitude = float(value_split[2])
     except ArithmeticError as exc:
       raise ValueError(exc) from exc
 
