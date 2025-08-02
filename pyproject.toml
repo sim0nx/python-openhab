@@ -40,12 +40,13 @@ Tracker = "https://github.com/sim0nx/python-openhab/issues"
 Documentation = "http://python-openhab.readthedocs.io/en/latest/?badge=latest"
 Source = "https://github.com/sim0nx/python-openhab"
 
-[project.optional-dependencies]
+[dependency-groups]
 docs = [
   "mkdocs-material",
   "mkdocstrings[crystal,python]",
 ]
 dev = [
+  "pip",
   "mypy",
   "ruff",
   "types-python-dateutil",
@@ -82,10 +83,24 @@ warn_unused_ignores = true
 strict_optional = true
 check_untyped_defs = false
 
+files = [
+  "openhab/**/*.py",
+]
+
+[tool.pytest.ini_options]
+minversion = "8.0"
+testpaths = [
+  "tests"
+]
+
 [tool.ruff]
 line-length = 160
 indent-width = 2
 target-version = "py39"
+include = [
+  "pyproject.toml",
+  "openhab/**/*.py",
+]
 
 [tool.ruff.lint]
 select = [
@@ -145,11 +160,9 @@ ignore = [
   "C901", # too complex
   "E501", # line too long
   "B008", # do not perform function call in argument defaults
-  "ANN101", # missing-type-self
   "ANN401", # any-type
   "ANN002", # missing-type-args
   "ANN003", # missing-type-kwargs
-  "ANN102", # missing-type-cls
   "PLR0913", # Too many arguments to function call
   "PLR0915", # Too many statements
   "PLR2004", # Magic value used in comparison

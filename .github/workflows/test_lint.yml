@@ -30,7 +30,7 @@ jobs:
       - name: Run tests
         run: |
           python3 -m pip install uv
-          uv sync --extra test
+          uv sync --group test
           uv run docker/test_connectivity.py
 
           docker exec -i openhab /openhab/runtime/bin/client -v -p habopen users add admin admin administrator || true
@@ -93,5 +93,5 @@ jobs:
 
       - run: |
           python3 -m pip install uv
-          uv sync --extra dev
+          uv sync --group dev
           uv run mypy --config-file pyproject.toml openhab
