@@ -1,6 +1,6 @@
 [build-system]
-requires = ["setuptools>=68", "setuptools_scm[toml]>=7.1"]
-build-backend = "setuptools.build_meta"
+requires = ["hatchling", "hatch-vcs"]
+build-backend = "hatchling.build"
 
 [project]
 name = "python-openhab"
@@ -59,16 +59,23 @@ test = [
   "beautifulsoup4",
 ]
 
-[tool.setuptools_scm]
+[tool.hatch.envs.default]
+installer = "uv"
 
-[tool.setuptools]
-include-package-data = true
+[tool.hatch.build.targets.wheel]
+packages = [
+  "/openhab",
+]
 
-[tool.setuptools.packages]
-find = { namespaces = false }
+[tool.hatch.build.targets.sdist]
+include = [
+  "/openhab",
+  "/tests",
+]
+exclude = []
 
-[tool.setuptools.package-data]
-openhab = ["py.typed"]
+[tool.hatch.version]
+source = "vcs"
 
 [tool.mypy]
 show_error_context = true
