@@ -8,6 +8,8 @@
 This library allows for easily accessing the openHAB REST API. A number of features are implemented but not all, this is
 work in progress.
 
+**Note: This library is archived now. I have moved on to homeassistant.**
+
 # Requirements
 
 - python >= 3.9
